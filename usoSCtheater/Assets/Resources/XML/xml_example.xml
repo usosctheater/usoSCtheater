@@ -1,0 +1,20 @@
+<?xml version = "1.0" encoding = "UTF-8"?>
+
+<Scene>
+    <Line
+        Name = "아사히"
+        CG = "asahi_idol_2"
+        Position = "left"
+        Animation = "think1"
+        Voice = "S001001"
+        Text = "그치만 후유코쨩 느림다."
+    />
+    <Line
+        Name = "후유코"
+        CG = "huyuko_normal_9"
+        Position = "right"
+        Animation = "anger1"
+        Voice = "S001002"
+        Text = "시끄러! 알고 있거든!"
+    />
+</Scene>

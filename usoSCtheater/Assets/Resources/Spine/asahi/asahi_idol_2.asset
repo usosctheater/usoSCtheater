@@ -10,12 +10,12 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f1b3b4b945939a54ea0b23d3396115fb, type: 3}
-  m_Name: New SkeletonData
+  m_Name: asahi_idol_2
   m_EditorClassIdentifier: Assembly-CSharp::Spine.Unity.SkeletonDataAsset
   atlasAssets:
-  - {fileID: 11400000, guid: e2abfff559ce38d4f9f7176e2914b5d0, type: 2}
+  - {fileID: 11400000, guid: 31fd3a9ac7841394dbaec98f66524e18, type: 2}
   scale: 0.01
-  skeletonJSON: {fileID: 4900000, guid: 9f8eabe41271ec44d988b19e263e62a0, type: 3}
+  skeletonJSON: {fileID: 4900000, guid: 6da01d91da1a98f46ae0e836886e9cb2, type: 3}
   fromAnimation: []
   toAnimation: []
   duration: []
