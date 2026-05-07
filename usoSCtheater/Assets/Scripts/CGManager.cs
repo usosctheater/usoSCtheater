@@ -107,6 +107,6 @@ public class CGManager : MonoBehaviour
             return;
         }
 
-        skAnim.AnimationState.SetAnimation(0, animName, true);
+        skAnim.AnimationState.SetAnimation(0, animName, false);
     }
 }

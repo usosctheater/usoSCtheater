@@ -1,7 +1,6 @@
-<?xml version = "1.0" encoding = "UTF-8"?>
-
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Scene>
-    <Line Type="BGM" Track="BGM_nanndesyou" Volume="0.5"/>
+	<Line Type="BGM" Track="BGM_nanndesyou" Volume="0.5"/>
 	<Line Type="SE" Track="door_knock" Volume="2"/>
 	<Line Type="TEXT" Name="???" Voice="s001001" Text="들어가도 됨까?"/>
 	<Line Type="TEXT" Name="후유코" CG="huyuko_normal_9" Position="left" Animation="smile1" Voice="s001002" Text="네~ 누구세요~"/>
