@@ -11,6 +11,8 @@
         Animation = ""
         Voice = ""
         Text = ""
+        Effect = ""
+        SE = ""
     />
     <Line
         Type = ""
@@ -22,5 +24,7 @@
         Animation = ""
         Voice = ""
         Text = ""
+        Effect = ""
+        SE = ""
     />
 </Scene>

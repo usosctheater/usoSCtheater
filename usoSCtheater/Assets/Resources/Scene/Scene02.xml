@@ -1,13 +1,13 @@
-<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<?xml version = "1.0" encoding = "UTF-8"?>
+
 <Scene>
-	<Line Type="BGM" Track="BGM_nanndesyou" Volume="0.5"/>
+    <Line Type="BGM" Track="BGM_nanndesyou" Volume="0.5"/>
 	<Line Type="SE" Track="door_knock" Volume="2"/>
-	<Line Type="TEXT" Name="???" Voice="s001001" Text="들어가도 됨까?"/>
+	<Line Type="TEXT" Name="???" Voice="s001001" Text="다시 들어가도 됨까?"/>
 	<Line Type="TEXT" Name="후유코" CG="huyuko_normal_9" Position="left" Animation="smile1" Voice="s001002" Text="네~ 누구세요~"/>
 	<Line Type="SE" Track="door_ake"/>
-	<Line Type="TEXT" Name="아사히" CG="asahi_idol_2" Position="right" Animation="why" Voice="s001003" Text="저임다. 목소리 들으면 모름까?"/>
+	<Line Type="TEXT" Name="아사히" CG="asahi_idol_2" Position="right" Animation="why" Voice="s001003" Text="저임다. 그새 까먹었슴까?"/>
 	<Line Type="SE" Track="door_sime"/>
 	<Line Type="TEXT" Name="후유코" CG="huyuko_normal_9" Position="left" Animation="anger1" Voice="s001004" Text="하? 예의상 대답한 거잖아, 예의상!"/>
-	<Line Type="TRANSITION" Effect="fade_out"/>
-	<Line/>
+	<Line Type="TRANSITION" Effect="wipe_left"/>
 </Scene>

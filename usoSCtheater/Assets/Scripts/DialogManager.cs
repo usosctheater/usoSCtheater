@@ -4,6 +4,7 @@ using System.Xml;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using NUnit.Framework;
 
 public class DialogManager : MonoBehaviour
 {
@@ -11,12 +12,12 @@ public class DialogManager : MonoBehaviour
     [SerializeField] private TextMeshProUGUI nameText;
     [SerializeField] private TextMeshProUGUI dialogText;
 
-    [Header("XML 파일")]
-    [SerializeField] private TextAsset xmlFile;
-
     [Header("매니저 연결")]
+    [SerializeField] private BGManager bgManager;
     [SerializeField] private CGManager cgManager;
     [SerializeField] private AudioManager audioManager;
+    [SerializeField] private SceneManager sceneManager;
+    [SerializeField] private EffectManager effectManager;
 
     [Header("타이핑 설정")]
     [SerializeField] private float typingSpeed = 0.1f;          //글자 당 딜레이 (s)
@@ -27,14 +28,8 @@ public class DialogManager : MonoBehaviour
     private int currentIndex = 0;
     private Coroutine typingCoroutine;                          //타이핑 효과용 코루틴
     private bool isTyping = false;
+    private bool isTransition = false;
     
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
-    {
-        LoadXML();
-        ProcessNext();
-    }
-
     void Update()
     {
         if (Input.GetMouseButtonDown(0))
@@ -44,36 +39,13 @@ public class DialogManager : MonoBehaviour
         }
     }
 
-    private void LoadXML()
+    public void LoadScene(TextAsset xmlAsset)
     {
-        lines.Clear();
+        scriptNodes.Clear();
+        currentIndex = 0;
 
         XmlDocument doc = new XmlDocument();
-        doc.LoadXml(xmlFile.text);
-
-        //노드 정보를 다양화 하여, 처리 코드 변경으로 폐기
-        /**
-        XmlNodeList lineNodes = doc.SelectNodes("Scene/Line");
-
-        foreach (XmlNode node in lineNodes)
-        {
-            DialogLine line = new DialogLine();
-
-            //텍스트 로드
-            line.name = node.Attributes["Name"].Value;
-            line.text = node.Attributes["Text"].Value;
-
-            //리소스 로드 (없으면 빈 문자열)
-            line.cgKey = GetAttr(node, "CG");
-            line.cgPos = GetAttr(node, "Position");
-            line.animation = GetAttr(node, "Animation");
-            line.voiceKey = GetAttr(node, "Voice");
-
-            lines.Add(line);
-        }
-
-        Debug.Log($"총 {lines.Count}줄 로드 완료");
-        **/
+        doc.LoadXml(xmlAsset.text);
 
         //Scene 바로 아래 모든 자식 노드를 순서대로 처리
         XmlNodeList lineNodes = doc.SelectNodes("Scene/Line");
@@ -104,14 +76,25 @@ public class DialogManager : MonoBehaviour
                     scriptNodes.Add(new ScriptNode(ScriptNode.NodeType.SE, GetAttr(node, "Track"), float.TryParse(GetAttr(node, "Volume"), out float seVol) ? seVol : 1.0f));
                     break;
 
+                case "TRANSITION":
+                    scriptNodes.Add(new ScriptNode(GetAttr(node, "Effect"), GetAttr(node, "SE")));
+                    break;
+
+                case "BG":
+                    scriptNodes.Add(new ScriptNode(ScriptNode.NodeType.BG, GetAttr(node, "Key")));
+                    break;
+
                 default:
-                    Debug.LogWarning($"[DialogManager] 알 수 없는 태그: {node.Name}");
+                    Debug.LogWarning($"[DialogManager] 알 수 없는 타입: {type}");
                     break;
             }
 
         }
 
         Debug.Log($"총 {scriptNodes.Count}개 노드 로드 완료");
+
+        //로드 완료 후에 자동으로 첫번째 Line을 출력
+        ProcessNext();
     }
 
     private void ShowLine(DialogLine line)
@@ -142,22 +125,13 @@ public class DialogManager : MonoBehaviour
         audioManager.PlayVoice(line.voiceKey);
     }
 
-    //노드 다양화로 ProcessNext() 로 기능 이전
-    /**
-    private void NextLine()
-    {
-        currentIndex++;
-        ShowLine();
-    }
-    **/
-
     //노드 순차 처리하는 함수 (노드 다양화로 Line 이외에도 처리하게 변경)
     private void ProcessNext()
     {
         while(currentIndex < scriptNodes.Count)
         {
             ScriptNode node = scriptNodes[currentIndex];
-            currentIndex++;
+            currentIndex++; 
 
             switch (node.type)
             {
@@ -169,15 +143,47 @@ public class DialogManager : MonoBehaviour
                     audioManager.PlaySE(node.track, node.volume);
                     continue;
 
+                case ScriptNode.NodeType.BG:
+                    bgManager.SetBG(node.bg);
+                    continue;
+
+                case ScriptNode.NodeType.Transition:
+                    if (!string.IsNullOrEmpty(node.transition_se)) audioManager.PlaySE(node.transition_se);
+
+                    effectManager.PlayTransition(node.transition_effect, ()=> ProcessNext());
+                    return;
+
                 case ScriptNode.NodeType.Line:
                     ShowLine(node.line);
                     return;
             }
         }
 
-        Debug.Log("씬 종료");
+        ClearScene();
+        //Debug.Log("씬 종료");
+        Debug.Log($"[DialogManager] 씬 종료 — SceneManager에 전달");
+        sceneManager.OnSceneEnd();
     }
 
+    private void ClearScene()
+    {
+        //텍스트 초기화
+        nameText.text = "";
+        dialogText.text = "";
+
+        //타이핑 코루틴 중단
+        if (typingCoroutine != null)
+        {
+            StopCoroutine(typingCoroutine);
+            typingCoroutine = null;
+        }
+        isTyping = false;
+
+        //CG 초기화
+        cgManager.HideAll();
+        bgManager.HideBG();
+        audioManager.StopBGM();
+    }
 
     //속성이 없거나 비어있는 경우엔 빈 문자열 반환하는 함수
     private string GetAttr(XmlNode node, string key)
@@ -238,12 +244,15 @@ public class DialogLine
 public class ScriptNode
 {
     //노드를 타입별로 구분
-    public enum NodeType {Line, BGM, SE}
+    public enum NodeType {Line, BGM, SE, Transition, BG}
 
     public NodeType type;
     public DialogLine line;             //type == Line일 때 사용
     public string track;                //tpye = BGM/SE일 때 사용
     public float volume;
+    public string transition_effect;
+    public string transition_se;
+    public string bg;
 
     //대사 노드 생성자
     public ScriptNode(DialogLine line)
@@ -253,10 +262,23 @@ public class ScriptNode
     }
 
     //BGM / SE 노드 생성자
-    public ScriptNode(NodeType type, string track, float volume = 1.0f)
+    public ScriptNode(NodeType type, string track, float volume)
     {
         this.type = type;
         this.track = track;
         this.volume = volume;
+    }
+
+    public ScriptNode(string transition_effect, string transition_se)
+    {
+        this.type = NodeType.Transition;
+        this.transition_effect = transition_effect;
+        this.transition_se = transition_se;
+    }
+
+    public ScriptNode(NodeType type, string key)
+    {
+        this.type = type;
+        this.bg = key;
     }
 }
