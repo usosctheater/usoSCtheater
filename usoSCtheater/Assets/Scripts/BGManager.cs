@@ -5,6 +5,10 @@ public class BGManager : MonoBehaviour
     [Header("UI 연결")]
     [SerializeField] private UnityEngine.UI.Image bgImage;
 
+    [Header("Flashback 설정")]
+    [SerializeField] private Image flashbackOverlay;
+    [SerializeField] [Range(0f, 1f)] private float flashbackAlpha = 0.3f;
+
     [Header("리소스 경로")]
     [SerializeField] private string bgPath = "BG";
 
@@ -31,5 +35,25 @@ public class BGManager : MonoBehaviour
     public void HideBG()
     {
         bgImage.gameObject.SetActive(false);
+    }
+
+    public void SetFlashback()
+    {
+        if (flashbackOverlay == null)
+        {
+            Debug.LogWarning("[BGManager] flashbackOverlay가 연결되지 않았습니다.");
+            return;
+        }
+
+        Color color = flashbackOverlay.color;
+        color.a = flashbackAlpha;
+        flashbackOverlay.color = color;
+        flashbackOverlay.gameObject.SetActive(true);
+    }
+
+    public void HideFlashback()
+    {
+        if (flashbackOverlay == null) return;
+        flashbackOverlay.gameObject.SetActive(false);
     }
 }

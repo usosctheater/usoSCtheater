@@ -81,7 +81,7 @@ public class DialogManager : MonoBehaviour
                     break;
 
                 case "BG":
-                    scriptNodes.Add(new ScriptNode(ScriptNode.NodeType.BG, GetAttr(node, "Key")));
+                    scriptNodes.Add(new ScriptNode(ScriptNode.NodeType.BG, GetAttr(node, "Key"), GetAttr(node, "Effect")));
                     break;
 
                 default:
@@ -145,6 +145,9 @@ public class DialogManager : MonoBehaviour
 
                 case ScriptNode.NodeType.BG:
                     bgManager.SetBG(node.bg);
+
+                    //만약 회상 이펙트가 부여되어 있으면 적용
+                    if (node.bgEffect.ToLower() == "flashback") bgManager.SetFlashback();
                     continue;
 
                 case ScriptNode.NodeType.Transition:
@@ -182,6 +185,7 @@ public class DialogManager : MonoBehaviour
         //CG 초기화
         cgManager.HideAll();
         bgManager.HideBG();
+        bgManager.HideFlashback();
         audioManager.StopBGM();
     }
 
@@ -253,6 +257,7 @@ public class ScriptNode
     public string transition_effect;
     public string transition_se;
     public string bg;
+    public string bgEffect;
 
     //대사 노드 생성자
     public ScriptNode(DialogLine line)
@@ -269,16 +274,19 @@ public class ScriptNode
         this.volume = volume;
     }
 
-    public ScriptNode(string transition_effect, string transition_se)
+    //Transition 노드 생성자
+    public ScriptNode(string effect, string se)
     {
         this.type = NodeType.Transition;
-        this.transition_effect = transition_effect;
-        this.transition_se = transition_se;
+        this.transition_effect = effect;
+        this.transition_se = se;
     }
 
-    public ScriptNode(NodeType type, string key)
+    //BG 노드 생성자
+    public ScriptNode(NodeType type, string bgKey, string bgEffect = "")
     {
         this.type = type;
-        this.bg = key;
+        this.bg = bgKey;
+        this.bgEffect = bgEffect;
     }
 }
