@@ -9,6 +9,9 @@ using UnityEngine.UI;
 
 public class EffectManager : MonoBehaviour
 {
+    [Header("매니저 연결")]
+    [SerializeField] private AudioManager audioManager;
+
     [Header("UI 연결")]
     [SerializeField] private UnityEngine.UI.Image overlayImage;
     [SerializeField] private UnityEngine.UI.Image wipeImage;
@@ -43,7 +46,7 @@ public class EffectManager : MonoBehaviour
         irisImage.material = irisMaterial;
     }
 
-    public void PlayTransition(string effect, Action onComplete)
+    public void PlayTransition(string effect, string se, Action onComplete)
     {
         
         switch (effect.ToLower())
@@ -57,11 +60,11 @@ public class EffectManager : MonoBehaviour
             break;
 
             case "wipe_left":
-                StartCoroutine(WipeCoroutine(UnityEngine.Vector2.right, wipeDuration, onComplete));
+                StartCoroutine(WipeCoroutine(se, onComplete));
             break;
 
             case "iris":
-                StartCoroutine(IrisCoroutine(onComplete));
+                StartCoroutine(IrisCoroutine(se, onComplete));
             break;
 
             default:
@@ -113,24 +116,26 @@ public class EffectManager : MonoBehaviour
         overlayImage.gameObject.SetActive(false);
     }
 
-    private IEnumerator WipeCoroutine(UnityEngine.Vector2 direction, float duration, Action onComplete)
+    private IEnumerator WipeCoroutine(string se, Action onComplete)
     {
+        if (!string.IsNullOrEmpty(se)) audioManager.PlaySE(se);
+
         wipeImage.gameObject.SetActive(true);
 
         RectTransform rect = wipeImage.GetComponent<RectTransform>();
         UnityEngine.Vector2 screenSize = new UnityEngine.Vector2(Screen.width, Screen.height);
 
-        UnityEngine.Vector2 startPos = -direction * screenSize;
-        UnityEngine.Vector2 endPos = direction * screenSize;
+        UnityEngine.Vector2 startPos = -UnityEngine.Vector2.right * screenSize;
+        UnityEngine.Vector2 endPos = UnityEngine.Vector2.right * screenSize;
 
         rect.anchoredPosition = startPos;
 
         float elapsed = 0f;
 
-        while (elapsed < duration)
+        while (elapsed < wipeDuration)
         {
             elapsed += Time.deltaTime;
-            rect.anchoredPosition = UnityEngine.Vector2.Lerp(startPos, endPos, elapsed / duration);
+            rect.anchoredPosition = UnityEngine.Vector2.Lerp(startPos, endPos, elapsed / wipeDuration);
             yield return null;
         }
 
@@ -140,8 +145,11 @@ public class EffectManager : MonoBehaviour
         onComplete?.Invoke();
     }
 
-    private IEnumerator IrisCoroutine(Action onComplete)
+    private IEnumerator IrisCoroutine(string se, Action onComplete)
     {
+        if (!string.IsNullOrEmpty(se)) audioManager.PlaySE(se);
+        else Debug.Log("[EffectManager] SE is null");
+
         irisImage.gameObject.SetActive(true);
 
         //Iris Out > 구멍이 작아지며 화면을 덮음 (CutOff : 1 > 0)

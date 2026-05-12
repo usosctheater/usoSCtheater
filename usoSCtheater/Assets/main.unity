@@ -471,6 +471,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: aafa8a8aadc0cc340a9627defb9cedf0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EffectManager
+  audioManager: {fileID: 1400404542}
   overlayImage: {fileID: 1821218098}
   wipeImage: {fileID: 1183749839}
   fadeDuration: 1.5
@@ -526,7 +527,7 @@ MonoBehaviour:
     m_PostInfinity: 2
     m_RotationOrder: 4
   irisImage: {fileID: 1859838219}
-  irisOutDuration: 2
+  irisOutDuration: 1
   irisInDuration: 1
   irisOutCurve:
     serializedVersion: 2

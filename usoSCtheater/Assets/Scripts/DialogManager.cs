@@ -77,7 +77,7 @@ public class DialogManager : MonoBehaviour
                     break;
 
                 case "TRANSITION":
-                    scriptNodes.Add(new ScriptNode(GetAttr(node, "Effect"), GetAttr(node, "SE")));
+                    scriptNodes.Add(new ScriptNode(GetAttr(node, "Effect"), GetAttr(node, "Se")));
                     break;
 
                 case "BG":
@@ -151,9 +151,12 @@ public class DialogManager : MonoBehaviour
                     continue;
 
                 case ScriptNode.NodeType.Transition:
-                    if (!string.IsNullOrEmpty(node.transition_se)) audioManager.PlaySE(node.transition_se);
+                    isTransition = true;
 
-                    effectManager.PlayTransition(node.transition_effect, ()=> ProcessNext());
+                    effectManager.PlayTransition(node.transition_effect, node.transition_se, ()=> {
+                        isTransition = false;
+                        ProcessNext();
+                        });
                     return;
 
                 case ScriptNode.NodeType.Line:
