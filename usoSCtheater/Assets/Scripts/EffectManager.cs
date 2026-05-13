@@ -17,7 +17,7 @@ public class EffectManager : MonoBehaviour
     [SerializeField] private UnityEngine.UI.Image wipeImage;
 
     [Header("트랜지션 설정")]
-    [SerializeField] private float fadeDuration = 0.5f;
+    [SerializeField] private float transitionHoldDuration = 0.3f;
     [SerializeField] private float wipeDuration = 0.5f;
 
     [Header("Fade 설정")]
@@ -26,10 +26,13 @@ public class EffectManager : MonoBehaviour
     [SerializeField] private AnimationCurve fadeOutCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
     [SerializeField] private AnimationCurve fadeInCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
 
-    [Header("Iris 설정")]
-    [SerializeField] private UnityEngine.UI.Image irisImage;
+    [Header("Iris Simple 설정")]
+    [SerializeField] private UnityEngine.UI.Image irisImage;                                            //패널 이미지
+    [SerializeField] private UnityEngine.UI.Image irisIcon;                                             //유닛 아이콘
     [SerializeField] private float irisOutDuration = 1.0f;
     [SerializeField] private float irisInDuration = 1.0f;
+    [SerializeField] private float irisMinScale = 1.0f;
+    [SerializeField] private float irisMaxScale = 13.0f;
 
     [SerializeField] private AnimationCurve irisOutCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
     [SerializeField] private AnimationCurve irisInCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
@@ -40,10 +43,7 @@ public class EffectManager : MonoBehaviour
         overlayImage.gameObject.SetActive(false);
         wipeImage.gameObject.SetActive(false);
         irisImage.gameObject.SetActive(false);
-
-        //Material 인스턴스 복사 - 원본 수정 방지
-        irisMaterial = new Material(irisImage.material);
-        irisImage.material = irisMaterial;
+        irisIcon.gameObject.SetActive(false);
     }
 
     public void PlayTransition(string effect, string se, Action onComplete)
@@ -150,48 +150,51 @@ public class EffectManager : MonoBehaviour
         if (!string.IsNullOrEmpty(se)) audioManager.PlaySE(se);
         else Debug.Log("[EffectManager] SE is null");
 
+        irisIcon.gameObject.SetActive(true);        
+
         irisImage.gameObject.SetActive(true);
+        RectTransform rect = irisImage.GetComponent<RectTransform>();
 
         //Iris Out > 구멍이 작아지며 화면을 덮음 (CutOff : 1 > 0)
         float elapsed = 0f;
         while (elapsed < irisOutDuration)
         {
             elapsed += Time.deltaTime;
-            float t = irisOutCurve.Evaluate(elapsed / irisOutDuration);
-            
-            float scale = Mathf.Lerp(2.0f, 0.1f, t);
-            irisMaterial.SetFloat("_Scale", scale);
 
-            float cutoff = Mathf.Lerp(1.0f, 0.5f, t);
-            irisMaterial.SetFloat("_Cutoff", cutoff);
+            float t = irisOutCurve.Evaluate(elapsed / irisOutDuration);
+            float scale = Mathf.Lerp(irisMaxScale, irisMinScale, t);
+
+            rect.localScale = new UnityEngine.Vector3(scale, scale, 1f);
+            
             yield return null;
         }
 
-        irisMaterial.SetFloat("_Scale", 0.1f);
-        irisMaterial.SetFloat("_Cutoff", 0.5f);
+        rect.localScale = new UnityEngine.Vector3(irisMinScale, irisMinScale, 1f);
 
         //화면이 완전히 덮인 순간 콜백 호출
         onComplete?.Invoke();
+
+        //일정 시간 대기
+        yield return new WaitForSeconds(transitionHoldDuration);
 
         //Iris In > 구멍이 커지며 화면이 드러남 (CutOFf : 0 > 1)
         elapsed = 0f;
         while (elapsed < irisInDuration)
         {
             elapsed += Time.deltaTime;
-            float t = irisInCurve.Evaluate(elapsed / irisInDuration);
-            
-            float scale = Mathf.Lerp(0.1f, 2.0f, t);
-            irisMaterial.SetFloat("_Scale", scale);
 
-            float cutoff = Mathf.Lerp(0.5f, 1.0f, t);
-            irisMaterial.SetFloat("_Cutoff", cutoff);
+            float t = irisInCurve.Evaluate(elapsed / irisInDuration);
+            float scale = Mathf.Lerp(irisMinScale, irisMaxScale, t);
+
+            rect.localScale = new UnityEngine.Vector3(scale, scale, 1f);
+
             yield return null;
         }
 
-        irisMaterial.SetFloat("_Scale", 2.0f);
-        irisMaterial.SetFloat("_Cutoff", 1.0f);
+        rect.localScale = new UnityEngine.Vector3(irisMaxScale, irisMaxScale, 1f);
 
         irisImage.gameObject.SetActive(false);
+        irisIcon.gameObject.SetActive(false);
     }
 
 }

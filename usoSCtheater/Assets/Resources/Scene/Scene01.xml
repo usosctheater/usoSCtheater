@@ -20,5 +20,5 @@
 	<Line Type="TEXT" Name="아사히" CG="asahi_idol_2" Position="right" Animation="why" Voice="s001003" Text="저임다. 그새 까먹었슴까?"/>
 	<Line Type="SE" Track="door_sime"/>
 	<Line Type="TEXT" Name="후유코" CG="huyuko_normal_9" Position="left" Animation="anger1" Voice="s001004" Text="하? 예의상 대답한 거잖아, 예의상!"/>
-	<Line Type="TRANSITION" Effect="wipe_left"/>
+	<Line Type="TRANSITION" Effect="wipe_left" Se="trans_in"/>
 </Scene>
