@@ -28,7 +28,6 @@ public class DialogManager : MonoBehaviour
     private int currentIndex = 0;
     private Coroutine typingCoroutine;                          //타이핑 효과용 코루틴
     private bool isTyping = false;
-    private bool isTransition = false;
     
     void Update()
     {
@@ -81,7 +80,7 @@ public class DialogManager : MonoBehaviour
                     break;
 
                 case "BG":
-                    scriptNodes.Add(new ScriptNode(ScriptNode.NodeType.BG, GetAttr(node, "Key"), GetAttr(node, "Effect")));
+                    scriptNodes.Add(new ScriptNode(ScriptNode.NodeType.BG, GetAttr(node, "Key"), GetAttr(node, "Effect"), GetAttr(node, "Position"), float.TryParse(GetAttr(node, "Value"), out float bgVal) ? bgVal : 1.0f));
                     break;
 
                 default:
@@ -146,17 +145,13 @@ public class DialogManager : MonoBehaviour
                 case ScriptNode.NodeType.BG:
                     bgManager.SetBG(node.bg);
 
-                    //만약 회상 이펙트가 부여되어 있으면 적용
+                    //만약 이펙트가 부여되어 있으면 적용
                     if (node.bgEffect.ToLower() == "flashback") bgManager.SetFlashback();
+                    else if (node.bgEffect.ToLower() == "zoom") bgManager.setZoom(node.zoomPos, node.zoomValue);
                     continue;
 
                 case ScriptNode.NodeType.Transition:
-                    isTransition = true;
-
-                    effectManager.PlayTransition(node.transition_effect, node.transition_se, ()=> {
-                        isTransition = false;
-                        ProcessNext();
-                        });
+                    effectManager.PlayTransition(node.transition_effect, node.transition_se, ()=> ProcessNext());
                     return;
 
                 case ScriptNode.NodeType.Line:
@@ -189,6 +184,7 @@ public class DialogManager : MonoBehaviour
         cgManager.HideAll();
         bgManager.HideBG();
         bgManager.HideFlashback();
+        bgManager.hideZoom();
         audioManager.StopBGM();
     }
 
@@ -261,6 +257,8 @@ public class ScriptNode
     public string transition_se;
     public string bg;
     public string bgEffect;
+    public string zoomPos;
+    public float zoomValue;
 
     //대사 노드 생성자
     public ScriptNode(DialogLine line)
@@ -286,10 +284,12 @@ public class ScriptNode
     }
 
     //BG 노드 생성자
-    public ScriptNode(NodeType type, string bgKey, string bgEffect = "")
+    public ScriptNode(NodeType type, string bgKey, string bgEffect = "", string zoomPos = "5", float zoomValue = 1.0f)
     {
         this.type = type;
         this.bg = bgKey;
         this.bgEffect = bgEffect;
+        this.zoomPos = zoomPos;
+        this.zoomValue = zoomValue;
     }
 }

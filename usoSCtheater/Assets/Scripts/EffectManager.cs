@@ -17,17 +17,14 @@ public class EffectManager : MonoBehaviour
 
     [Header("트랜지션 설정")]
     [SerializeField] private float transitionHoldDuration = 0.5f;
-    [SerializeField] private float wipeDuration = 0.5f;
 
     [Header("Wipe Left 설정")]
-    [SerializeField] private UnityEngine.UI.Image transitionBG;                 //BG 이미지
     [SerializeField] private RectTransform wipeBarRect;                         //WipeBar 이동용 Rect
     [SerializeField] private RectTransform wipeMaskRect;                        //TransitionMask 조절용 Rect
     [SerializeField] private RectTransform wipeTransitionScene;                 //트랜지션 씬 전체 컨트롤용
     [SerializeField] private RectTransform gearRect;                            //Gear 회전용 Rect
-    [SerializeField] private float wipeBarDuration = 1f;                        //WipeBar 이동 시간
+    [SerializeField] private float wipeBarDuration = 3f;                        //WipeBar 이동 시간
     [SerializeField] private float gearRotateSpeed = 45f;                       //Gear 회전 속도
-    [SerializeField] private float wipeHoldDuration = 1.0f;                     //트랜지션 씬 유지 시간
     [SerializeField] private AnimationCurve wipeBarCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
 
     private bool _onCompleteInvoked = false;
@@ -138,7 +135,12 @@ public class EffectManager : MonoBehaviour
 
     private IEnumerator WipeCoroutine(string se, Action onComplete)
     {
-        if (!string.IsNullOrEmpty(se)) audioManager.PlaySE(se);
+        // | 구분자 있을 경우, se를 out과 in으로 분리해서 사용
+        string[] seParts = se.Split('|');
+        string se_out = seParts.Length > 0 ? seParts[0].Trim() : "";
+        string se_in = seParts.Length > 1 ? seParts[1].Trim() : "";
+
+        if (!string.IsNullOrEmpty(se_out)) audioManager.PlaySE(se_out);
 
         float screenW = Screen.width;
 
@@ -159,7 +161,7 @@ public class EffectManager : MonoBehaviour
         float wipeBarOffset = wipeMaskWidth * 0.4f;
         wipeBarRect.anchoredPosition = new UnityEngine.Vector2(startX + wipeBarOffset, 0f);        //WipeBar 시작 위치는 평행사변형의 오른쪽
 
-        //1단계(기존 씬 > 트랜지션 씬) - WipeBar/WipeMask 이동, Gear 회전
+        //WipeBar/WipeMask 이동, Gear 회전
         float elapsed = 0f;
         while (elapsed < wipeBarDuration)
         {
@@ -186,16 +188,20 @@ public class EffectManager : MonoBehaviour
             {
                 onComplete?.Invoke();
                 _onCompleteInvoked = true;
+
+                //반복문 분리하기 싫어서 위험하지만 그냥 배치
+                if (!string.IsNullOrEmpty(se_in)) audioManager.PlaySE(se_in);
             }
 
             yield return null;
         }
-
+        
         _onCompleteInvoked = false;
 
         //전부 비활성화
         wipeBarRect.gameObject.SetActive(false);
         wipeMaskRect.gameObject.SetActive(false);
+        wipeTransitionScene.gameObject.SetActive(false);
 
     }
 
@@ -257,7 +263,6 @@ public class EffectManager : MonoBehaviour
 
         irisImage.gameObject.SetActive(false);
         irisIcon.gameObject.SetActive(false);
-        wipeTransitionScene.gameObject.SetActive(false);
     }
 
 }
