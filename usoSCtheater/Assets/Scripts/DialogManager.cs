@@ -28,11 +28,13 @@ public class DialogManager : MonoBehaviour
     private int currentIndex = 0;
     private Coroutine typingCoroutine;                          //타이핑 효과용 코루틴
     private bool isTyping = false;
+    private bool isTransition = false;
     
     void Update()
     {
         if (Input.GetMouseButtonDown(0))
         {   
+            if (isTransition) return;
             if (isTyping) SkipTyping();
                 else ProcessNext();
         }
@@ -151,7 +153,12 @@ public class DialogManager : MonoBehaviour
                     continue;
 
                 case ScriptNode.NodeType.Transition:
-                    effectManager.PlayTransition(node.transition_effect, node.transition_se, ()=> ProcessNext());
+                    isTransition = true;
+                    effectManager.PlayTransition(node.transition_effect, node.transition_se, ()=> {
+                        ClearScene();
+                        isTransition = false;
+                        ProcessNext();
+                        });
                     return;
 
                 case ScriptNode.NodeType.Line:

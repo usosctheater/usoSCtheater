@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using Spine.Unity;
+using System.Linq;
 
 public class CGManager : MonoBehaviour
 {
@@ -75,8 +76,7 @@ public class CGManager : MonoBehaviour
 
     public void HideAll()
     {
-        foreach (var obj in spineDict.Values)
-            obj.SetActive(false);
+        foreach (var obj in spineDict.Values) obj.SetActive(false);
     }
 
     private void ApplyPosition(GameObject spineObj, string position)
@@ -107,6 +107,28 @@ public class CGManager : MonoBehaviour
             return;
         }
 
-        skAnim.AnimationState.SetAnimation(0, animName, false);
+        //공백과 쉼표를 구분자로 분리
+        string[] animations = animName.Split(new char[] { ' ', ','}, System.StringSplitOptions.RemoveEmptyEntries);
+
+        //모든 트랙 초기화
+        skAnim.AnimationState.ClearTracks();
+        skAnim.skeleton.SetToSetupPose();
+
+        foreach (string anim in animations)
+        {
+            string trimmed = anim.Trim();
+            int track = GetTrackIndex(trimmed);
+            skAnim.AnimationState.SetAnimation(track, trimmed, true);
+        }
+    }
+
+    private int GetTrackIndex(string animName)
+    {
+        string lower = animName.ToLower();
+
+        if (lower.StartsWith("face_")) return 1;
+        if (lower.StartsWith("lip_")) return 2;
+        if (lower.StartsWith("arm_")) return 3;
+        return 0;
     }
 }

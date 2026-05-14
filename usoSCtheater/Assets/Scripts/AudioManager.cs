@@ -71,6 +71,8 @@ public class AudioManager : MonoBehaviour
 
     public void StopBGM()
     {
+        if (bgmSource == null) return;
+        
         bgmSource.Stop();
     }
 
