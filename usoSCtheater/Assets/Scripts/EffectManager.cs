@@ -22,13 +22,16 @@ public class EffectManager : MonoBehaviour
     [Header("Wipe Left 설정")]
     [SerializeField] private UnityEngine.UI.Image transitionBG;                 //BG 이미지
     [SerializeField] private RectTransform wipeBarRect;                         //WipeBar 이동용 Rect
-    [SerializeField] private RectTransform wipeTransitionMask;                  //TransitionMask 조절용 Rect
+    [SerializeField] private RectTransform wipeMaskRect;                        //TransitionMask 조절용 Rect
     [SerializeField] private RectTransform wipeTransitionScene;                 //트랜지션 씬 전체 컨트롤용
     [SerializeField] private RectTransform gearRect;                            //Gear 회전용 Rect
     [SerializeField] private float wipeBarDuration = 1f;                        //WipeBar 이동 시간
     [SerializeField] private float gearRotateSpeed = 45f;                       //Gear 회전 속도
     [SerializeField] private float wipeHoldDuration = 1.0f;                     //트랜지션 씬 유지 시간
     [SerializeField] private AnimationCurve wipeBarCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
+
+    private bool _onCompleteInvoked = false;
+    float wipeMaskWidth = 2560f;
 
 
     [Header("Fade 설정")]
@@ -58,7 +61,7 @@ public class EffectManager : MonoBehaviour
         irisIcon.gameObject.SetActive(false);
 
         //Wipe 트랜지션 세팅
-        wipeTransitionMask.gameObject.SetActive(false);
+        wipeMaskRect.gameObject.SetActive(false);
         wipeTransitionScene.gameObject.SetActive(false);
         wipeBarRect.gameObject.SetActive(false);
     }
@@ -138,93 +141,62 @@ public class EffectManager : MonoBehaviour
         if (!string.IsNullOrEmpty(se)) audioManager.PlaySE(se);
 
         float screenW = Screen.width;
-        float screenH = Screen.height;
 
-        //Mask 초기화 - 너비 0에서 시작
-        wipeTransitionMask.gameObject.SetActive(true);
+        //Mask 너비가 2560이므로 평행사변형 양 끝이 화면 밖까지 가게        
+        float startX = -(screenW * 0.5f + wipeMaskWidth * 0.5f);                    //화면 왼쪽 밖
+        float endX = screenW * 0.5f + wipeMaskWidth * 0.5f;                         //화면 오른쪽 밖
+
+        wipeMaskRect.gameObject.SetActive(true);
         wipeBarRect.gameObject.SetActive(true);
         wipeTransitionScene.gameObject.SetActive(true);
+        wipeBarRect.localRotation = UnityEngine.Quaternion.identity;
 
-        wipeTransitionMask.sizeDelta = new UnityEngine.Vector2(0f, screenH);
+        //시작 위치 세팅
+        wipeMaskRect.anchoredPosition = new UnityEngine.Vector2(startX, 0f);
+        wipeTransitionScene.anchoredPosition = new UnityEngine.Vector2(-startX, 0f);
 
-        //WipeBar 시작 위치 - 화면 왼쪽 밖
-        UnityEngine.Vector2 wipeStartPos = new UnityEngine.Vector2(-screenW * 0.5f, 0f);
-        UnityEngine.Vector2 wipeEndPos = new UnityEngine.Vector2(screenW * 0.5f, 0f);
-        wipeBarRect.anchoredPosition = wipeStartPos;
+        //WipeBar와 평행사변형 사이의 Padding값
+        float wipeBarOffset = wipeMaskWidth * 0.4f;
+        wipeBarRect.anchoredPosition = new UnityEngine.Vector2(startX + wipeBarOffset, 0f);        //WipeBar 시작 위치는 평행사변형의 오른쪽
 
-        //1단계(기존 씬 > 트랜지션 씬) - WipeBar 이동, Mask 너비 확장, Gear 회전
+        //1단계(기존 씬 > 트랜지션 씬) - WipeBar/WipeMask 이동, Gear 회전
         float elapsed = 0f;
         while (elapsed < wipeBarDuration)
         {
             elapsed += Time.deltaTime;
             float t = wipeBarCurve.Evaluate(elapsed / wipeBarDuration);
+            float posX = Mathf.Lerp(startX, endX, t);
 
-            //WipeBar 이동
-            float wipeX = Mathf.Lerp(-screenW * 0.5f, screenW * 0.5f, t);
-            wipeBarRect.anchoredPosition = new UnityEngine.Vector2(wipeX, 0f);
+            //WipeMask 이동
+            wipeMaskRect.anchoredPosition = new UnityEngine.Vector2(posX, 0f);
 
-            //WipeBar의 x값 기준으로 Mask 너비 변경
-            float maskWidth = wipeX + screenW * 0.5f;
-            wipeTransitionMask.sizeDelta = new UnityEngine.Vector2(maskWidth, screenH);
+            //TransitionScene 역방향 이동 (중앙 고정처럼 보이게)
+            wipeTransitionScene.anchoredPosition = new UnityEngine.Vector2(-posX, 0f);
 
+            //WipeBar는 Offset 유지하면서 이동
+            float wipeBarX = posX + wipeBarOffset;
+            if (wipeBarX > screenW * 0.5f) wipeBarX = posX  - wipeBarOffset;
+            
+            wipeBarRect.anchoredPosition = new UnityEngine.Vector2(wipeBarX, 0f);
             //Gear 회전
             gearRect.Rotate(0f, 0f, -gearRotateSpeed * Time.deltaTime);
             
+            //Mask가 화면 중앙 근처일 때 콜백 호출
+            if (!_onCompleteInvoked && posX >= 0f)
+            {
+                onComplete?.Invoke();
+                _onCompleteInvoked = true;
+            }
+
             yield return null;
         }
 
-        // wipeBarRect.anchoredPosition = wipeEndPos;
-
-        //Mask 전체 화면으로 확장
-        wipeTransitionMask.sizeDelta = new UnityEngine.Vector2(screenW, screenH);
-        wipeBarRect.gameObject.SetActive(false);
-
-        //2단계 - 콜백 호출 (다음 씬 세팅)
-        onComplete?.Invoke();
-
-        //WipeBar 다시 시작 지점으로 보내기
-        // wipeBarRect.anchoredPosition = wipeStartPos;
-
-        //3단계 - 트랜지션 씬 (Gear 회전)
-        elapsed = 0f;
-        while (elapsed < wipeHoldDuration)
-        {
-            elapsed += Time.deltaTime;
-            gearRect.Rotate(0f, 0f, -gearRotateSpeed * Time.deltaTime);
-            
-            yield return null;
-        }
-
-        //4단계(트랜지션 씬 > 다음 씬) - WipeBar 이동, Mask 너비 축소, Gear 회전
-        
-        elapsed = 0f;
-        while (elapsed < wipeBarDuration)
-        {
-            elapsed += Time.deltaTime;
-            float t = wipeBarCurve.Evaluate(elapsed / wipeBarDuration);
-
-            //WipeBar 이동
-            float wipeX = Mathf.Lerp(-screenW * 0.5f, screenW * 0.5f, t);
-            wipeBarRect.anchoredPosition = new UnityEngine.Vector2(wipeX, 0f);
-
-            //WipeBar의 x값 기준으로 Mask 너비 변경
-            //wipeTransitionScene의 anchoredPos도 같이 오른쪽으로 밀어줘서 Mask 너비가 줄어들어도 항상 오른쪽에 출력되게
-            float maskWidth = screenW - (wipeX + screenW * 0.5f);
-            wipeTransitionMask.sizeDelta = new UnityEngine.Vector2(maskWidth, screenH);
-            wipeTransitionScene.anchoredPosition = new UnityEngine.Vector2(wipeX + screenW * 0.5f, 0f);
-
-            //Gear 회전
-            gearRect.Rotate(0f, 0f, -gearRotateSpeed * Time.deltaTime);
-            
-            yield return null;
-        }
+        _onCompleteInvoked = false;
 
         //전부 비활성화
         wipeBarRect.gameObject.SetActive(false);
-        wipeTransitionMask.gameObject.SetActive(false);
+        wipeMaskRect.gameObject.SetActive(false);
 
-        //Gear 회전값 초기화
-        gearRect.localRotation = UnityEngine.Quaternion.identity;
     }
 
     private IEnumerator IrisCoroutine(string se, Action onComplete)
