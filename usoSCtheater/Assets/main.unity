@@ -231,8 +231,10 @@ MonoBehaviour:
   - key: asahi_idol_2
     spineObject: {fileID: 1268738735}
   screenWidth: 1920
+  basePosY: -100
   scale3: 60
   scale5: 40
+  zoomYOffsetScale: 5
 --- !u!1 &241467249
 GameObject:
   m_ObjectHideFlags: 0
@@ -661,15 +663,12 @@ MonoBehaviour:
   audioManager: {fileID: 1400404542}
   overlayImage: {fileID: 1821218098}
   transitionHoldDuration: 0.5
-  wipeDuration: 1
-  transitionBG: {fileID: 1127497077}
   wipeBarRect: {fileID: 1527195209}
   wipeMaskRect: {fileID: 1345795432}
   wipeTransitionScene: {fileID: 2066871507}
   gearRect: {fileID: 336080967}
   wipeBarDuration: 3
   gearRotateSpeed: 45
-  wipeHoldDuration: 1
   wipeBarCurve:
     serializedVersion: 2
     m_Curve:

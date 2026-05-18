@@ -18,8 +18,10 @@ public class CGManager : MonoBehaviour
 
     [Header("Spine Pos 설정")]
     [SerializeField] private float screenWidth = 1920f;
+    [SerializeField] private float basePosY = -100f;
     [SerializeField] private float scale3 = 60f;           //3분할 기본 스케일
     [SerializeField] private float scale5 = 40f;          //5분할 기본 스케일
+    [SerializeField] private float zoomYOffsetScale = 5f;     //줌인 할 때 Y축 보정계수
 
     //키 > GameObj 빠른 접근용 딕셔너리
     private Dictionary<string, GameObject> spineDict = new Dictionary<string, GameObject>();
@@ -159,6 +161,11 @@ public class CGManager : MonoBehaviour
         {
             //dur 0이면 즉시 적용
             spineObj.transform.localScale = new Vector3(finalScale, finalScale, 1f);
+
+            //Y축 보정값도 적용
+            float currentScale = spineObj.transform.localScale.x;
+            float targetY = basePosY -(finalScale - currentScale) * zoomYOffsetScale;
+            spineObj.transform.localPosition = new Vector3(spineObj.transform.localPosition.x, targetY, 0f);
         }
         else
         {
@@ -171,17 +178,23 @@ public class CGManager : MonoBehaviour
     {
         float elapsed = 0f;
         float currentScale = spineObj.transform.localScale.x;
+        float currentY = spineObj.transform.localPosition.y;
+        float targetY = basePosY -(finalScale - currentScale) * zoomYOffsetScale;
 
         while (elapsed < duration)
         {
             elapsed += Time.deltaTime;
             float t = elapsed / duration;
             float scale = Mathf.Lerp(currentScale, finalScale, t);
+            float posY = Mathf.Lerp(currentY, targetY, t);
+            
             spineObj.transform.localScale = new Vector3(scale, scale, 1f);
+            spineObj.transform.localPosition = new Vector3(spineObj.transform.localPosition.x, posY, 0f);
             yield return null;
         }
 
         spineObj.transform.localScale = new Vector3(finalScale, finalScale, 1f);
+        spineObj.transform.localPosition = new Vector3(spineObj.transform.localPosition.x, targetY, 0f);
         
     }
 
@@ -196,6 +209,7 @@ public class CGManager : MonoBehaviour
         }
 
         spineDict[cgKey].transform.localScale = new Vector3(scale3, scale3, 1f);
+        spineDict[cgKey].transform.localPosition = new Vector3(spineDict[cgKey].transform.localPosition.x, basePosY, 0f);
     }
 
     public void ClearAllZoom()
