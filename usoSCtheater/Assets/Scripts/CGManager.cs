@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using Spine.Unity;
 using System.Linq;
+using System.Collections;
 
 public class CGManager : MonoBehaviour
 {
@@ -17,13 +18,15 @@ public class CGManager : MonoBehaviour
 
     [Header("Spine Pos 설정")]
     [SerializeField] private float screenWidth = 1920f;
-    [SerializeField] private float scale3 = 1.0f;           //3분할 기본 스케일
-    [SerializeField] private float scale5 = 0.75f;          //5분할 기본 스케일
+    [SerializeField] private float scale3 = 60f;           //3분할 기본 스케일
+    [SerializeField] private float scale5 = 40f;          //5분할 기본 스케일
 
     //키 > GameObj 빠른 접근용 딕셔너리
     private Dictionary<string, GameObject> spineDict = new Dictionary<string, GameObject>();
     //포지션 문자열 > X 좌표 (ScreenWidth 기준 비율)
     private Dictionary<string, float> positionDict = new Dictionary<string, float>();
+
+    private Dictionary<string, Coroutine> zoomDict = new Dictionary<string, Coroutine>();
 
     void Awake()
     {
@@ -131,4 +134,73 @@ public class CGManager : MonoBehaviour
         if (lower.StartsWith("arm_")) return 3;
         return 0;
     }
+
+    public void SetZoom(string cgKey, string position, float targetScale, float duration)
+    {
+        if (!spineDict.ContainsKey(cgKey))
+        {
+            Debug.LogWarning($"[CGManager] 등록되지 않은 CG 키: {cgKey}");
+            return;
+        }
+
+        GameObject spineObj = spineDict[cgKey];
+
+        float baseScale = position.StartsWith("wide_") ? scale5 : scale3;
+        float finalScale = baseScale * targetScale;
+
+        //새로운 줌 세팅 시, 기존 줌 코루틴 실행중이면 강제 중단
+        if (zoomDict.ContainsKey(cgKey) && zoomDict[cgKey] != null)
+        {
+            StopCoroutine(zoomDict[cgKey]);
+            zoomDict[cgKey] = null;
+        }
+
+        if (duration <= 0f)
+        {
+            //dur 0이면 즉시 적용
+            spineObj.transform.localScale = new Vector3(finalScale, finalScale, 1f);
+        }
+        else
+        {
+            //아니면 코루틴
+            zoomDict[cgKey] = StartCoroutine(ZoomCoroutine(spineObj, finalScale, duration));
+        }
+    }
+
+    private IEnumerator ZoomCoroutine(GameObject spineObj, float finalScale, float duration)
+    {
+        float elapsed = 0f;
+        float currentScale = spineObj.transform.localScale.x;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = elapsed / duration;
+            float scale = Mathf.Lerp(currentScale, finalScale, t);
+            spineObj.transform.localScale = new Vector3(scale, scale, 1f);
+            yield return null;
+        }
+
+        spineObj.transform.localScale = new Vector3(finalScale, finalScale, 1f);
+        
+    }
+
+    public void ClearZoom(string cgKey)
+    {
+        if (!spineDict.ContainsKey(cgKey)) return;
+
+        if (zoomDict.ContainsKey(cgKey) && zoomDict[cgKey] != null)
+        {
+            StopCoroutine(zoomDict[cgKey]);
+            zoomDict[cgKey] = null;
+        }
+
+        spineDict[cgKey].transform.localScale = new Vector3(scale3, scale3, 1f);
+    }
+
+    public void ClearAllZoom()
+    {
+        foreach (var key in spineDict.Keys) ClearZoom(key);
+    }
+
 }

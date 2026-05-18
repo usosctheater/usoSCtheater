@@ -5,6 +5,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using NUnit.Framework;
+using Unity.GraphToolkit.Editor;
 
 public class DialogManager : MonoBehaviour
 {
@@ -65,6 +66,9 @@ public class DialogManager : MonoBehaviour
                     line.cgPos = GetAttr(node, "Position");
                     line.animation = GetAttr(node, "Animation");
                     line.voiceKey = GetAttr(node, "Voice");
+                    line.effect = GetAttr(node, "Effect").Trim().ToLower();
+                    line.value = float.TryParse(GetAttr(node, "Value"), out float val) ? val : 1.0f;
+                    line.duration = float.TryParse(GetAttr(node, "Duration"), out float dur) ? dur : 0f;
 
                     scriptNodes.Add(new ScriptNode(line));
                     break;
@@ -121,6 +125,10 @@ public class DialogManager : MonoBehaviour
             cgManager.SetCG(line.cgKey, line.cgPos, line.animation);
             //Debug.Log($"[CG] {line.cgKey} / 위치: {line.cgPos}");
         }
+
+        //이펙트 처리
+        // Effect = zoom일 경우
+        if (line.effect == "zoom" && !string.IsNullOrEmpty(line.cgKey)) cgManager.SetZoom(line.cgKey, line.cgPos, line.value, line.duration);
 
         //보이스 재생
         audioManager.PlayVoice(line.voiceKey);
@@ -189,6 +197,7 @@ public class DialogManager : MonoBehaviour
 
         //CG 초기화
         cgManager.HideAll();
+        cgManager.ClearAllZoom();
         bgManager.HideBG();
         bgManager.HideFlashback();
         bgManager.hideZoom();
@@ -249,6 +258,11 @@ public class DialogLine
     public string cgPos;
     public string animation;
     public string voiceKey;
+
+    //이펙트
+    public string effect;
+    public float value;
+    public float duration;
 }
 
 public class ScriptNode
