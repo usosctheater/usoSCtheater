@@ -338,7 +338,7 @@ MonoBehaviour:
   calculateTangents: 0
   logErrors: 0
   disableRenderingOnOverride: 1
-  _animationName: smile1
+  _animationName: smile2
   loop: 1
   timeScale: 1
 --- !u!23 &293520805
