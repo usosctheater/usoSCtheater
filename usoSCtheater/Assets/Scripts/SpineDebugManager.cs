@@ -1,4 +1,7 @@
 using System.Collections.Generic;
+using System.Net.WebSockets;
+using NUnit.Framework;
+using Spine;
 using Spine.Unity;
 using TMPro;
 using UnityEditor.EditorTools;
@@ -32,7 +35,6 @@ public class SpineDebugManager : MonoBehaviour
     private SkeletonAnimation currentSkAnim;
     private bool isPaused = false;
     private bool isSliderDragging = false;
-    private string pendingAnimName = "";                                  //적용 대기 중인 애니메이션 이름
 
     void Start()
     {
@@ -45,7 +47,7 @@ public class SpineDebugManager : MonoBehaviour
 
         //트랙 드롭다운 초기화
         trackSelector.ClearOptions();
-        trackSelector.AddOptions(new List<string> { "트랙 0", "트랙 1", "트랙 2", "트랙 3" });
+        trackSelector.AddOptions(new List<string> { "Track 0", "Track 1", "Track 2", "Track 3" });
 
         //재생 및 일시정지 버튼
         playPauseButton.onClick.AddListener(OnPlayPauseClicked);
@@ -59,21 +61,145 @@ public class SpineDebugManager : MonoBehaviour
 
     void Update()
     {
-        
+        if (currentSkAnim == null) return;
+
+        UpdateTrackInfo();
+        UpdateTimeInfo();
+        UpdateBoneList();
+
+        //슬라이더 드래그 중이 아닐 때만 슬라이더 값 갱신
+        if (!isSliderDragging && !isPaused)
+        {
+            var entry = currentSkAnim.AnimationState.GetCurrent(0);
+            if (entry != null && entry.Animation.Duration > 0f)
+            {
+                //Duration 넘으면 루프
+                float loopedTime = entry.TrackTime % entry.Animation.Duration;
+                timeSlider.SetValueWithoutNotify(loopedTime / entry.Animation.Duration);
+            }
+            
+        }
     }
 
     private void OnSpineSelected(int index)
     {
-        
+        //모든 Spine 비활성화
+        foreach (var obj in spineObjects) obj.SetActive(false);
+
+        currentSpineObj = spineObjects[index];
+        currentSpineObj.SetActive(true);
+        currentSkAnim = currentSpineObj.GetComponent<SkeletonAnimation>();
+
+        isPaused = false;
+        currentSkAnim.timeScale = 1f;
+        playPauseText.text = "일시정지";
+
+        RefreshAnimList();
     }
 
     private void OnPlayPauseClicked()
     {
-        
+        isPaused = !isPaused;
+        currentSkAnim.timeScale = isPaused ? 0f : 1f;
+        playPauseText.text = isPaused ? "재생" : "일시정지";
     }
 
     private void OnSliderChanged(float value)
     {
-        
+        if (!isPaused || currentSkAnim == null) return;
+
+        isSliderDragging = true;
+
+        for (int i = 0; i <= 3; i++)
+        {
+            var entry = currentSkAnim.AnimationState.GetCurrent(i);
+            if (entry != null) entry.trackTime = entry.Animation.Duration * value;
+        }
+
+        isSliderDragging = false;
+    }
+    
+    //애니메이션 리스트 갱신
+    private void RefreshAnimList()
+    {
+        //기존 리스트 제거
+        foreach (Transform child in animListContent) Destroy(child.gameObject);
+
+        if (currentSkAnim == null) return;
+
+        foreach (var anim in currentSkAnim.skeleton.Data.Animations)
+        {
+            GameObject item = Instantiate(animListItemPrefab, animListContent);
+            TextMeshProUGUI label = item.GetComponentInChildren<TextMeshProUGUI>();
+            Button btn = item.GetComponent<Button>();
+
+            string animName = anim.Name;
+            float duration = anim.Duration;
+
+            label.text = $"{animName} ({duration:F2}s)";
+
+            //클릭 시 해당 애니메이션을 선택된 트랙에 적용
+            btn.onClick.AddListener(() => onAnimitemClicked(animName));
+        }
+    }
+
+    //애니메이션 리스트 아이템 클릭 시
+    private void onAnimitemClicked(string animName)
+    {
+        if (currentSkAnim == null) return;
+
+        int track = trackSelector.value;
+        currentSkAnim.AnimationState.SetAnimation(track, animName, track == 0);
+
+        //트랙이 0이 아니면 Complete시 마지막 프레임 고정
+        if (track != 0)
+        {
+            var entry = currentSkAnim.AnimationState.GetCurrent(track);
+            if (entry != null)
+            {
+                entry.Complete += (TrackEntry) =>
+                {
+                    TrackEntry.TimeScale = 0f;
+                };
+            }
+        }
+    }
+
+    private void UpdateTrackInfo()
+    {
+        string info = "";
+        for (int i = 0; i <= 3; i++)
+        {
+            var entry = currentSkAnim.AnimationState.GetCurrent(i);
+            if (entry != null) info += $"[Track {i}]\n{entry.Animation.Name}\n{entry.TrackTime:F2}s / {entry.Animation.Duration:F2}s\n";
+            else info += $"[Track {i} : None ]\n";
+        }
+
+        trackInfoText.text = info;
+    }
+
+    private void UpdateTimeInfo()
+    {
+        var entry = currentSkAnim.AnimationState.GetCurrent(0);
+        if (entry != null)
+            timeInfoText.text = $"[{entry.TrackTime:F2}s / {entry.Animation.Duration:F2}s]";
+        else
+            timeInfoText.text = "[0s / 0s]";
+    }
+
+    private void UpdateBoneList()
+    {
+        foreach (Transform child in boneListContent) Destroy(child.gameObject);
+
+        foreach (var bone in currentSkAnim.Skeleton.Bones)
+        {
+            //기본 포즈에서 변화가 있는 본만 표시
+            if (Mathf.Abs(bone.rotation) > 0.1f || Mathf.Abs(bone.x) > 0.1f || Mathf.Abs(bone.y) > 0.1f)
+            {
+                GameObject item = Instantiate(boneListItemPrefab, boneListContent);
+                TextMeshProUGUI label = item.GetComponentInChildren<TextMeshProUGUI>();
+                label.text = $"{bone.Data.Name} (rot: {bone.Rotation:F1})";
+            }
+        }
     }
 }
