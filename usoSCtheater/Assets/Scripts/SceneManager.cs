@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Xml;
 using UnityEngine;
 
 public class SceneManager : MonoBehaviour
@@ -56,6 +57,16 @@ public class SceneManager : MonoBehaviour
     {
         TextAsset nextFile = sceneFiles[currentSceneIndex];
         Debug.Log($"[SceneManager] 씬 시작: {nextFile.name}");
+        
+        //Title 파싱
+        XmlDocument doc = new XmlDocument();
+        doc.LoadXml(nextFile.text);
+        XmlNode sceneNode = doc.SelectSingleNode("Scene");
+        string title = sceneNode?.Attributes["title"]?.Value ?? "";
+
+        //Title 표시
+        if (!string.IsNullOrEmpty(title)) uiManager.ShowSceneTitle(title);
+        
         dialogManager.LoadScene(nextFile);
     }
 

@@ -1,16 +1,177 @@
+using System.Collections;
+using System.Collections.Generic;
+using NUnit.Framework;
+using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class UIManager : MonoBehaviour
 {
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
+    [Header("씬 타이틀 UI")]
+    [SerializeField] private GameObject sceneTitleUI;
+    [SerializeField] private TextMeshProUGUI sceneTitleText;
+    [SerializeField] private float titleDisplayDuration = 3.0f;
+
+    [Header("설정 UI")]
+    [SerializeField] private Button settingButton;
+    [SerializeField] private Image settingButtonImage;
+    [SerializeField] private Sprite spriteSettingButton;
+    [SerializeField] private Sprite spriteSettingButtonC;
+
+    [SerializeField] private GameObject settingBack;
+    [SerializeField] private RectTransform settingBackRect;
+
+    [SerializeField] private GameObject autoButton;
+    [SerializeField] private Image autoButtonImage;
+    [SerializeField] private Sprite spriteAutoOn;
+    [SerializeField] private Sprite spriteAutoOff;
+
+    [SerializeField] private Button logButton;
+    [SerializeField] private Button hideButton;
+
+    [SerializeField] private float panelAnimDuration = 0.3f;
+    [SerializeField] private float panelMaxHeight = 400f;
+
+    [Header("비표시 UI 리스트")]
+    [SerializeField] private List<GameObject> hideTargets;
+
+    private Coroutine titleCoroutine;
+
+    private bool isPanelOpen = false;
+    private bool isAutoPlay = false;
+    private bool isHidden = false;
+
+    private Coroutine panelCoroutine;
+
     void Start()
+    {
+        //리스너 연결
+        settingButton.onClick.AddListener(OnSettingButtonClicked);
+        logButton.onClick.AddListener(OnLogButtonClicked);
+        hideButton.onClick.AddListener(OnHideButtonClicked);
+
+        //초기 상태 - 패널 닫힘
+        settingBack.SetActive(false);
+        autoButton.SetActive(false);
+        logButton.gameObject.SetActive(false);
+        hideButton.gameObject.SetActive(false);
+
+        settingBackRect.sizeDelta = new Vector2(settingBackRect.sizeDelta.x, 0f);
+    }
+
+    void Update()
+    {
+        //비표시 상태에서 아무 곳이나 클릭 시 UI 표시
+        if (isHidden && Input.GetMouseButtonDown(0)) ToggleHide(false);
+    }
+
+    public void ShowSceneTitle(string title)
+    {
+        if (string.IsNullOrEmpty(title)) return;
+
+        //이미 표시 중이라면 강제 중단 후 재시작wwww
+        if (titleCoroutine != null)
+        {
+            StopCoroutine(titleCoroutine);
+            titleCoroutine = null;
+        }
+
+        titleCoroutine = StartCoroutine(ShowTitleCoroutine(title));
+    }
+
+    private IEnumerator ShowTitleCoroutine(string title)
+    {
+        sceneTitleText.text = title;
+        sceneTitleUI.SetActive(true);
+
+        yield return new WaitForSeconds(titleDisplayDuration);
+
+        sceneTitleUI.SetActive(false);
+        titleCoroutine = null;
+    }
+
+    private void OnSettingButtonClicked()
+    {
+        Debug.Log("[UIManager] SettingButtonClicked");
+        if (isHidden) return;
+
+        if (isPanelOpen) ClosePanel();
+        else OpenPanel();
+    }
+
+    private void OpenPanel()
+    {
+        isPanelOpen = true;
+        settingButtonImage.sprite = spriteSettingButtonC;
+
+        settingBack.SetActive(true);
+        autoButton.SetActive(true);
+        logButton.gameObject.SetActive(true);
+        hideButton.gameObject.SetActive(true);
+
+        if (panelCoroutine != null) StopCoroutine(panelCoroutine);
+        panelCoroutine = StartCoroutine(AnimatePanel(0f, panelMaxHeight));
+    }
+
+    private void ClosePanel()
+    {
+        isPanelOpen = false;
+        settingButtonImage.sprite = spriteSettingButton;
+
+        if (panelCoroutine != null) StopCoroutine(panelCoroutine);
+        panelCoroutine = StartCoroutine(AnimatePanel(settingBackRect.sizeDelta.y, 0f, () =>
+        {
+            settingBack.SetActive(false);
+            autoButton.SetActive(false);
+            logButton.gameObject.SetActive(false);
+            hideButton.gameObject.SetActive(false);
+        }));
+    }
+
+    private IEnumerator AnimatePanel(float from, float to, System.Action onComplete = null)
+    {
+        float elapsed = 0f;
+        Vector2 size = settingBackRect.sizeDelta;
+
+        while(elapsed < panelAnimDuration)
+        {
+            elapsed += Time.deltaTime;
+            float t = elapsed / panelAnimDuration;
+            size.y = Mathf.Lerp(from, to, t);
+            settingBackRect.sizeDelta = size;
+            yield return null;
+        }
+        
+        size.y = to;
+        settingBackRect.sizeDelta = size;
+        onComplete?.Invoke();
+
+    }
+
+    private void OnLogButtonClicked()
     {
         
     }
 
-    // Update is called once per frame
-    void Update()
+    private void OnAutoButtonClicked()
     {
-        
+        isAutoPlay = !isAutoPlay;
+        autoButtonImage.sprite = isAutoPlay ? spriteAutoOn : spriteAutoOff;
+        //기능은 추후 연결
     }
+
+    private void OnHideButtonClicked()
+    {
+        ToggleHide(true);
+    }
+
+    private void ToggleHide(bool hide)
+    {
+        isHidden = hide;
+
+        foreach (var obj in hideTargets) obj.SetActive(!hide);
+
+        if (hide) ClosePanel();
+    }
+
 }

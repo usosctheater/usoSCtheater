@@ -1,6 +1,6 @@
 <?xml version = "1.0" encoding = "UTF-8"?>
 
-<Scene>
+<Scene title="이번화는데모">
 	<Line Type="TRANSITION" Effect="normal"/>
 	<Line Type="BG" Key="bg_temp" Effect="zoom" Position="3" Value="1.5"/>
     <Line Type="BGM" Track="BGM_nanndesyou" Volume="0.5"/>
