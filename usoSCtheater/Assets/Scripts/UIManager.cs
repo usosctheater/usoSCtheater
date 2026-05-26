@@ -21,13 +21,16 @@ public class UIManager : MonoBehaviour
     [SerializeField] private GameObject settingBack;
     [SerializeField] private RectTransform settingBackRect;
 
-    [SerializeField] private GameObject autoButton;
+    [SerializeField] private Button autoButton;
     [SerializeField] private Image autoButtonImage;
     [SerializeField] private Sprite spriteAutoOn;
     [SerializeField] private Sprite spriteAutoOff;
 
     [SerializeField] private Button logButton;
     [SerializeField] private Button hideButton;
+    [SerializeField] private RectTransform autoButtonRect;
+    [SerializeField] private RectTransform logButtonRect;
+    [SerializeField] private RectTransform hideButtonRect;
 
     [SerializeField] private float panelAnimDuration = 0.3f;
     [SerializeField] private float panelMaxHeight = 400f;
@@ -40,6 +43,7 @@ public class UIManager : MonoBehaviour
     private bool isPanelOpen = false;
     private bool isAutoPlay = false;
     private bool isHidden = false;
+    public bool IsHidden => isHidden;
 
     private Coroutine panelCoroutine;
 
@@ -47,12 +51,13 @@ public class UIManager : MonoBehaviour
     {
         //리스너 연결
         settingButton.onClick.AddListener(OnSettingButtonClicked);
+        autoButton.onClick.AddListener(OnAutoButtonClicked);
         logButton.onClick.AddListener(OnLogButtonClicked);
         hideButton.onClick.AddListener(OnHideButtonClicked);
 
         //초기 상태 - 패널 닫힘
         settingBack.SetActive(false);
-        autoButton.SetActive(false);
+        autoButton.gameObject.SetActive(false);
         logButton.gameObject.SetActive(false);
         hideButton.gameObject.SetActive(false);
 
@@ -105,9 +110,6 @@ public class UIManager : MonoBehaviour
         settingButtonImage.sprite = spriteSettingButtonC;
 
         settingBack.SetActive(true);
-        autoButton.SetActive(true);
-        logButton.gameObject.SetActive(true);
-        hideButton.gameObject.SetActive(true);
 
         if (panelCoroutine != null) StopCoroutine(panelCoroutine);
         panelCoroutine = StartCoroutine(AnimatePanel(0f, panelMaxHeight));
@@ -122,9 +124,6 @@ public class UIManager : MonoBehaviour
         panelCoroutine = StartCoroutine(AnimatePanel(settingBackRect.sizeDelta.y, 0f, () =>
         {
             settingBack.SetActive(false);
-            autoButton.SetActive(false);
-            logButton.gameObject.SetActive(false);
-            hideButton.gameObject.SetActive(false);
         }));
     }
 
@@ -133,12 +132,36 @@ public class UIManager : MonoBehaviour
         float elapsed = 0f;
         Vector2 size = settingBackRect.sizeDelta;
 
+        //열릴 때만 버튼 순차 표시
+        bool isOpening = to > from;
+
+        //버튼 Y 위치의 절대값 기준으로 역산
+        float hideThreshold = panelMaxHeight - Mathf.Abs(hideButtonRect.anchoredPosition.y);
+        float logThreshold = panelMaxHeight - Mathf.Abs(logButtonRect.anchoredPosition.y);
+        float autoThreshold = panelMaxHeight - Mathf.Abs(autoButtonRect.anchoredPosition.y);
+
+
         while(elapsed < panelAnimDuration)
         {
             elapsed += Time.deltaTime;
             float t = elapsed / panelAnimDuration;
             size.y = Mathf.Lerp(from, to, t);
             settingBackRect.sizeDelta = size;
+
+            //열릴 때는 아래에서부터, 닫힐 때는 위에서부터
+            if (isOpening)
+            {
+                if (size.y >= hideThreshold) hideButton.gameObject.SetActive(true);
+                if (size.y >= logThreshold) logButton.gameObject.SetActive(true);
+                if (size.y >= autoThreshold) autoButton.gameObject.SetActive(true);
+            }
+            else
+            {
+                if (size.y < hideThreshold) hideButton.gameObject.SetActive(false);
+                if (size.y < logThreshold) logButton.gameObject.SetActive(false);
+                if (size.y < autoThreshold) autoButton.gameObject.SetActive(false);
+            }
+
             yield return null;
         }
         

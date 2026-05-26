@@ -6,6 +6,7 @@ using UnityEngine.UI;
 using TMPro;
 using NUnit.Framework;
 using Unity.GraphToolkit.Editor;
+using UnityEngine.EventSystems;
 
 public class DialogManager : MonoBehaviour
 {
@@ -19,6 +20,7 @@ public class DialogManager : MonoBehaviour
     [SerializeField] private AudioManager audioManager;
     [SerializeField] private SceneManager sceneManager;
     [SerializeField] private EffectManager effectManager;
+    [SerializeField] private UIManager uiManager;
 
     [Header("타이핑 설정")]
     [SerializeField] private float typingSpeed = 0.1f;          //글자 당 딜레이 (s)
@@ -35,7 +37,22 @@ public class DialogManager : MonoBehaviour
     {
         if (Input.GetMouseButtonDown(0))
         {   
+            if (EventSystem.current.IsPointerOverGameObject()) return;
+            
+            // UI 클릭 감지
+            // PointerEventData pointerData = new PointerEventData(EventSystem.current);
+            // pointerData.position = Input.mousePosition;
+
+            // List<RaycastResult> results = new List<RaycastResult>();
+            // EventSystem.current.RaycastAll(pointerData, results);
+
+            // if (results.Count > 0) foreach (var result in results) Debug.Log($"[클릭 감지] 오브젝트 : {result.gameObject.name} / 레이어 : {result.gameObject.layer}");
+            // else Debug.Log("감지된 UI 오브젝트 없음");
+
+            //클릭 예외처리
             if (isTransition) return;
+            if (uiManager.IsHidden) return;
+
             if (isTyping) SkipTyping();
                 else ProcessNext();
         }
