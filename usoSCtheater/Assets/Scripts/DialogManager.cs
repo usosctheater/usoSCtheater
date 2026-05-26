@@ -25,16 +25,25 @@ public class DialogManager : MonoBehaviour
     [Header("타이핑 설정")]
     [SerializeField] private float typingSpeed = 0.1f;          //글자 당 딜레이 (s)
 
+    [Header("자동재생 설정")]
+    [SerializeField] private float autoPlayTextCoeff = 0.05f;   //텍스트 길이 계수
+    [SerializeField] private float autoPlayDelay = 0.3f;
+
     private List<DialogLine> lines = new List<DialogLine>();
     //대사/BGM/SE를 순서대로 담을 노드 리스트
     private List<ScriptNode> scriptNodes = new List<ScriptNode>();
     private int currentIndex = 0;
     private Coroutine typingCoroutine;                          //타이핑 효과용 코루틴
+    private Coroutine autoPlayCoroutine;
     private bool isTyping = false;
     private bool isTransition = false;
+    private bool isAutoPlay = false;
     
     void Update()
     {
+        //핫키 할당
+        if (Input.GetKeyDown(KeyCode.F3)) uiManager.ToggleAutoPlay();
+
         if (Input.GetMouseButtonDown(0))
         {   
             if (EventSystem.current.IsPointerOverGameObject()) return;
@@ -54,7 +63,17 @@ public class DialogManager : MonoBehaviour
             if (uiManager.IsHidden) return;
 
             if (isTyping) SkipTyping();
-                else ProcessNext();
+            else 
+            {
+                //자동재생 대기 중이면 취소 후 즉시 NextLine으로
+                if (autoPlayCoroutine != null)
+                {
+                    StopCoroutine(autoPlayCoroutine);
+                    autoPlayCoroutine = null;
+                }
+
+                ProcessNext();
+            }
         }
     }
 
@@ -149,6 +168,13 @@ public class DialogManager : MonoBehaviour
 
         //보이스 재생
         audioManager.PlayVoice(line.voiceKey);
+
+        //자동재생 코루틴 시작
+        if (isAutoPlay)
+        {
+            if (autoPlayCoroutine != null) StopCoroutine(autoPlayCoroutine);
+            autoPlayCoroutine = StartCoroutine(AutoPlayCoroutine(line));
+        }
     }
 
     //노드 순차 처리하는 함수 (노드 다양화로 Line 이외에도 처리하게 변경)
@@ -253,11 +279,65 @@ public class DialogManager : MonoBehaviour
         {
             StopCoroutine(typingCoroutine);
             typingCoroutine = null;
+        }
+
+        if (autoPlayCoroutine != null)
+        {
+            StopCoroutine(autoPlayCoroutine);
+            autoPlayCoroutine = null;
         }    
 
         DialogLine line = scriptNodes[currentIndex - 1].line;
         dialogText.text = line.text;
         isTyping = false;
+    }
+
+    public void SetAutoPlay(bool value)
+    {
+        isAutoPlay = value;
+
+        //자동재생 꺼지면 대기 코루틴 중단
+        if (!isAutoPlay && autoPlayCoroutine != null)
+        {
+            StopCoroutine(autoPlayCoroutine);
+            autoPlayCoroutine = null;
+        }
+        else
+        {
+            //자동재생 켜지면 현재 라인 즉시 자동재생 시작
+            if (currentIndex > 0 && scriptNodes[currentIndex - 1].type == ScriptNode.NodeType.Line)
+            {
+                if (autoPlayCoroutine != null) StopCoroutine(autoPlayCoroutine);
+                autoPlayCoroutine = StartCoroutine(AutoPlayCoroutine(scriptNodes[currentIndex - 1].line));
+            }
+        }
+    }
+
+    private IEnumerator AutoPlayCoroutine(DialogLine line)
+    {
+        //Voice 길이 계산
+        float voiceDuration = 0f;
+        if (!string.IsNullOrEmpty(line.voiceKey))
+        {
+            AudioClip clip = Resources.Load<AudioClip>($"Audio/Voice/{line.voiceKey}");
+            if (clip != null) voiceDuration = clip.length;
+        }
+
+        //텍스트 타이핑 시간 계산
+        float typingDuration = line.text.Length * typingSpeed;
+
+        //둘 중 더 긴 시간동안 대기
+        float waitDuration = Mathf.Max(voiceDuration, typingDuration);
+        yield return new WaitForSeconds(waitDuration);
+
+        //만약 타이핑이 아직 진행 중이면 완료될 때까지 대기
+        while (isTyping) yield return null;
+
+        //고정 딜레이 적용
+        yield return new WaitForSeconds(autoPlayDelay);
+
+        autoPlayCoroutine = null;
+        ProcessNext();
     }
 
 }

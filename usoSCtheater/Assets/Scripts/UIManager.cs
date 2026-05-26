@@ -7,6 +7,9 @@ using UnityEngine.UI;
 
 public class UIManager : MonoBehaviour
 {
+    [Header("매니저 연결")]
+    [SerializeField] private DialogManager dialogManager;
+
     [Header("씬 타이틀 UI")]
     [SerializeField] private GameObject sceneTitleUI;
     [SerializeField] private TextMeshProUGUI sceneTitleText;
@@ -97,7 +100,7 @@ public class UIManager : MonoBehaviour
 
     private void OnSettingButtonClicked()
     {
-        Debug.Log("[UIManager] SettingButtonClicked");
+        // Debug.Log("[UIManager] SettingButtonClicked");
         if (isHidden) return;
 
         if (isPanelOpen) ClosePanel();
@@ -180,7 +183,8 @@ public class UIManager : MonoBehaviour
     {
         isAutoPlay = !isAutoPlay;
         autoButtonImage.sprite = isAutoPlay ? spriteAutoOn : spriteAutoOff;
-        //기능은 추후 연결
+        
+        dialogManager.SetAutoPlay(isAutoPlay);
     }
 
     private void OnHideButtonClicked()
@@ -195,6 +199,11 @@ public class UIManager : MonoBehaviour
         foreach (var obj in hideTargets) obj.SetActive(!hide);
 
         if (hide) ClosePanel();
+    }
+
+    public void ToggleAutoPlay()
+    {
+        OnAutoButtonClicked();
     }
 
 }

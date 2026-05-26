@@ -1793,6 +1793,7 @@ MonoBehaviour:
   effectManager: {fileID: 502208736}
   uiManager: {fileID: 1589418730}
   typingSpeed: 0.1
+  autoPlayTextCoeff: 0.05
 --- !u!1 &1268738735
 GameObject:
   m_ObjectHideFlags: 0
@@ -2650,6 +2651,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ea0b6a750eb78b44aa0d817f28330057, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UIManager
+  dialogManager: {fileID: 1223084827}
   sceneTitleUI: {fileID: 2027259510}
   sceneTitleText: {fileID: 1740356793}
   titleDisplayDuration: 3
@@ -2659,7 +2661,7 @@ MonoBehaviour:
   spriteSettingButtonC: {fileID: 21300000, guid: be500838ac497204aa81a79ea38de62e, type: 3}
   settingBack: {fileID: 458214794}
   settingBackRect: {fileID: 458214795}
-  autoButton: {fileID: 145419763}
+  autoButton: {fileID: 145419765}
   autoButtonImage: {fileID: 145419766}
   spriteAutoOn: {fileID: 21300000, guid: 11b8d612d9197e1459fd40cb772ab7b3, type: 3}
   spriteAutoOff: {fileID: 21300000, guid: fa728234f6345e24fadb42c94e8a2f16, type: 3}
