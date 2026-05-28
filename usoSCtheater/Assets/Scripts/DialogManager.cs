@@ -61,6 +61,7 @@ public class DialogManager : MonoBehaviour
             //클릭 예외처리
             if (isTransition) return;
             if (uiManager.IsHidden) return;
+            if (uiManager.IsBacklogOpen) return;
 
             if (isTyping) SkipTyping();
             else 
@@ -105,6 +106,7 @@ public class DialogManager : MonoBehaviour
                     line.effect = GetAttr(node, "Effect").Trim().ToLower();
                     line.value = float.TryParse(GetAttr(node, "Value"), out float val) ? val : 1.0f;
                     line.duration = float.TryParse(GetAttr(node, "Duration"), out float dur) ? dur : 0f;
+                    line.speakerType = int.TryParse(GetAttr(node, "SpeakerType"), out int st) ? st : 1;
 
                     scriptNodes.Add(new ScriptNode(line));
                     break;
@@ -266,7 +268,7 @@ public class DialogManager : MonoBehaviour
             //나중에 오디오 매니저 연결 시 여기서 타이핑 사운드 함수 호출
 
             //타이핑 효과 텀 설정 (어색하면 없애도 됨)
-            yield return new WaitForSeconds(typingSpeed);
+            yield return new WaitForSecondsRealtime(typingSpeed);
         }
 
         isTyping = false;
@@ -328,16 +330,21 @@ public class DialogManager : MonoBehaviour
 
         //둘 중 더 긴 시간동안 대기
         float waitDuration = Mathf.Max(voiceDuration, typingDuration);
-        yield return new WaitForSeconds(waitDuration);
+        yield return new WaitForSecondsRealtime(waitDuration);
 
         //만약 타이핑이 아직 진행 중이면 완료될 때까지 대기
         while (isTyping) yield return null;
 
         //고정 딜레이 적용
-        yield return new WaitForSeconds(autoPlayDelay);
+        yield return new WaitForSecondsRealtime(autoPlayDelay);
 
         autoPlayCoroutine = null;
         ProcessNext();
+    }
+
+    public List<ScriptNode> GetReadNodes()
+    {
+        return scriptNodes.GetRange(0, currentIndex);
     }
 
 }
@@ -355,6 +362,7 @@ public class DialogLine
     public string cgPos;
     public string animation;
     public string voiceKey;
+    public int speakerType;             //1: 아이돌 2: 프로듀서 3: 기타
 
     //이펙트
     public string effect;

@@ -9,6 +9,8 @@ public class UIManager : MonoBehaviour
 {
     [Header("매니저 연결")]
     [SerializeField] private DialogManager dialogManager;
+    [SerializeField] private AudioManager audioManager;
+    [SerializeField] private BacklogManager backlogManager;
 
     [Header("씬 타이틀 UI")]
     [SerializeField] private GameObject sceneTitleUI;
@@ -39,7 +41,7 @@ public class UIManager : MonoBehaviour
     [SerializeField] private float panelMaxHeight = 400f;
 
     [Header("비표시 UI 리스트")]
-    [SerializeField] private List<GameObject> hideTargets;
+    [SerializeField] private List<GameObject> hideTargets;    
 
     private Coroutine titleCoroutine;
 
@@ -49,9 +51,12 @@ public class UIManager : MonoBehaviour
     public bool IsHidden => isHidden;
 
     private Coroutine panelCoroutine;
+    public bool IsBacklogOpen => backlogManager.IsOpen;
 
     void Start()
     {
+        backlogManager.Init(dialogManager, audioManager);
+
         //리스너 연결
         settingButton.onClick.AddListener(OnSettingButtonClicked);
         autoButton.onClick.AddListener(OnAutoButtonClicked);
@@ -92,7 +97,7 @@ public class UIManager : MonoBehaviour
         sceneTitleText.text = title;
         sceneTitleUI.SetActive(true);
 
-        yield return new WaitForSeconds(titleDisplayDuration);
+        yield return new WaitForSecondsRealtime(titleDisplayDuration);
 
         sceneTitleUI.SetActive(false);
         titleCoroutine = null;
@@ -176,7 +181,16 @@ public class UIManager : MonoBehaviour
 
     private void OnLogButtonClicked()
     {
-        
+        ClosePanel();
+
+        if (isAutoPlay)
+        {
+            isAutoPlay = false;
+            autoButtonImage.sprite = spriteAutoOff;
+            dialogManager.SetAutoPlay(false);
+        }
+
+        backlogManager.OpenBacklog();
     }
 
     private void OnAutoButtonClicked()
