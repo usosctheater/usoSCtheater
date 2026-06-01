@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using UnityEditor.Search;
 using UnityEngine;
 using UnityEngine.UI;
@@ -14,14 +15,19 @@ public class BacklogManager : MonoBehaviour
 
     [Header("프리팹")]
     [SerializeField] private GameObject dialogItemPrefab;
+    [SerializeField] private GameObject transitionDividerPrefab;
 
     [Header("스프라이트")]
     [SerializeField] private Sprite bubbleType1;                //아이돌 (분홍색)
     [SerializeField] private Sprite bubbleType2;                //프로듀서 (파란색)
     [SerializeField] private Sprite bubbleType3;                //기타 (초록색)
+    [SerializeField] private Sprite dividerSprite1;             //normal
+    [SerializeField] private Sprite dividerSprite2;             //Fade, Iris
+    [SerializeField] private Sprite dividerSprite3;             //Wipe_Left
 
     [Header("SD 이미지")]
     [SerializeField] private Sprite defaultSDSprite;
+    [SerializeField] private Sprite circleMaskSprite;
     [SerializeField] private string sdResourcePath = "SD";
 
     private DialogManager dialogManager;
@@ -57,7 +63,7 @@ public class BacklogManager : MonoBehaviour
         foreach (ScriptNode node in readNodes)
         {
             if (node.type == ScriptNode.NodeType.Line) CreateDialogItem(node.line);
-            else if (node.type == ScriptNode.NodeType.Transition) CreateTransitionDivider();
+            else if (node.type == ScriptNode.NodeType.Transition) CreateTransitionDivider(node.transition_effect);
         }
 
         backlogUI.SetActive(true);
@@ -80,12 +86,28 @@ public class BacklogManager : MonoBehaviour
     {
         GameObject item = Instantiate(dialogItemPrefab, contentParent);
         BacklogItem backlogItem = item.GetComponent<BacklogItem>();
-        backlogItem.Setup(line, GetBubbleSprite(line.speakerType), GetSDSprite(line.cgKey), audioManager);
+
+        var (sdSprite, isSD) = GetSDSprite(line.cgKey);
+
+        backlogItem.Setup(
+            line,
+            GetBubbleSprite(line.speakerType),
+            sdSprite,
+            isSD,
+            audioManager,
+            circleMaskSprite
+            );
     }
 
-    private void CreateTransitionDivider()
+    private void CreateTransitionDivider(string effect)
     {
-        //구분선 코드
+        GameObject item = Instantiate(transitionDividerPrefab, contentParent);
+        TransitionDividerItem divider = item.GetComponent<TransitionDividerItem>();
+
+        Sprite sprite = GetDividerSprite(effect);
+        Image.Type imageType = GetDividerImageType(effect);
+
+        divider.Setup(sprite, imageType);
     }
 
     private Sprite GetBubbleSprite(int speakerType)
@@ -99,11 +121,35 @@ public class BacklogManager : MonoBehaviour
         }
     }
 
-    private Sprite GetSDSprite(string cgKey)
+    private (Sprite sprite, bool isSD) GetSDSprite(string cgKey)
     {
-        if (string.IsNullOrEmpty(cgKey)) return defaultSDSprite;
+        if (string.IsNullOrEmpty(cgKey)) return (defaultSDSprite, false);
 
         Sprite sd = Resources.Load<Sprite>($"{sdResourcePath}/{cgKey}");
-        return sd != null ? sd : defaultSDSprite;
+        return sd != null ? (sd, true) : (defaultSDSprite, false);
+    }
+
+    private Sprite GetDividerSprite(string effect)
+    {
+        switch (effect.ToLower())
+        {
+            case "normal":          return dividerSprite1;
+            case "fade":
+            case "iris":            return dividerSprite2;
+            case "wipe_left":       return dividerSprite2;
+            default:                return dividerSprite1;
+        }
+    }
+
+    private Image.Type GetDividerImageType(string effect)
+    {
+        switch (effect.ToLower())
+        {
+            case "normal":          return Image.Type.Sliced;
+            case "fade":
+            case "iris":            
+            case "wipe_left":       return Image.Type.Tiled;
+            default:                return Image.Type.Sliced;
+        }
     }
 }

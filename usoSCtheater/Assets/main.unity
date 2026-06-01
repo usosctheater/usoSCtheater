@@ -412,10 +412,15 @@ MonoBehaviour:
   scrollRect: {fileID: 1913413655}
   settingPanel: {fileID: 3141371}
   dialogItemPrefab: {fileID: 4746501929014911925, guid: 916de8b0751bbbb40aefa52d7be63317, type: 3}
+  transitionDividerPrefab: {fileID: 6203546035109008957, guid: 25974e45cb390394f916a24f4f5a55d3, type: 3}
   bubbleType1: {fileID: 21300000, guid: a7204dc4033293540a5dac8685da9753, type: 3}
   bubbleType2: {fileID: 21300000, guid: f1b9c81d1e1542e49b9c85d1685aac1b, type: 3}
   bubbleType3: {fileID: 21300000, guid: 4354abfafa3933b48a2b9c0be4ffd1de, type: 3}
+  dividerSprite1: {fileID: -919852725, guid: b11d894010e82234297f9a9d4e6f1e94, type: 3}
+  dividerSprite2: {fileID: 21300000, guid: 566afc33b58db8b41838a35d41b01a76, type: 3}
+  dividerSprite3: {fileID: 21300000, guid: d323535048c094645a283b006f728ff7, type: 3}
   defaultSDSprite: {fileID: 21300000, guid: 7245a5e65005c2a4bbcadec82a62d2eb, type: 3}
+  circleMaskSprite: {fileID: 21300000, guid: 696eed24b23b6534f808173fbe79405a, type: 3}
   sdResourcePath: SD
 --- !u!1 &145419763
 GameObject:
@@ -764,7 +769,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CGManager
   spineEntries:
-  - key: huyuko_normal_9
+  - key: fuyuko_normal_9
     spineObject: {fileID: 293520802}
   - key: asahi_idol_2
     spineObject: {fileID: 1268738735}
@@ -823,7 +828,7 @@ GameObject:
   - component: {fileID: 293520805}
   - component: {fileID: 293520804}
   m_Layer: 0
-  m_Name: Huyuko_normal_9
+  m_Name: Fuyuko_normal_9
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -4173,8 +4178,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 40}
-  m_SizeDelta: {x: 950, y: 500}
+  m_AnchoredPosition: {x: 0, y: 45}
+  m_SizeDelta: {x: 950, y: 490}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1913413655
 MonoBehaviour:
