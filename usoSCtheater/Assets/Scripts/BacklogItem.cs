@@ -16,7 +16,7 @@ public class BacklogItem : MonoBehaviour
 
     [Header("sdIcon RectTransform 프리셋")]
     [SerializeField] private Vector2 sdOffset = new Vector2(5f, -60f);
-    [SerializeField] private Vector3 sdScale = Vector3.one * 0.4f;
+    [SerializeField] private Vector2 sdIconSize = new Vector2(80f, 192f);
 
     private string voiceKey;
     private AudioManager audioManager;
@@ -48,7 +48,8 @@ public class BacklogItem : MonoBehaviour
             {
                 sdIcon.SetNativeSize();
                 sdRect.anchoredPosition = sdOffset;
-                sdRect.localScale = sdScale;
+                sdRect.localScale = Vector3.one;
+                sdRect.sizeDelta = sdIconSize;
             }
         }
 
