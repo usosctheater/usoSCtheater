@@ -160,7 +160,7 @@ public class DialogManager : MonoBehaviour
         // CG - 키가 있을 때만
         if (!string.IsNullOrEmpty(line.cgKey))
         {
-            cgManager.SetCG(line.cgKey, line.cgPos, line.animation);
+            cgManager.SetCG(line.cgKey, line.cgPos, line.animation, GetVoiceDuration(line.voiceKey));
             //Debug.Log($"[CG] {line.cgKey} / 위치: {line.cgPos}");
         }
 
@@ -317,16 +317,9 @@ public class DialogManager : MonoBehaviour
 
     private IEnumerator AutoPlayCoroutine(DialogLine line)
     {
-        //Voice 길이 계산
-        float voiceDuration = 0f;
-        if (!string.IsNullOrEmpty(line.voiceKey))
-        {
-            AudioClip clip = Resources.Load<AudioClip>($"Audio/Voice/{line.voiceKey}");
-            if (clip != null) voiceDuration = clip.length;
-        }
-
         //텍스트 타이핑 시간 계산
         float typingDuration = line.text.Length * typingSpeed;
+        float voiceDuration = GetVoiceDuration(line.voiceKey);
 
         //둘 중 더 긴 시간동안 대기
         float waitDuration = Mathf.Max(voiceDuration, typingDuration);
@@ -345,6 +338,14 @@ public class DialogManager : MonoBehaviour
     public List<ScriptNode> GetReadNodes()
     {
         return scriptNodes.GetRange(0, currentIndex);
+    }
+
+    private float GetVoiceDuration(string voiceKey)
+    {
+        if (string.IsNullOrEmpty(voiceKey)) return 0f;
+
+        AudioClip clip = Resources.Load<AudioClip>($"Audio/Voice/{voiceKey}");
+        return clip != null ? clip.length : 0f;
     }
 
 }

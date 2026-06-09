@@ -30,6 +30,17 @@ public class CGManager : MonoBehaviour
 
     private Dictionary<string, Coroutine> zoomDict = new Dictionary<string, Coroutine>();
 
+    //EndLoop용 Loop_Start 시간 저장
+    private Dictionary<string, float> endLoopStartDict = new Dictionary<string, float>();
+    //EndLoop용 애니메이션 이름 저장
+    private Dictionary<string, string> endLoopAnimDict = new Dictionary<string, string>();
+    //립 연동용 코루틴 관리
+    private Dictionary<string, Coroutine> lipCoroutineDict = new Dictionary<string, Coroutine>();
+
+    private static readonly string[] DEFAULT_LIP_ANIM = { "lip_wait", "lip_bitter_smile" };
+    private static readonly string[] DEFAULT_LIP_S_ANIM = { "lip_wait_s", "lip_bitter_smile_s" };
+
+
     void Awake()
     {
         //Spine 오브젝트 딕셔너리 구성
@@ -53,7 +64,7 @@ public class CGManager : MonoBehaviour
         positionDict["wide_far_right"] = screenWidth * 0.40f; //768
     }
 
-    public void SetCG (string cgKey, string position, string animation)
+    public void SetCG (string cgKey, string position, string animation, float voiceDuration = 0f)
     {
         //예외 처리
         if (!spineDict.ContainsKey(cgKey))
@@ -69,8 +80,13 @@ public class CGManager : MonoBehaviour
         ApplyPosition(spineObj, position);
 
         //애니메이션 재생
-        if (!string.IsNullOrEmpty(animation))
-            PlayAnimation(spineObj, animation);
+        if (!string.IsNullOrEmpty(animation)) PlayAnimation(spineObj, animation);
+
+        if (voiceDuration > 0f)
+        {
+            if (lipCoroutineDict.ContainsKey(cgKey) && lipCoroutineDict[cgKey] != null) StopCoroutine(lipCoroutineDict[cgKey]);
+            lipCoroutineDict[cgKey] = StartCoroutine(LipSyncCoroutine(cgKey, animation, voiceDuration));
+        }
     }
 
     public void HideCG(string cgKey)
@@ -112,6 +128,9 @@ public class CGManager : MonoBehaviour
             return;
         }
 
+        //cgKey 역조회
+        string cgKey = spineDict.FirstOrDefault(kvp => kvp.Value == spineObj).Key;
+
         //공백과 쉼표를 구분자로 분리
         string[] animations = animName.Split(new char[] { ' ', ','}, System.StringSplitOptions.RemoveEmptyEntries);
 
@@ -119,11 +138,43 @@ public class CGManager : MonoBehaviour
         skAnim.AnimationState.ClearTracks();
         skAnim.skeleton.SetToSetupPose();
 
+        //이전 EndLoop 등록 정보 초기화
+        var keysToRemove = endLoopStartDict.Keys.Where(k => k.StartsWith(cgKey + "_")).ToList();
+        foreach (var key in keysToRemove)        {
+            endLoopStartDict.Remove(key);
+            endLoopAnimDict.Remove(key);
+        }
+
         foreach (string anim in animations)
         {
             string trimmed = anim.Trim();
             int track = GetTrackIndex(trimmed);
-            skAnim.AnimationState.SetAnimation(track, trimmed, true);
+
+            //SkeletonData에서 Loop_Start 이벤트 존재 여부 및 시간 조회
+            float loopStartTime = GetLoopStartTime(skAnim, trimmed);
+            bool hasEndLoop = loopStartTime >= 0f;
+
+            //Loop_Start 이벤트가 있으면 loop=false로 1회 재생, 없다면 기존처럼 loop=true로 재생
+            Spine.TrackEntry entry = skAnim.AnimationState.SetAnimation(track, trimmed, !hasEndLoop);
+
+            if (hasEndLoop)
+            {
+                //Complete 이벤트 핸들러 등록
+                string dictKey = cgKey + "_" + track;
+                endLoopStartDict[dictKey] = loopStartTime;
+                endLoopAnimDict[dictKey] = trimmed;
+
+                float relayTime = GetRelayTime(skAnim, trimmed, out string relayAnimName);
+
+                //Complete 이벤트 구독
+                entry.Complete += (TrackEntry) =>
+                {
+                    OnAnimationComplete(skAnim, cgKey, track);
+
+                    //relay가 있으면 Complete 시점에 arm 애니메이션 재생 후 마지막 프레임은 정지
+                    if (!string.IsNullOrEmpty(relayAnimName)) PlayArmDown(skAnim, relayAnimName);
+                };
+            }
         }
     }
 
@@ -217,4 +268,150 @@ public class CGManager : MonoBehaviour
         foreach (var key in spineDict.Keys) ClearZoom(key);
     }
 
+    private float GetLoopStartTime(SkeletonAnimation skAnim, string animName)
+    {
+        var animData = skAnim.Skeleton.Data.FindAnimation(animName);
+        if (animData == null) return -1f;
+        
+        foreach (var timeline in animData.Timelines)
+        {
+            if (timeline is Spine.EventTimeline eventTimeline)
+            {
+                for (int i = 0; i < eventTimeline.Events.Length; i++)
+                {
+                    if (eventTimeline.Events[i].Data.Name == "loop_start")
+                    {
+                        return eventTimeline.Frames[i];
+                    }
+                }
+            }
+        }
+        return -1f;
+    }
+
+    private float GetRelayTime(SkeletonAnimation skAnim, string animName, out string relayAnimName)
+    {
+        relayAnimName = null;
+        var animData = skAnim.Skeleton.Data.FindAnimation(animName);
+        if (animData == null) return -1f;
+
+        foreach (var timeline in animData.Timelines)
+        {
+            if (timeline is Spine.EventTimeline eventTimeline)
+            {
+                for (int i = 0; i < eventTimeline.Events.Length; i++)
+                {
+                    if (eventTimeline.Events[i].Data.Name == "relay")
+                    {
+                        relayAnimName = eventTimeline.Events[i].String;
+                        return eventTimeline.Frames[i];
+                    }
+                }
+            }
+        }
+        return -1f;
+    }
+
+    private void OnAnimationComplete(SkeletonAnimation skAnim, string cgKey, int track)
+    {
+        string dictKey = cgKey + "_" + track;
+        if (!endLoopStartDict.ContainsKey(dictKey)) return;
+            
+        float loopStartTime = endLoopStartDict[dictKey];
+        string animName = endLoopAnimDict[dictKey];
+
+        //해당 트랙에 loopStartTime부터 loop=true로 애니메이션 재생
+        Spine.TrackEntry newEntry = skAnim.AnimationState.SetAnimation(track, animName, false);
+        newEntry.TrackTime = loopStartTime;
+
+        //다음 Complete시에도 동일하게 반복
+        newEntry.Complete += (TrackEntry) =>
+        {
+            OnAnimationComplete(skAnim, cgKey, track);
+        };
+    }
+
+    private void PlayArmDown(SkeletonAnimation skAnim, string armAnimName)
+    {
+        var animData = skAnim.Skeleton.Data.FindAnimation(armAnimName);
+        if (animData == null) 
+        {
+            Debug.LogWarning($"[CGManager] arm 애니메이션 없음: {armAnimName}");
+            return;
+        }
+
+        Spine.TrackEntry armEntry = skAnim.AnimationState.SetAnimation(3, armAnimName, false);
+
+        armEntry.Complete += (trackEntry) =>
+        {
+            // 마지막 프레임에서 timeScale = 0으로 정지
+            trackEntry.TimeScale = 0f;
+        };
+    }
+
+    //보이스 길이만큼 입 움직임 재생 후 정지 립으로 교체
+    private IEnumerator LipSyncCoroutine(string cgKey, string animName, float voiceDuration)
+    {
+        if (!spineDict.ContainsKey(cgKey)) yield break;
+        SkeletonAnimation skAnim = spineDict[cgKey].GetComponent<SkeletonAnimation>();
+        if (skAnim == null) yield break;
+
+        //립 애니메이션 이름 결정
+        string[] animations = animName.Split(new char[] { ' ', ','}, System.StringSplitOptions.RemoveEmptyEntries);
+        string explicitLip = System.Array.Find(animations, a => a.Trim().StartsWith("lip_"));
+
+        string lipMoving;
+        string lipStill;
+
+        if (!string.IsNullOrEmpty(explicitLip))
+        {
+            //명시적인 Lip 애니메이션 지정이 있는 경우
+            lipMoving = explicitLip.Trim();
+            string candidate = lipMoving + "_s";
+            lipStill = skAnim.Skeleton.Data.FindAnimation(candidate) != null ? candidate : ResolveLipAnim(skAnim, DEFAULT_LIP_S_ANIM);
+        }
+        else
+        {
+            //Lip 애니메이션 지정이 없는 경우, 0번 트랙 애니메이션에서 추출 시도
+            string track0Anim = System.Array.Find(animations, a => GetTrackIndex(a.Trim()) == 0)?. Trim();
+            string lipKey = ExtractLipKey(track0Anim);
+
+            string candidate = "lip_" + lipKey;
+            string candidateS = "lip_" + lipKey + "_s";
+
+            lipMoving = skAnim.Skeleton.Data.FindAnimation(candidate) != null ? candidate : ResolveLipAnim(skAnim, DEFAULT_LIP_ANIM);
+            lipStill = skAnim.Skeleton.Data.FindAnimation(candidateS) != null ? candidateS : ResolveLipAnim(skAnim, DEFAULT_LIP_S_ANIM);
+
+        }
+
+        //보이스 재생 중에는 움직이는 Lip 애니메이션 재생
+        skAnim.AnimationState.SetAnimation(2, lipMoving, true);
+        
+        yield return new WaitForSeconds(voiceDuration);
+
+        //보이스 종료 후에는 정지 Lip 애니메이션으로 교체
+        if (spineDict.ContainsKey(cgKey) && spineDict[cgKey].activeSelf) skAnim.AnimationState.SetAnimation(2, lipStill, true);
+
+        lipCoroutineDict[cgKey] = null;
+    }
+
+    //0번 트랙에서 키워드 추출하는 함수
+    private string ExtractLipKey(string animName)
+    {
+        if (string.IsNullOrEmpty(animName)) return "wait";
+
+        //anger1 > anger / smile3 > smile
+        string trimmed = animName.TrimEnd('0', '1', '2', '3', '4', '5', '6', '7', '8', '9');
+        return trimmed;
+    }
+
+    private string ResolveLipAnim(SkeletonAnimation skAnim, string[] candidates)
+    {
+        foreach (string candidate in candidates)
+        {
+            if (skAnim.Skeleton.Data.FindAnimation(candidate) != null) return candidate;
+        }
+
+        return null;
+    }
 }
