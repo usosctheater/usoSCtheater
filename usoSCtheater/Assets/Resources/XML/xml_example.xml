@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Scene>
-	<Line Type="BG" Key="bg_hall"/>
-	<Line Type="SE" Track="se_jihanki"/>
+	<Line Type="BG" Key="bg_rouka"/>
+	<Line Type="SE" Track="se_jihannki"/>
 	<Line Type="TEXT" Name="메이" Text="아 후유코쨩, 그거 들었어?" Voice="s001001" CG="mei_idol_3" Position="left" Animation="wait1" SpeakerType="1"/>
 	<Line Type="TEXT" Name="후유코" Text="그거?" Voice="s001002" CG="fuyuko_idol_3" Position="right" Animation="wait1" SpeakerType="1"/>
 	<Line Type="TEXT" Name="메이" Text="다음 달에 있는 운동회 이야기!" Voice="s001003" CG="mei_idol_3" Position="left" Animation="wait1" SpeakerType="1"/>
@@ -10,8 +10,8 @@
 	<Line Type="TEXT" Name="메이" Text="후유코쨩은 뭐 나가고 싶어?" Voice="s001006" SpeakerType="1"/>
 	<Line Type="TEXT" Name="후유코" Text="음… 그러네…" Voice="s001007" CG="fuyuko_idol_3" Position="right" Animation="think" SpeakerType="1"/>
 	<Line Type="TRANSITION" Effect="normal"/>
-	<Line Type="BG" Effect="zoom" Value="1.3" Key="bg_hall"/>
-	<Line Type="SE" Track="se_can"/>
+	<Line Type="BG" Effect="zoom" Value="1.3" Key="bg_rouka"/>
+	<Line Type="SE" Track="se_tansan"/>
 	<Line Type="TEXT" Name="메이" Text="계주라던가, 어때?" Voice="s001008" CG="mei_idol_3" Position="left" Animation="think" SpeakerType="1"/>
 	<Line Type="TEXT" Name="후유코" Text="아… 최악이야. 계주같은 건, 죽어도 사양이야" Voice="s001009" CG="fuyuko_idol_3" Position="right" Animation="wait1 face_jito lip_cry" SpeakerType="1"/>
 	<Line Type="TEXT" Name="메이" Text="에, 정말? 계주는 운동회의 꽃이잖아?" Voice="s001010" CG="mei_idol_3" Position="left" Animation="surp1" SpeakerType="1"/>
@@ -25,7 +25,7 @@
 	<Line Type="TEXT" Name="메이" Text="후유코쨩?" Voice="s001018" CG="mei_idol_3" Position="left" Animation="wait1 face_surp" SpeakerType="1"/>
 	<Line Type="TEXT" Name="후유코" Text="왠지 불길한 기분이 들어… 빨리 돌아가자." Voice="s001019" CG="fuyuko_idol_3" Position="right" Animation="wait1 face_anger" SpeakerType="1"/>
 	<Line Type="TRANSITION" Effect="normal"/>
-	<Line Type="BG" Position="4" Effect="zoom" Value="1.3" Key="bg_hall"/>
+	<Line Type="BG" Position="4" Effect="zoom" Value="1.3" Key="bg_rouka"/>
 	<Line Type="TEXT" Name="메이" Text="자, 잠깐만 후유코쨩!" Voice="s001020" CG="mei_idol_3" Position="left" Animation="surp1" SpeakerType="1"/>
 	<Line Type="TRANSITION" Effect="iris" SE="se_iris_out|se_iris_in"/>
 </Scene>

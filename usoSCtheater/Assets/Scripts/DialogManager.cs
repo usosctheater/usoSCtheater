@@ -120,7 +120,7 @@ public class DialogManager : MonoBehaviour
                     break;
 
                 case "TRANSITION":
-                    scriptNodes.Add(new ScriptNode(GetAttr(node, "Effect"), GetAttr(node, "Se")));
+                    scriptNodes.Add(new ScriptNode(GetAttr(node, "Effect"), GetAttr(node, "SE")));
                     break;
 
                 case "BG":

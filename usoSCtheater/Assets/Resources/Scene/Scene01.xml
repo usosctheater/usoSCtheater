@@ -1,24 +1,32 @@
 <?xml version = "1.0" encoding = "UTF-8"?>
 
-<Scene title="이번화는데모">
+<Scene title = "빛은 언제나 한 발 빠르다">
+	<Line Type="BG" Key="bg_rouka"/>
+	<Line Type="SE" Track="se_jihannki"/>
+	<Line Type="TEXT" Name="메이" Text="아 후유코쨩, 그거 들었어?" Voice="s001001" CG="mei_idol_3" Position="left" Animation="wait1" SpeakerType="1"/>
+	<Line Type="TEXT" Name="후유코" Text="그거?" Voice="s001002" CG="fuyuko_idol_3" Position="right" Animation="wait1" SpeakerType="1"/>
+	<Line Type="TEXT" Name="메이" Text="다음 달에 있는 운동회 이야기!" Voice="s001003" CG="mei_idol_3" Position="left" Animation="wait1" SpeakerType="1"/>
+	<Line Type="TEXT" Name="후유코" Text="아 그러고보니…" Voice="s001004" CG="fuyuko_idol_3" Position="right" Animation="think" SpeakerType="1"/>
+	<Line Type="TEXT" Name="메이" Text="이번에는 유닛 별로 종목을 고를 수 있대~" Voice="s001005" CG="mei_idol_3" Position="left" Animation="smile2" SpeakerType="1"/>
+	<Line Type="TEXT" Name="메이" Text="후유코쨩은 뭐 나가고 싶어?" Voice="s001006" SpeakerType="1"/>
+	<Line Type="TEXT" Name="후유코" Text="음… 그러네…" Voice="s001007" CG="fuyuko_idol_3" Position="right" Animation="think" SpeakerType="1"/>
 	<Line Type="TRANSITION" Effect="normal"/>
-	<Line Type="BG" Key="bg_temp" Effect="zoom" Position="3" Value="1.5"/>
-    <Line Type="BGM" Track="BGM_nanndesyou" Volume="0.5"/>
-	<Line Type="SE" Track="door_knock" Volume="2"/>
-	<Line Type="TEXT" Name="???" Voice="s001001" Text="들어가도 됨까?"/>
-	<Line Type="TEXT" Name="후유코" CG="fuyuko_normal_9" Position="center" Animation="smile1" Voice="s001002" Text="네~ 누구세요~" Effect="zoom" Value="1.3" Duration="1.0"/>
-	<Line Type="SE" Track="door_ake"/>
-	<Line Type="TEXT" Name="아사히" CG="asahi_idol_2" Position="right" Animation="wait face_surp lip_surp" Voice="s001003" Text="저임다. 목소리 들으면 모름까?" Effect="zoom" Value="1.1" Duration="2.0"/>
-	<Line Type="SE" Track="door_sime"/>
-	<Line Type="TEXT" Name="후유코" CG="fuyuko_normal_9" Position="left" Animation="wait face_jito2 lip_jito" Voice="s001004" Text="하? 예의상 대답한 거잖아, 예의상!" Effect="zoom" Value="0.8"/>
-	<Line Type="TRANSITION" Effect="wipe_left" Se="trans_out|trans_in"/>
-	<Line Type="BG" Key="bg_hikaesitu" Effect="flashback"/>
-	<Line Type="SE" Track="door_knock" Volume="2"/>
-	<Line Type="TEXT" Name="???" Voice="s001001" Text="다시 들어가도 됨까?"/>
-	<Line Type="TEXT" Name="후유코" CG="fuyuko_normal_9" Position="left" Animation="smile1" Voice="s001002" Text="네~ 누구세요~"/>
-	<Line Type="SE" Track="door_ake"/>
-	<Line Type="TEXT" Name="아사히" CG="asahi_idol_2" Position="right" Animation="why" Voice="s001003" Text="저임다. 그새 까먹었슴까?"/>
-	<Line Type="SE" Track="door_sime"/>
-	<Line Type="TEXT" Name="후유코" CG="fuyuko_normal_9" Position="left" Animation="anger1" Voice="s001004" Text="하? 예의상 대답한 거잖아, 예의상!"/>
-	<Line Type="TRANSITION" Effect="wipe_left" Se="trans_out"/>
+	<Line Type="BG" Effect="zoom" Value="1.3" Key="bg_rouka"/>
+	<Line Type="SE" Track="se_tansan"/>
+	<Line Type="TEXT" Name="메이" Text="계주라던가, 어때?" Voice="s001008" CG="mei_idol_3" Position="left" Animation="wait3" SpeakerType="1"/>
+	<Line Type="TEXT" Name="후유코" Text="아… 최악이야. 계주같은 건, 죽어도 사양이야" Voice="s001009" CG="fuyuko_idol_3" Position="right" Animation="wait1 face_jito lip_cry" SpeakerType="1"/>
+	<Line Type="TEXT" Name="메이" Text="에, 정말? 계주는 운동회의 꽃이잖아?" Voice="s001010" CG="mei_idol_3" Position="left" Animation="surp1" SpeakerType="1"/>
+	<Line Type="TEXT" Name="후유코" Text="그러니까 싫은 거야. 그렇게 보는 눈이 많은 곳에서 넘어지기라도 해 봐." Voice="s001011" CG="fuyuko_idol_3" Position="right" Animation="wait1 face_jito lip_cry" SpeakerType="1"/>
+	<Line Type="TEXT" Name="후유코" Text="애초에 후유, 달리기 그렇게 잘 하는 편이 아니니까…" Voice="s001012" SpeakerType="1"/>
+	<Line Type="TEXT" Name="후유코" Text="팬들에게 완벽하지 않은 모습은 보여주고 싶지 않아." Voice="s001013" SpeakerType="1"/>
+	<Line Type="TEXT" Name="메이" Text="그렇구나… 후유코쨩이 그렇다면 이어달리기는 안 나가는 걸로!" Voice="s001014" CG="mei_idol_3" Position="left" Animation="wait3" SpeakerType="1"/>
+	<Line Type="TEXT" Name="메이" Text="아, 근데 아사히쨩은 분명 이어달리기 나가고 싶어할 텐데…" Voice="s001015" SpeakerType="1"/>
+	<Line Type="TEXT" Name="후유코" Text="그 녀석 성격 상, 무조건 그렇겠지…" Voice="s001016" CG="fuyuko_idol_3" Position="right" Animation="wait2" SpeakerType="1"/>
+	<Line Type="TEXT" Name="후유코" Text="잠깐만, 메이." Voice="s001017" CG="fuyuko_idol_3" Position="right" Animation="shrug" SpeakerType="1"/>
+	<Line Type="TEXT" Name="메이" Text="후유코쨩?" Voice="s001018" CG="mei_idol_3" Position="left" Animation="wait1 face_surp" SpeakerType="1"/>
+	<Line Type="TEXT" Name="후유코" Text="왠지 불길한 기분이 들어… 빨리 돌아가자." Voice="s001019" CG="fuyuko_idol_3" Position="right" Animation="wait1 face_anger" SpeakerType="1"/>
+	<Line Type="TRANSITION" Effect="normal"/>
+	<Line Type="BG" Position="4" Effect="zoom" Value="1.3" Key="bg_rouka"/>
+	<Line Type="TEXT" Name="메이" Text="자, 잠깐만 후유코쨩!" Voice="s001020" CG="mei_idol_3" Position="left" Animation="surp1" SpeakerType="1"/>
+	<Line Type="TRANSITION" Effect="iris" SE="se_trans_in|se_trans_out"/>
 </Scene>

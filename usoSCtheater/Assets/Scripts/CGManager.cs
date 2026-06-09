@@ -390,8 +390,20 @@ public class CGManager : MonoBehaviour
         yield return new WaitForSeconds(voiceDuration);
 
         //보이스 종료 후에는 정지 Lip 애니메이션으로 교체
-        if (spineDict.ContainsKey(cgKey) && spineDict[cgKey].activeSelf) skAnim.AnimationState.SetAnimation(2, lipStill, true);
-
+        if (spineDict.ContainsKey(cgKey) && spineDict[cgKey].activeSelf)
+        {
+            if (lipStill != null)
+            {
+                skAnim.AnimationState.SetAnimation(2, lipStill, true);
+            }
+            else
+            {
+                //Lip 애니메이션을 최종적으로 못찾았을 경우, 그냥 애니메이션을 정지시킴
+            Spine.TrackEntry track2 = skAnim.AnimationState.GetCurrent(2);
+            if (track2 != null) track2.TimeScale = 0f;
+            }
+        }
+        
         lipCoroutineDict[cgKey] = null;
     }
 
