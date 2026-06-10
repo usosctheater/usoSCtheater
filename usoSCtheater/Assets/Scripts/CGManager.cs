@@ -100,6 +100,24 @@ public class CGManager : MonoBehaviour
         foreach (var obj in spineDict.Values) obj.SetActive(false);
     }
 
+    public void ClearAllCGState()
+    {
+        //립 코루틴 모두 중단
+        foreach (var coroutine in lipCoroutineDict.Values)
+        {
+            if (coroutine != null) StopCoroutine(coroutine);
+        }
+        lipCoroutineDict.Clear();
+
+        //EndLoop 정보 초기화
+        endLoopStartDict.Clear();
+        endLoopAnimDict.Clear();
+
+        //CG 비활성화 및 줌 초기화
+        HideAll();
+        ClearAllZoom();
+    }
+
     private void ApplyPosition(GameObject spineObj, string position)
     {
         if (!positionDict.ContainsKey(position))

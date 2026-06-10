@@ -162,8 +162,16 @@ public class DialogManager : MonoBehaviour
         typingCoroutine = StartCoroutine(TypeText(line));
 
         //리소스 처리
+        // CG - None일 경우
+        if (line.cgKey.ToLower() == "none")
+        {
+            cgManager.ClearAllCGState();
+            lastCgKey = null;
+            lastAnimation = null;
+            lastSpeakerName = null;
+        }
         // CG - 키가 있을 때만
-        if (!string.IsNullOrEmpty(line.cgKey))
+        else if (!string.IsNullOrEmpty(line.cgKey))
         {
             cgManager.SetCG(line.cgKey, line.cgPos, line.animation, GetVoiceDuration(line.voiceKey));
             //Debug.Log($"[CG] {line.cgKey} / 위치: {line.cgPos}");
@@ -185,6 +193,9 @@ public class DialogManager : MonoBehaviour
             lastAnimation = null;
             lastSpeakerName = null;
         }
+        
+        
+
 
         //이펙트 처리
         // Effect = zoom일 경우
@@ -262,9 +273,8 @@ public class DialogManager : MonoBehaviour
         }
         isTyping = false;
 
-        //CG 초기화
-        cgManager.HideAll();
-        cgManager.ClearAllZoom();
+        //리소스 초기화
+        cgManager.ClearAllCGState();
         bgManager.HideBG();
         bgManager.HideFlashback();
         bgManager.hideZoom();
