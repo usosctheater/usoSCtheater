@@ -52,6 +52,11 @@ public class BacklogManager : MonoBehaviour
         //백로그 열면 씬 시간 정지
         Time.timeScale = 0f;
 
+        //동일 화자가 연속해서 대사를 하는 경우, SDIcon 동기화를 위한 변수
+        string lastCgKey = null;
+        string lastSpeakerName = null;
+        bool hideSD = false;
+
         settingPanel.SetActive(false);
 
         //기존 항목 제거
@@ -62,8 +67,41 @@ public class BacklogManager : MonoBehaviour
 
         foreach (ScriptNode node in readNodes)
         {
-            if (node.type == ScriptNode.NodeType.Line) CreateDialogItem(node.line);
-            else if (node.type == ScriptNode.NodeType.Transition) CreateTransitionDivider(node.transition_effect);
+            if (node.type == ScriptNode.NodeType.Line) 
+            {
+                DialogLine line = node.line;
+
+                //CG = none이면 SD 숨김 처리
+                if (!string.IsNullOrEmpty(line.cgKey) && line.cgKey.ToLower() == "none")
+                {
+                    lastCgKey = null;
+                    lastSpeakerName = null;
+                    line.cgKey = null;
+                    hideSD = true;
+                }
+                //CG 없는데 이전 화자와 동일하면 cgKey 재사용
+                else if (string.IsNullOrEmpty(line.cgKey) && line.name == lastSpeakerName)
+                {
+                    line.cgKey = lastCgKey;
+                }
+                //CG 있고 명시되어 있으면 기억 갱신
+                else if (!string.IsNullOrEmpty(line.cgKey))
+                {
+                    lastCgKey = line.cgKey;
+                    lastSpeakerName = line.name;
+                    hideSD = false;
+                }
+
+                CreateDialogItem(line, hideSD);
+            }
+            else if (node.type == ScriptNode.NodeType.Transition)
+            {
+                CreateTransitionDivider(node.transition_effect);
+                //트랜지션 시에도 기억 초기화
+                lastCgKey = null;
+                lastSpeakerName = null;
+                hideSD = false;
+            }
         }
 
         backlogUI.SetActive(true);
@@ -82,18 +120,25 @@ public class BacklogManager : MonoBehaviour
         backlogUI.SetActive(false);
     }
 
-    private void CreateDialogItem(DialogLine line)
+    private void CreateDialogItem(DialogLine line, bool hideSD = false)
     {
         GameObject item = Instantiate(dialogItemPrefab, contentParent);
         BacklogItem backlogItem = item.GetComponent<BacklogItem>();
 
-        var (sdSprite, isSD) = GetSDSprite(line.cgKey);
+        //hideSD = true거나, 화자가 프로듀셔면 sdSprite = null로 처리
+        Sprite sdSprite;
+        if (hideSD || line.speakerType == 2) sdSprite = null;
+        else
+        {
+            sdSprite = GetSDSprite(line.cgKey);
+            //hideSD도 아니고 프로듀서도 아닌데 SD키가 없다면, 디폴트로 처리
+            if (sdSprite == null) sdSprite = defaultSDSprite;
+        }
 
         backlogItem.Setup(
             line,
             GetBubbleSprite(line.speakerType),
             sdSprite,
-            isSD,
             audioManager,
             circleMaskSprite
             );
@@ -121,12 +166,10 @@ public class BacklogManager : MonoBehaviour
         }
     }
 
-    private (Sprite sprite, bool isSD) GetSDSprite(string cgKey)
+    private Sprite GetSDSprite(string cgKey)
     {
-        if (string.IsNullOrEmpty(cgKey)) return (defaultSDSprite, false);
-
-        Sprite sd = Resources.Load<Sprite>($"{sdResourcePath}/{cgKey}");
-        return sd != null ? (sd, true) : (defaultSDSprite, false);
+        if (string.IsNullOrEmpty(cgKey)) return null;
+        return Resources.Load<Sprite>($"{sdResourcePath}/{cgKey}");
     }
 
     private Sprite GetDividerSprite(string effect)

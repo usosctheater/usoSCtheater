@@ -21,7 +21,7 @@ public class BacklogItem : MonoBehaviour
     private string voiceKey;
     private AudioManager audioManager;
 
-    public void Setup(DialogLine line, Sprite bubbleSprite, Sprite sdSprite, bool isSD, AudioManager am, Sprite circleMask)
+    public void Setup(DialogLine line, Sprite bubbleSprite, Sprite sdSprite, AudioManager am, Sprite circleMask)
     {
         audioManager = am;
         voiceKey = line.voiceKey;
@@ -31,7 +31,7 @@ public class BacklogItem : MonoBehaviour
         nameText.text = line.name;
         dialogText.text = line.text;
 
-        if (line.speakerType == 3) sdIconRoot.SetActive(false);
+        if (sdSprite == null) sdIconRoot.SetActive(false);
         else
         {
             sdIconRoot.SetActive(true);
@@ -42,10 +42,10 @@ public class BacklogItem : MonoBehaviour
 
             //SD 이미지 크기 및 오프셋 적용
             RectTransform sdRect = sdIcon.GetComponent<RectTransform>();
-            sdIcon.sprite = sdSprite;
 
-            if (isSD)
+            if (sdSprite != sdIcon.sprite)
             {
+                sdIcon.sprite = sdSprite;
                 sdIcon.SetNativeSize();
                 sdRect.anchoredPosition = sdOffset;
                 sdRect.localScale = Vector3.one;
