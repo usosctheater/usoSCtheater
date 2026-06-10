@@ -39,6 +39,11 @@ public class DialogManager : MonoBehaviour
     private bool isTransition = false;
     private bool isAutoPlay = false;
     
+    //Lip 재사용 기능
+    private string lastCgKey = null;
+    private string lastAnimation = null;
+    private string lastSpeakerName = null;
+    
     void Update()
     {
         //핫키 할당
@@ -162,6 +167,23 @@ public class DialogManager : MonoBehaviour
         {
             cgManager.SetCG(line.cgKey, line.cgPos, line.animation, GetVoiceDuration(line.voiceKey));
             //Debug.Log($"[CG] {line.cgKey} / 위치: {line.cgPos}");
+            
+            //Lip 재사용 기능을 위한 정보 저장
+            lastCgKey = line.cgKey;
+            lastAnimation = line.animation;
+            lastSpeakerName = line.name;
+        }
+        //CG 키가 없지만 이전 CG가 있고, 화자가 같다면 Lip 재사용
+        else if (!string.IsNullOrEmpty(lastCgKey) && line.name == lastSpeakerName)
+        {
+            cgManager.RestartLipSync(lastCgKey, lastAnimation, GetVoiceDuration(line.voiceKey));
+        }
+        else
+        {
+            //둘 다 아니라면, 초기화
+            lastCgKey = null;
+            lastAnimation = null;
+            lastSpeakerName = null;
         }
 
         //이펙트 처리

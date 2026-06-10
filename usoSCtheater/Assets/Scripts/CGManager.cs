@@ -426,4 +426,26 @@ public class CGManager : MonoBehaviour
 
         return null;
     }
+
+    public void UpdateLipOnly(string cgKey, string animation, float voiceDuration)
+    {
+        if (!spineDict.ContainsKey(cgKey)) return;
+        if (voiceDuration <= 0f) return;
+
+        //기존 코루틴 중단 후, 새로운 립 코루틴 실행
+        if (lipCoroutineDict.ContainsKey(cgKey) && lipCoroutineDict[cgKey] != null) StopCoroutine(lipCoroutineDict[cgKey]);
+
+        lipCoroutineDict[cgKey] = StartCoroutine(LipSyncCoroutine(cgKey, animation, voiceDuration));
+    }
+
+    public void RestartLipSync(string cgKey, string animation, float voiceDuration)
+    {
+        if (!spineDict.ContainsKey(cgKey)) return;
+        if (voiceDuration <= 0f) return;
+
+        //기존 코루틴 중단 후, 새로운 립 코루틴 실행
+        if (lipCoroutineDict.ContainsKey(cgKey) && lipCoroutineDict[cgKey] != null) StopCoroutine(lipCoroutineDict[cgKey]);
+
+        lipCoroutineDict[cgKey] = StartCoroutine(LipSyncCoroutine(cgKey, animation, voiceDuration));
+    }
 }
