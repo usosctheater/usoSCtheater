@@ -156,6 +156,9 @@ public class DialogManager : MonoBehaviour
         // 코루틴 처리로 변경해서 기존 처리 라인 주석
         // dialogText.text = line.text;
 
+        //화자에 따라 대화창 색 동기화
+        uiManager.SetDialogBoxType(line.speakerType);
+
         //이전 타이핑 코루틴 진행중이라면 중단시킴
         if (typingCoroutine != null) StopCoroutine(typingCoroutine);
 
@@ -194,9 +197,6 @@ public class DialogManager : MonoBehaviour
             lastSpeakerName = null;
         }
         
-        
-
-
         //이펙트 처리
         // Effect = zoom일 경우
         if (line.effect == "zoom" && !string.IsNullOrEmpty(line.cgKey)) cgManager.SetZoom(line.cgKey, line.cgPos, line.value, line.duration);

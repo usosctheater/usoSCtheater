@@ -3762,6 +3762,10 @@ MonoBehaviour:
   dialogManager: {fileID: 1223084827}
   audioManager: {fileID: 1400404542}
   backlogManager: {fileID: 101449366}
+  dialogBoxImage: {fileID: 2045714902}
+  dialogBoxRed: {fileID: 21300000, guid: f3943918a91c29746b6c22d9420d3ca7, type: 3}
+  dialogBoxBlue: {fileID: 21300000, guid: ab5c8737a05a3974da8cf2ea0c478101, type: 3}
+  dialogBoxGreen: {fileID: 21300000, guid: 190b64ba8df14d0449dae6fdc0b15713, type: 3}
   sceneTitleUI: {fileID: 2027259510}
   sceneTitleText: {fileID: 1740356793}
   titleDisplayDuration: 3

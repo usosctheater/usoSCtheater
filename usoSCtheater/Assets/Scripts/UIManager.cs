@@ -12,6 +12,12 @@ public class UIManager : MonoBehaviour
     [SerializeField] private AudioManager audioManager;
     [SerializeField] private BacklogManager backlogManager;
 
+    [Header("대화창 UI")]
+    [SerializeField] private Image dialogBoxImage;
+    [SerializeField] private Sprite dialogBoxRed;
+    [SerializeField] private Sprite dialogBoxBlue;
+    [SerializeField] private Sprite dialogBoxGreen;
+
     [Header("씬 타이틀 UI")]
     [SerializeField] private GameObject sceneTitleUI;
     [SerializeField] private TextMeshProUGUI sceneTitleText;
@@ -218,6 +224,20 @@ public class UIManager : MonoBehaviour
     public void ToggleAutoPlay()
     {
         OnAutoButtonClicked();
+    }
+
+    public void SetDialogBoxType(int speakerType)
+    {
+        if (dialogBoxImage == null) return;
+
+        dialogBoxImage.sprite = speakerType switch
+        {
+            1 => dialogBoxRed,
+            2 => dialogBoxBlue,
+            3 => dialogBoxGreen,
+            _ => dialogBoxRed
+        };
+
     }
 
 }
