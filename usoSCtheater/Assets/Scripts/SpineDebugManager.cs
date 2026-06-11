@@ -83,6 +83,13 @@ public class SpineDebugManager : MonoBehaviour
 
     private void OnSpineSelected(int index)
     {
+        //기존 스파인 모든 트랙 초기화
+        if (currentSkAnim != null)
+        {
+            currentSkAnim.AnimationState.ClearTracks();
+            currentSkAnim.Skeleton.SetToSetupPose();
+        }
+
         //모든 Spine 비활성화
         foreach (var obj in spineObjects) obj.SetActive(false);
 
@@ -93,6 +100,9 @@ public class SpineDebugManager : MonoBehaviour
         isPaused = false;
         currentSkAnim.timeScale = 1f;
         playPauseText.text = "일시정지";
+
+        //트랙 드롭다운도 초기화
+        trackSelector.SetValueWithoutNotify(0);
 
         RefreshAnimList();
     }
@@ -127,6 +137,13 @@ public class SpineDebugManager : MonoBehaviour
 
         if (currentSkAnim == null) return;
 
+        //트랙 초기화용 None 아이템
+        GameObject noneItem = Instantiate(animListItemPrefab, animListContent);
+        TextMeshProUGUI noneLabel = noneItem.GetComponentInChildren<TextMeshProUGUI>();
+        Button noneBtn = noneItem.GetComponent<Button>();
+        noneLabel.text = "None";
+        noneBtn.onClick.AddListener(() => onAnimitemClicked(null));
+
         foreach (var anim in currentSkAnim.skeleton.Data.Animations)
         {
             GameObject item = Instantiate(animListItemPrefab, animListContent);
@@ -149,6 +166,23 @@ public class SpineDebugManager : MonoBehaviour
         if (currentSkAnim == null) return;
 
         int track = trackSelector.value;
+
+        //None 선택 시 트랙 초기화
+        if (animName == null)
+        {
+            if (track == 0)
+            {
+                currentSkAnim.AnimationState.ClearTracks();
+                currentSkAnim.skeleton.SetToSetupPose();
+            }
+            else
+            {
+                currentSkAnim.AnimationState.ClearTrack(track);    
+            }
+            
+            return;
+        }
+
         currentSkAnim.AnimationState.SetAnimation(track, animName, track == 0);
 
         //트랙이 0이 아니면 Complete시 마지막 프레임 고정

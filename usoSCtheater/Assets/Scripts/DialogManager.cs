@@ -240,8 +240,10 @@ public class DialogManager : MonoBehaviour
 
                 case ScriptNode.NodeType.Transition:
                     isTransition = true;
+                    // normal 트랜지션이면 BGM 유지
+                    bool isNormalTransition = node.transition_effect.ToLower() == "normal";
                     effectManager.PlayTransition(node.transition_effect, node.transition_se, ()=> {
-                        ClearScene();
+                        ClearScene(stopBGM: !isNormalTransition);
                         isTransition = false;
                         ProcessNext();
                         });
@@ -259,7 +261,8 @@ public class DialogManager : MonoBehaviour
         sceneManager.OnSceneEnd();
     }
 
-    private void ClearScene()
+    // stopBGM: false이면 BGM을 정지하지 않음 (normal 트랜지션 등에서 BGM 유지 시 사용)
+    private void ClearScene(bool stopBGM = true)
     {
         //텍스트 초기화
         nameText.text = "";
@@ -278,7 +281,9 @@ public class DialogManager : MonoBehaviour
         bgManager.HideBG();
         bgManager.HideFlashback();
         bgManager.hideZoom();
-        audioManager.StopBGM();
+        
+        // normal 트랜지션 시 BGM 유지를 위해 조건부 정지
+        if (stopBGM) audioManager.StopBGM();
     }
 
     //속성이 없거나 비어있는 경우엔 빈 문자열 반환하는 함수
