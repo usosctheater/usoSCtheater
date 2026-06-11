@@ -895,7 +895,7 @@ MonoBehaviour:
   spineEntries:
   - key: fuyuko_normal_9
     spineObject: {fileID: 293520802}
-  - key: asahi_idol_2
+  - key: asahi_idol_3
     spineObject: {fileID: 1268738735}
   - key: fuyuko_idol_3
     spineObject: {fileID: 91741853}
@@ -2667,7 +2667,7 @@ GameObject:
   - component: {fileID: 1268738737}
   - component: {fileID: 1268738736}
   m_Layer: 0
-  m_Name: Asahi_Idol_2
+  m_Name: Asahi_Idol_3
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
