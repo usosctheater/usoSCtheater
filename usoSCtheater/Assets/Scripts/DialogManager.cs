@@ -121,7 +121,7 @@ public class DialogManager : MonoBehaviour
                     break;
 
                 case "SE":
-                    scriptNodes.Add(new ScriptNode(ScriptNode.NodeType.SE, GetAttr(node, "Track"), float.TryParse(GetAttr(node, "Volume"), out float seVol) ? seVol : 1.0f));
+                    scriptNodes.Add(new ScriptNode(ScriptNode.NodeType.SE, GetAttr(node, "Track"), float.TryParse(GetAttr(node, "Volume"), out float seVol) ? seVol : 1.0f, float.TryParse(GetAttr(node, "Duration"), out float seDur) ? seDur : 0f));
                     break;
 
                 case "TRANSITION":
@@ -227,7 +227,7 @@ public class DialogManager : MonoBehaviour
                     continue;
 
                 case ScriptNode.NodeType.SE:
-                    audioManager.PlaySE(node.track, node.volume);
+                    audioManager.PlaySE(node.track, node.volume, node.seDuration);
                     continue;
 
                 case ScriptNode.NodeType.BG:
@@ -281,7 +281,7 @@ public class DialogManager : MonoBehaviour
         bgManager.HideBG();
         bgManager.HideFlashback();
         bgManager.hideZoom();
-        
+
         // normal 트랜지션 시 BGM 유지를 위해 조건부 정지
         if (stopBGM) audioManager.StopBGM();
     }
@@ -413,10 +413,15 @@ public class ScriptNode
     //노드를 타입별로 구분
     public enum NodeType {Line, BGM, SE, Transition, BG}
 
+    //type == Line일 때 사용
     public NodeType type;
-    public DialogLine line;             //type == Line일 때 사용
-    public string track;                //tpye = BGM/SE일 때 사용
+    public DialogLine line;
+
+    //tpye = BGM/SE일 때 사용 
+    public string track;                
     public float volume;
+    public float seDuration;
+    
     public string transition_effect;
     public string transition_se;
     public string bg;
@@ -432,11 +437,12 @@ public class ScriptNode
     }
 
     //BGM / SE 노드 생성자
-    public ScriptNode(NodeType type, string track, float volume)
+    public ScriptNode(NodeType type, string track, float volume, float seDuration = 0f)
     {
         this.type = type;
         this.track = track;
         this.volume = volume;
+        this.seDuration = seDuration;
     }
 
     //Transition 노드 생성자

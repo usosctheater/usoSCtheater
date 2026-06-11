@@ -77,7 +77,7 @@ public class AudioManager : MonoBehaviour
     }
 
     // SE
-    public void PlaySE(string seKey, float volume = 1.0f)
+    public void PlaySE(string seKey, float volume = 1.0f, float duration = 0f)
     {
         if (string.IsNullOrEmpty(seKey)) return;
 
@@ -89,7 +89,15 @@ public class AudioManager : MonoBehaviour
             return;
         }
 
-        // PlayOneShot은 중첩 재생 가능 — SE에 적합
+        //Duration 받았으면 코루틴으로 처리, 아니면 일반 처리
+        if (duration > 0f) StartCoroutine(PlaySEWithDuration(clip, volume, duration));
+        else seSource.PlayOneShot(clip, volume);
+    }
+
+    private IEnumerator PlaySEWithDuration(AudioClip clip, float volume, float duration)
+    {
         seSource.PlayOneShot(clip, volume);
+        yield return new WaitForSeconds(duration);
+        seSource.Stop();
     }
 }
