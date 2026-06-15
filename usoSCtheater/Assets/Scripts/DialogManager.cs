@@ -43,6 +43,9 @@ public class DialogManager : MonoBehaviour
     private string lastCgKey = null;
     private string lastAnimation = null;
     private string lastSpeakerName = null;
+
+    //CGgroup 구현용 Dict
+    private Dictionary<string, List<CGGroupEntry>> cgGroupDict = new Dictionary<string, List<CGGroupEntry>>();
     
     void Update()
     {
@@ -136,6 +139,13 @@ public class DialogManager : MonoBehaviour
                     scriptNodes.Add(new ScriptNode(ScriptNode.NodeType.Break));
                     break;
 
+                case "CGGROUP":
+                    string groupName = GetAttr(node, "Name");
+                    if (!cgGroupDict.ContainsKey(groupName)) cgGroupDict[groupName] = new List<CGGroupEntry>();
+
+                    cgGroupDict[groupName].Add(new CGGroupEntry(GetAttr(node, "CG"), GetAttr(node, "Position"), GetAttr(node, "Animation")));
+                    break;
+
                 default:
                     Debug.LogWarning($"[DialogManager] 알 수 없는 타입: {type}");
                     break;
@@ -180,13 +190,25 @@ public class DialogManager : MonoBehaviour
         // CG - 키가 있을 때만
         else if (!string.IsNullOrEmpty(line.cgKey))
         {
-            cgManager.SetCG(line.cgKey, line.cgPos, line.animation, GetVoiceDuration(line.voiceKey));
-            //Debug.Log($"[CG] {line.cgKey} / 위치: {line.cgPos}");
+            //CG 키가 CGGroup인 경우
+            if (cgGroupDict.ContainsKey(line.cgKey))
+            {
+                foreach (var entry in cgGroupDict[line.cgKey]) cgManager.SetCG(entry.cgKey, entry.cgPos, entry.animation, GetVoiceDuration(line.voiceKey));
+
+                lastCgKey = line.cgKey;
+                lastAnimation = null;               //그룹은 단일 Animation 지정 없음
+                lastSpeakerName = line.name;
+            }
+            //그 외에는 기존 단일 CG 처리
+            else
+            {
+                cgManager.SetCG(line.cgKey, line.cgPos, line.animation, GetVoiceDuration(line.voiceKey));
             
-            //Lip 재사용 기능을 위한 정보 저장
-            lastCgKey = line.cgKey;
-            lastAnimation = line.animation;
-            lastSpeakerName = line.name;
+                //Lip 재사용 기능을 위한 정보 저장
+                lastCgKey = line.cgKey;
+                lastAnimation = line.animation;
+                lastSpeakerName = line.name;
+            }
         }
         //CG 키가 없지만 이전 CG가 있고, 화자가 같다면 Lip 재사용
         else if (!string.IsNullOrEmpty(lastCgKey) && line.name == lastSpeakerName)
@@ -294,6 +316,9 @@ public class DialogManager : MonoBehaviour
 
         // normal 트랜지션 시 BGM 유지를 위해 조건부 정지
         if (stopBGM) audioManager.StopBGM();
+
+        //안전을 위해서 CGGroupDict도 초기화
+        cgGroupDict.Clear();
     }
 
     //속성이 없거나 비어있는 경우엔 빈 문자열 반환하는 함수
@@ -394,8 +419,18 @@ public class DialogManager : MonoBehaviour
     {
         if (string.IsNullOrEmpty(voiceKey)) return 0f;
 
-        AudioClip clip = Resources.Load<AudioClip>($"Audio/Voice/{voiceKey}");
-        return clip != null ? clip.length : 0f;
+        //구분자로 다중 파싱 시에는 가장 긴 길이를 반환
+        float maxDuration = 0f;
+
+        foreach(string key in voiceKey.Split(new char[] { ' ', ','}, System.StringSplitOptions.RemoveEmptyEntries))
+        {
+            string trimmed = key.Trim();
+            AudioClip clip = Resources.Load<AudioClip>($"Audio/Voice/{trimmed}");
+            
+            if (clip != null) maxDuration = Mathf.Max(maxDuration, clip.length);
+        }
+
+        return maxDuration;
     }
 
 }
@@ -480,5 +515,20 @@ public class ScriptNode
         this.bgEffect = bgEffect;
         this.zoomPos = zoomPos;
         this.zoomValue = zoomValue;
+    }
+}
+
+//CGGroup의 단일 Spine 데이터 저장용 클래스
+public class CGGroupEntry
+{
+    public string cgKey;
+    public string cgPos;
+    public string animation;
+
+    public CGGroupEntry(string cgKey, string cgPos, string animation)
+    {
+        this.cgKey = cgKey;
+        this.cgPos = cgPos;
+        this.animation = animation;
     }
 }

@@ -1,74 +1,14 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Scene>
-	<Line Type="BGM" Track="BGM_nanndesyou" Volume="0.5"/>
-	<Line Type="BG" Key="bg_rouka"/>
-	<Line Type="SE" Track="se_jihannki"/>
-	<Line Type="TEXT" Name="메이" Text="아 후유코쨩, 그거 들었어?" Voice="s001001" CG="mei_idol_3" Position="left" Animation="wait1" SpeakerType="1"/>
-	<Line Type="TEXT" Name="후유코" Text="그거?" Voice="s001002" CG="fuyuko_idol_3" Position="right" Animation="wait1" SpeakerType="1"/>
-	<Line Type="TEXT" Name="메이" Text="다음 달에 있는 운동회 이야기!" Voice="s001003" CG="mei_idol_3" Position="left" Animation="wait2" SpeakerType="1"/>
-	<Line Type="TEXT" Name="후유코" Text="아 그러고보니…" Voice="s001004" CG="fuyuko_idol_3" Position="right" Animation="think" SpeakerType="1"/>
-	<Line Type="TEXT" Name="메이" Text="이번에는 유닛 별로 종목을 고를 수 있대~" Voice="s001005" CG="mei_idol_3" Position="left" Animation="smile2" SpeakerType="1"/>
-	<Line Type="TEXT" Name="메이" Text="후유코쨩은 뭐 나가고 싶어?" Voice="s001006" SpeakerType="1"/>
-	<Line Type="TRANSITION" Effect="normal"/>
-	<Line Type="BG" Effect="zoom" Value="1.5" Key="bg_rouka"/>
-	<Line Type="SE" Track="se_tansan" Volume="0.5"/>
-	<Line Type="TEXT" Name="후유코" Text="음… 그러네…" Voice="s001007" CG="fuyuko_idol_3" Position="right" Animation="think" SpeakerType="1"/>
-	<Line Type="TEXT" Name="메이" Text="계주라던가, 어때?" Voice="s001008" CG="mei_idol_3" Position="left" Animation="wait1" SpeakerType="1"/>
-	<Line Type="TEXT" Name="후유코" Text="아… 최악이야. 계주같은 건, 죽어도 사양이야" Voice="s001009" CG="fuyuko_idol_3" Position="right" Animation="wait1 face_jito lip_cry" SpeakerType="1"/>
-	<Line Type="TEXT" Name="메이" Text="에, 정말? 계주는 운동회의 꽃이잖아?" Voice="s001010" CG="mei_idol_3" Position="left" Animation="surp1" SpeakerType="1"/>
-	<Line Type="TEXT" Name="후유코" Text="그러니까 싫은 거야. 그렇게 보는 눈이 많은 곳에서 넘어지기라도 해 봐." Voice="s001011" CG="fuyuko_idol_3" Position="right" Animation="wait1 face_jito lip_cry" SpeakerType="1"/>
-	<Line Type="TEXT" Name="후유코" Text="애초에 후유, 달리기 그렇게 잘 하는 편이 아니니까…" Voice="s001012" SpeakerType="1"/>
-	<Line Type="TEXT" Name="후유코" Text="팬들에게 완벽하지 않은 모습은 보여주고 싶지 않아." Voice="s001013" SpeakerType="1"/>
-	<Line Type="TEXT" Name="메이" Text="그렇구나… 후유코쨩이 그렇다면 이어달리기는 안 나가는 걸로!" Voice="s001014" CG="mei_idol_3" Position="left" Animation="smile2" SpeakerType="1"/>
-	<Line Type="TEXT" Name="메이" Text="아, 근데 아사히쨩은 분명 이어달리기 나가고 싶어할 텐데…" Voice="s001015" CG="mei_idol_3" Position="left" Animation="skill2 face_sad" SpeakerType="1"/>
-	<Line Type="TEXT" Name="후유코" Text="그 녀석 성격 상, 무조건 그렇겠지…" Voice="s001016" CG="fuyuko_idol_3" Position="right" Animation="wait2 face_serious lip_sad" SpeakerType="1"/>
-	<Line Type="TEXT" Name="후유코" Text="잠깐만, 메이." Voice="s001017" CG="fuyuko_idol_3" Position="right" Animation="shrug" SpeakerType="1"/>
-	<Line Type="TEXT" Name="메이" Text="후유코쨩?" Voice="s001018" CG="mei_idol_3" Position="left" Animation="wait1 face_surp" SpeakerType="1"/>
-	<Line Type="TEXT" Name="후유코" Text="왠지 불길한 기분이 들어… 빨리 돌아가자." Voice="s001019" CG="fuyuko_idol_3" Position="right" Animation="wait4 face_jito lip_anger" SpeakerType="1"/>
-	<Line Type="TRANSITION" Effect="normal"/>
-	<Line Type="BG" Position="4" Key="bg_rouka"/>
-	<Line Type="SE" Duration="1" Track="se_rouka_run"/>
-	<Line Type="TEXT" Name="메이" Text="자, 잠깐만 후유코쨩!" Voice="s001020" CG="mei_idol_3" Position="left" Animation="surp1" SpeakerType="1"/>
-	<Line Type="TRANSITION" Effect="iris" SE="se_trans_out|se_trans_in"/>
-	<Line Type="BGM" Track="BGM_nanndesyou"/>
-	<Line Type="BG" Key="bg_hikaesitu"/>
-	<Line Type="TEXT" Name="아사히" CG="asahi_idol_3" Position="center" Animation="wait1 face_smile" SpeakerType="1"/>
-	<Line Type="TEXT" Name="방송 PD" Text="와하핫! 좋네, 그거!" Voice="s001021" SpeakerType="3"/>
-	<Line Type="TEXT" Name="방송 PD" Text="아사히쨩이 멋있게 달리는 거, 분명 그림이 될 테니까!" Voice="s001022" SpeakerType="3"/>
-	<Line Type="TEXT" Name="방송 PD" Text="작년 방송이 꽤 화제가 돼서 말이야." Voice="s001023" SpeakerType="3"/>
-	<Line Type="TEXT" Name="방송 PD" Text="이번에는 이어달리기용 원샷 카메라도 준비해뒀다고!" Voice="s001024" SpeakerType="3"/>
-	<Line Type="TEXT" Name="아사히" Text="그거, 본 적 있슴다!" Voice="s001025" CG="asahi_idol_3" Position="center" Animation="smile3" SpeakerType="1"/>
-	<Line Type="TEXT" Name="아사히" Text="카메라 감독님이 카메라를 들고 선수보다 빨리 뛰는 거!" Voice="s001026" SpeakerType="1"/>
-	<Line Type="TEXT" Name="방송 PD" Text="아니, 아무리 그래도 직접 들고 뛰진 않지~" Voice="s001027" SpeakerType="3"/>
-	<Line Type="TEXT" Name="아사히" Text="뭐야, 직접 뛰는 건 줄 알았슴다…" Voice="s001028" CG="asahi_idol_3" Position="center" Animation="sad2" SpeakerType="1"/>
-	<Line Type="TEXT" Name="방송 PD" Text="뭐, 옛날에는 직접 들고 뛰었을지도 모르겠지만" Voice="s001029" SpeakerType="3"/>
-	<Line Type="TEXT" Name="방송 PD" Text="지금은 보통 트랙 러너 카메라라는 녀석으로 찍거든" Voice="s001030" SpeakerType="3"/>
-	<Line Type="TEXT" Name="아사히" Text="그 트랙 러너 카메라라는 거, 빠른 검까?" Voice="s001031" CG="asahi_idol_3" Position="center" Animation="think1" SpeakerType="1"/>
-	<Line Type="TEXT" Name="방송 PD" Text="그야 달리는 선수들을 찍어야 하니까 당연히…" Voice="s001032" SpeakerType="3"/>
-	<Line Type="TEXT" Name="아사히" Text="그럼, 그 녀석을 이기면 제가 1등인 거네요?" Voice="s001033" CG="asahi_idol_3" Position="center" Animation="skill1" SpeakerType="1"/>
-	<Line Type="TEXT" Name="방송 PD" Text="아하하하! 그렇네, 아사히쨩이 이길 수 있다면 말이지!" Voice="s001034" SpeakerType="3"/>
-	<Line Type="TEXT" Name="아사히" Text="그 트랙… 무슨 카메라는 지금 어디있슴까?" Voice="s001035" CG="asahi_idol_3" Position="center" Animation="smile3" SpeakerType="1"/>
-	<Line Type="TEXT" Name="아사히" Text="빨리 승부하고 싶슴다!" Voice="s001036" SpeakerType="1"/>
-	<Line Type="TEXT" Name="방송 PD" Text="아쉽게도 다음 달 대여 예정이라서~" Voice="s001037" SpeakerType="3"/>
-	<Line Type="TRANSITION" Effect="normal"/>
-	<Line Type="BG" Key="bg_hikaesitu"/>
-	<Line Type="SE" Track="door_knock"/>
-	<Line Type="TEXT" Name="후유코" Text="수고하십니다~" Voice="s001038" CG="fuyuko_idol_3" Position="left" Animation="smile1" SpeakerType="1"/>
-	<Line Type="TEXT" Name="메이" Text="수고하십니다." Voice="s001039" CG="mei_idol_3" Position="right" Animation="wait2" SpeakerType="1"/>
-	<Line Type="TEXT" Name="아사히" Text="다음 달까지는 못 기다림다~" Voice="s001040" CG="asahi_idol_3" Position="center" Animation="anger1" SpeakerType="1"/>
-	<Line Type="TEXT" Name="후유코" Text="저기, 프로듀서 님… 이건…?" Voice="s001041" CG="fuyuko_idol_3" Position="left" Animation="wait1 face_smile lip_bitter_smile" SpeakerType="1"/>
-	<Line Type="TEXT" Name="프로듀서" Text="아 후유코, 메이. 어서 와." Voice="s001042" SpeakerType="2"/>
-	<Line Type="TEXT" Name="프로듀서" Text="PD님이랑 아사히가 다음 달에 나갈 운동회 이야기를 하고 있던 중이었는데…" Voice="s001043" SpeakerType="2"/>
-	<Line Type="TEXT" Name="방송 PD" Text="어, 마침 잘 왔네!" Voice="s001044" SpeakerType="3"/>
-	<Line Type="TEXT" Name="방송 PD" Text="스트레이라이트한테는 꼭 이어달리기에 나가줬으면 해서!" Voice="s001045" SpeakerType="3"/>
-	<Line Type="TEXT" Name="방송 PD" Text="두 사람도 괜찮지? 운동 잘 하잖아?" Voice="s001046" SpeakerType="3"/>
-	<Line Type="TEXT" Name="프로듀서" Text="P, PD님, 잠시…" Voice="s001047" SpeakerType="2"/>
-	<Line Type="TEXT" Name="메이" Text="아, 그건…" Voice="s001048" CG="mei_idol_3" Position="right" Animation="wait1 face_surp lip_surp" SpeakerType="1"/>
-	<Line Type="TEXT" Name="후유코" Text="네. 저희한테 맡겨주세요." Voice="s001049" CG="fuyuko_idol_3" Position="left" Animation="smile1" SpeakerType="1"/>
-	<Line Type="TEXT" Name="메이" Text="후, 후유코쨩…?" Voice="s001050" CG="mei_idol_3" Position="right" Animation="surp1" SpeakerType="1"/>
-	<Line Type="TEXT" Name="프로듀서" Text="후유코…?" Voice="s001051" SpeakerType="2"/>
-	<Line Type="TEXT" Name="방송 PD" Text="아하하, 좋네! 그럼 다음 달에 잘 부탁해!" Voice="s001052" SpeakerType="3"/>
-	<Line Type="TEXT" Name="후유코" Text="네, 잘 부탁드립니다~" Voice="s001053" CG="fuyuko_idol_3" Position="left" Animation="smile1" SpeakerType="1"/>
-	<Line Type="SE" Track="door_sime"/>
-	<Line Type="TRANSITION" Effect="iris" SE="se_trans_out|se_trans_in"/>
+	<Line Type="BG"/>
+	<Line Type="TEXT" Name="아사히" Text="이건 뭐 찍고 있는 검까?" Voice="s002001" CG="asahi_idol_3" Position="center" Animation="think1" SpeakerType="1"/>
+	<Line Type="TEXT" Name="후유코" Text="아사히쨩? 아까 대기실에서 이야기했잖아?" Voice="s002002" CG="fuyuko_idol_3" Position="left" Animation="smile1" SpeakerType="1"/>
+	<Line Type="TEXT" Name="메이" Text="이번에 새롭게 오픈하는 극장 선전이야." Voice="s002003" CG="mei_idol_3" Position="right" Animation="smile2" SpeakerType="1"/>
+	<Line Type="TEXT" Name="아사히" Text="헤에. 그렇슴까." Voice="s002004" CG="asahi_idol_3" Position="center" Animation="wait1" SpeakerType="1"/>
+	<Line Type="TEXT" Name="후유코" Text="우, 우선 인사드리자" Voice="s002005" CG="fuyuko_idol_3" Position="left" Animation="wait1 face_smile lip_bitter_smile" SpeakerType="1"/>
+	<Line Type="TEXT" Name="후유코" Text="안녕하세요. 저희는," Voice="s002006" SpeakerType="1"/>
+	<Line Type="CGGROUP" Name="스트레이라이트" CG="fuyuko_idol_3" Position="left" Animation="skill1" SpeakerType="1"/>
+	<Line Type="CGGROUP" Name="스트레이라이트" CG="mei_idol_3" Position="right" Animation="skill1"/>
+	<Line Type="CGGROUP" Name="스트레이라이트" CG="asahi_idol_3" Position="center" Animation="skill1"/>
+	<Line Type="TEXT" Name="스트레이라이트" Text="스트레이라이트입니다!" Voice="s002007 s002008 s002009" CG="스트레이라이트" SpeakerType="1"/>
 </Scene>

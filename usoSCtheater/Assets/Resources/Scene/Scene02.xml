@@ -1,12 +1,15 @@
 <?xml version = "1.0" encoding = "UTF-8"?>
 
-<Scene>
-	<Line Type="SE" Track="door_knock" Volume="2"/>
-	<Line Type="TEXT" Name="???" Voice="s001001" Text="다시 들어가도 됨까?"/>
-	<Line Type="TEXT" Name="후유코" CG="fuyuko_normal_9" Position="left" Animation="smile1" Voice="s001002" Text="네~ 누구세요~"/>
-	<Line Type="SE" Track="door_ake"/>
-	<Line Type="TEXT" Name="아사히" CG="asahi_idol_2" Position="right" Animation="why" Voice="s001003" Text="저임다. 그새 까먹었슴까?"/>
-	<Line Type="SE" Track="door_sime"/>
-	<Line Type="TEXT" Name="후유코" CG="fuyuko_normal_9" Position="left" Animation="anger1" Voice="s001004" Text="하? 예의상 대답한 거잖아, 예의상!"/>
-	<Line Type="TRANSITION" Effect="wipe_left"/>
+<Scene mainTitle = "가짜샤니마스극장 개장 예정" subTitle = "인기 그룹 스트레이라이트의 축전">
+	<Line Type="BG"/>
+	<Line Type="TEXT" Name="아사히" Text="이건 뭐 찍고 있는 검까?" Voice="s002001" CG="asahi_idol_3" Position="center" Animation="think1" SpeakerType="1"/>
+	<Line Type="TEXT" Name="후유코" Text="아사히쨩? 아까 대기실에서 이야기했잖아?" Voice="s002002" CG="fuyuko_idol_3" Position="left" Animation="smile1" SpeakerType="1"/>
+	<Line Type="TEXT" Name="메이" Text="이번에 새롭게 오픈하는 극장 선전이야." Voice="s002003" CG="mei_idol_3" Position="right" Animation="smile2" SpeakerType="1"/>
+	<Line Type="TEXT" Name="아사히" Text="헤에. 그렇슴까." Voice="s002004" CG="asahi_idol_3" Position="center" Animation="wait1" SpeakerType="1"/>
+	<Line Type="TEXT" Name="후유코" Text="우, 우선 인사드리자" Voice="s002005" CG="fuyuko_idol_3" Position="left" Animation="wait1 face_smile lip_bitter_smile" SpeakerType="1"/>
+	<Line Type="TEXT" Name="후유코" Text="안녕하세요. 저희는," Voice="s002006" SpeakerType="1"/>
+	<Line Type="CGGROUP" Name="스트레이라이트" CG="fuyuko_idol_3" Position="left" Animation="skill1" SpeakerType="1"/>
+	<Line Type="CGGROUP" Name="스트레이라이트" CG="mei_idol_3" Position="right" Animation="skill1"/>
+	<Line Type="CGGROUP" Name="스트레이라이트" CG="asahi_idol_3" Position="center" Animation="skill1"/>
+	<Line Type="TEXT" Name="스트레이라이트" Text="스트레이라이트입니다!" Voice="s002007 s002008 s002009" CG="스트레이라이트" SpeakerType="1"/>
 </Scene>

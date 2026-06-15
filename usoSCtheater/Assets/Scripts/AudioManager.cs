@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 public class AudioManager : MonoBehaviour
@@ -8,14 +9,15 @@ public class AudioManager : MonoBehaviour
     [SerializeField] private string bgmPath = "Audio/BGM";
     [SerializeField] private string sePath = "Audio/SE";
 
-    private AudioSource voiceSource;
+    //Voice 여러 개 저장 가능하도록 List로 변경
+    private List<AudioSource> voiceSources = new List<AudioSource>();
     private AudioSource bgmSource;
     private AudioSource seSource;
 
 
     void Awake()
     {
-        voiceSource = gameObject.AddComponent<AudioSource>();
+        voiceSources.Add(gameObject.AddComponent<AudioSource>());
         bgmSource = gameObject.AddComponent<AudioSource>();
         seSource = gameObject.AddComponent<AudioSource>();
 
@@ -28,22 +30,31 @@ public class AudioManager : MonoBehaviour
         //새로운 보이스 키 없으면 기존 재생 유지
         if (string.IsNullOrEmpty(voiceKey)) return;
 
-        AudioClip clip = Resources.Load<AudioClip>($"{voicePath}/{voiceKey}");
+        string[] keys = voiceKey.Split(new char[] { ' ', ','}, System.StringSplitOptions.RemoveEmptyEntries);
 
-        if (clip == null)
+        //List 부족 시 추가 생성
+        while (voiceSources.Count < keys.Length) voiceSources.Add(gameObject.AddComponent<AudioSource>());
+
+        for (int i = 0; i < keys.Length; i++)
         {
-            Debug.LogWarning($"[AudioManager] 보이스 파일 없음: {voiceKey}");
-            return;
-        }
+            string trimmed = keys[i].Trim();
+            AudioClip clip = Resources.Load<AudioClip>($"{voicePath}/{trimmed}");
 
-        voiceSource.Stop();
-        voiceSource.clip = clip;
-        voiceSource.Play();
+            if (clip == null)
+            {
+                Debug.LogWarning($"[AudioManager] 보이스 파일 없음: {trimmed}");
+                continue;
+            }
+
+            voiceSources[i].Stop();
+            voiceSources[i].clip = clip;
+            voiceSources[i].Play();
+        }
     }
 
     public void StopVoice()
     {
-        voiceSource.Stop();
+        foreach (var voice in voiceSources) voice.Stop();
     }
 
     // BGM
