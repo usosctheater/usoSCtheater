@@ -3,6 +3,7 @@ using UnityEngine;
 using Spine.Unity;
 using System.Linq;
 using System.Collections;
+using Spine;
 
 public class CGManager : MonoBehaviour
 {
@@ -41,7 +42,7 @@ public class CGManager : MonoBehaviour
     private static readonly string[] DEFAULT_LIP_S_ANIM = { "lip_wait_s", "lip_bitter_smile_s" };
     
     //강제 무한 Loop용 애니메이션 목록
-
+    private static readonly HashSet<string> FORCE_LOOP_ANIMS = new HashSet<string> {"wait", "blank"};
 
     void Awake()
     {
@@ -174,8 +175,30 @@ public class CGManager : MonoBehaviour
             float loopStartTime = GetLoopStartTime(skAnim, trimmed);
             bool hasEndLoop = loopStartTime >= 0f;
 
+            bool shouldLoop;
+            bool shouldHold;
+
+            if (hasEndLoop)
+            {
+                //LoopStart 이벤트가 있으면 1회 재생 후 EndLoop
+                shouldLoop = false;
+                shouldHold = false;
+            }
+            else if (FORCE_LOOP_ANIMS.Contains(trimmed))
+            {
+                //강제 무한 Loop 애니메이션이라면 무한 루프
+                shouldLoop = true;
+                shouldHold = false;
+            }
+            else
+            {
+                //둘 다 아닐 경우 1회 재생 후 마지막 동작 유지
+                shouldLoop = false;
+                shouldHold = true;
+            }
+
             //Loop_Start 이벤트가 있으면 loop=false로 1회 재생, 없다면 기존처럼 loop=true로 재생
-            Spine.TrackEntry entry = skAnim.AnimationState.SetAnimation(track, trimmed, !hasEndLoop);
+            Spine.TrackEntry entry = skAnim.AnimationState.SetAnimation(track, trimmed, shouldLoop);
 
             if (hasEndLoop)
             {
@@ -194,6 +217,10 @@ public class CGManager : MonoBehaviour
                     //relay가 있으면 Complete 시점에 arm 애니메이션 재생 후 마지막 프레임은 정지
                     if (!string.IsNullOrEmpty(relayAnimName)) PlayArmDown(skAnim, relayAnimName);
                 };
+            }
+            else if (shouldHold)
+            {
+                entry.Complete += (TrackEntry) => TrackEntry.TimeScale = 0f;
             }
         }
     }
