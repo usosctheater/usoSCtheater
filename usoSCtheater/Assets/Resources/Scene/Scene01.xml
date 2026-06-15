@@ -1,6 +1,6 @@
 <?xml version = "1.0" encoding = "UTF-8"?>
 
-<Scene title = "빛은 언제나 한 발 빠르다">
+<Scene mainTitle = "빛은 언제나 한 발 빠르다" subTitle = "Scene 1">
 	<Line Type="BGM" Track="BGM_nanndesyou" Volume="0.5"/>
 	<Line Type="BG" Key="bg_rouka"/>
 	<Line Type="SE" Track="se_jihannki"/>

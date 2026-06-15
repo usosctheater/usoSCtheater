@@ -3767,7 +3767,8 @@ MonoBehaviour:
   dialogBoxBlue: {fileID: 21300000, guid: ab5c8737a05a3974da8cf2ea0c478101, type: 3}
   dialogBoxGreen: {fileID: 21300000, guid: 190b64ba8df14d0449dae6fdc0b15713, type: 3}
   sceneTitleUI: {fileID: 2027259510}
-  sceneTitleText: {fileID: 1740356793}
+  sceneTitleMainText: {fileID: 2138941065}
+  sceneTitleSubText: {fileID: 1740356793}
   titleDisplayDuration: 3
   settingButton: {fileID: 1804541741}
   settingButtonImage: {fileID: 1804541742}

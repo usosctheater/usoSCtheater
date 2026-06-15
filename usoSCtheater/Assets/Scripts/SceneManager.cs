@@ -58,14 +58,16 @@ public class SceneManager : MonoBehaviour
         TextAsset nextFile = sceneFiles[currentSceneIndex];
         Debug.Log($"[SceneManager] 씬 시작: {nextFile.name}");
         
-        //Title 파싱
+        //Title 파싱 - mainTitle / subTitle로 분리
         XmlDocument doc = new XmlDocument();
         doc.LoadXml(nextFile.text);
         XmlNode sceneNode = doc.SelectSingleNode("Scene");
-        string title = sceneNode?.Attributes["title"]?.Value ?? "";
+        string mainTitle = sceneNode?.Attributes["mainTitle"]?.Value ?? "";
+        string subTitle  = sceneNode?.Attributes["subTitle"]?.Value  ?? "";
 
         //Title 표시
-        if (!string.IsNullOrEmpty(title)) uiManager.ShowSceneTitle(title);
+        if (!string.IsNullOrEmpty(mainTitle) || !string.IsNullOrEmpty(subTitle))
+            uiManager.ShowSceneTitle(mainTitle, subTitle);
         
         dialogManager.LoadScene(nextFile);
     }

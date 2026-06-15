@@ -20,7 +20,8 @@ public class UIManager : MonoBehaviour
 
     [Header("씬 타이틀 UI")]
     [SerializeField] private GameObject sceneTitleUI;
-    [SerializeField] private TextMeshProUGUI sceneTitleText;
+    [SerializeField] private TextMeshProUGUI sceneTitleMainText;   // 변경: mainTitle용 텍스트
+    [SerializeField] private TextMeshProUGUI sceneTitleSubText;    // 추가: subTitle용 텍스트
     [SerializeField] private float titleDisplayDuration = 3.0f;
 
     [Header("설정 UI")]
@@ -84,23 +85,25 @@ public class UIManager : MonoBehaviour
         if (isHidden && Input.GetMouseButtonDown(0)) ToggleHide(false);
     }
 
-    public void ShowSceneTitle(string title)
+    // 변경: mainTitle / subTitle 두 인자를 받도록 시그니처 변경
+    public void ShowSceneTitle(string mainTitle, string subTitle)
     {
-        if (string.IsNullOrEmpty(title)) return;
+        if (string.IsNullOrEmpty(mainTitle) && string.IsNullOrEmpty(subTitle)) return;
 
-        //이미 표시 중이라면 강제 중단 후 재시작wwww
+        //이미 표시 중이라면 강제 중단 후 재시작
         if (titleCoroutine != null)
         {
             StopCoroutine(titleCoroutine);
             titleCoroutine = null;
         }
 
-        titleCoroutine = StartCoroutine(ShowTitleCoroutine(title));
+        titleCoroutine = StartCoroutine(ShowTitleCoroutine(mainTitle, subTitle));
     }
 
-    private IEnumerator ShowTitleCoroutine(string title)
+    private IEnumerator ShowTitleCoroutine(string mainTitle, string subTitle)
     {
-        sceneTitleText.text = title;
+        if (sceneTitleMainText != null) sceneTitleMainText.text = mainTitle;
+        if (sceneTitleSubText  != null) sceneTitleSubText.text  = subTitle;
         sceneTitleUI.SetActive(true);
 
         yield return new WaitForSecondsRealtime(titleDisplayDuration);
