@@ -132,6 +132,10 @@ public class DialogManager : MonoBehaviour
                     scriptNodes.Add(new ScriptNode(ScriptNode.NodeType.BG, GetAttr(node, "Key"), GetAttr(node, "Effect"), GetAttr(node, "Position"), float.TryParse(GetAttr(node, "Value"), out float bgVal) ? bgVal : 1.0f));
                     break;
 
+                case "BREAK":
+                    scriptNodes.Add(new ScriptNode(ScriptNode.NodeType.Break));
+                    break;
+
                 default:
                     Debug.LogWarning($"[DialogManager] 알 수 없는 타입: {type}");
                     break;
@@ -249,7 +253,13 @@ public class DialogManager : MonoBehaviour
                         });
                     return;
 
+                case ScriptNode.NodeType.Break:
+                    uiManager.SetDialogBoxVisible(false);               // Break 진입 시 대화창 숨김
+                    ShowLine(new DialogLine());                          // 빈 DialogLine으로 클릭 대기
+                    return;
+
                 case ScriptNode.NodeType.Line:
+                    uiManager.SetDialogBoxVisible(true);                // TEXT 진입 시 대화창 복귀
                     ShowLine(node.line);
                     return;
             }
@@ -326,8 +336,11 @@ public class DialogManager : MonoBehaviour
             autoPlayCoroutine = null;
         }    
 
-        DialogLine line = scriptNodes[currentIndex - 1].line;
+        DialogLine line = scriptNodes[currentIndex - 1].type == ScriptNode.NodeType.Break
+            ? new DialogLine()                                          // Break 노드면 빈 DialogLine
+            : scriptNodes[currentIndex - 1].line;
         dialogText.text = line.text;
+
         isTyping = false;
     }
 
@@ -392,26 +405,26 @@ public class DialogManager : MonoBehaviour
 public class DialogLine
 {
     //텍스트
-    public string name;
-    public string text;
+    public string name     = "";
+    public string text     = "";
 
     //리소스
-    public string cgKey;
-    public string cgPos;
-    public string animation;
-    public string voiceKey;
-    public int speakerType;             //1: 아이돌 2: 프로듀서 3: 기타
+    public string cgKey    = "";
+    public string cgPos    = "";
+    public string animation= "";
+    public string voiceKey = "";
+    public int speakerType = 1;             //1: 아이돌 2: 프로듀서 3: 기타
 
     //이펙트
-    public string effect;
-    public float value;
-    public float duration;
+    public string effect   = "";
+    public float value     = 1.0f;
+    public float duration  = 0f;
 }
 
 public class ScriptNode
 {
     //노드를 타입별로 구분
-    public enum NodeType {Line, BGM, SE, Transition, BG}
+    public enum NodeType {Line, BGM, SE, Transition, BG, Break}  // Break 추가
 
     //type == Line일 때 사용
     public NodeType type;
@@ -451,6 +464,12 @@ public class ScriptNode
         this.type = NodeType.Transition;
         this.transition_effect = effect;
         this.transition_se = se;
+    }
+
+    //Break 노드 생성자
+    public ScriptNode(NodeType type)
+    {
+        this.type = type;
     }
 
     //BG 노드 생성자

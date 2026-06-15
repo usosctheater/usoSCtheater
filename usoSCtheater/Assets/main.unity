@@ -3762,6 +3762,7 @@ MonoBehaviour:
   dialogManager: {fileID: 1223084827}
   audioManager: {fileID: 1400404542}
   backlogManager: {fileID: 101449366}
+  dialogBox: {fileID: 2045714900}
   dialogBoxImage: {fileID: 2045714902}
   dialogBoxRed: {fileID: 21300000, guid: f3943918a91c29746b6c22d9420d3ca7, type: 3}
   dialogBoxBlue: {fileID: 21300000, guid: ab5c8737a05a3974da8cf2ea0c478101, type: 3}
@@ -3788,7 +3789,6 @@ MonoBehaviour:
   panelAnimDuration: 0.3
   panelMaxHeight: 357
   hideTargets:
-  - {fileID: 2045714900}
   - {fileID: 3141371}
 --- !u!1 &1630045756
 GameObject:

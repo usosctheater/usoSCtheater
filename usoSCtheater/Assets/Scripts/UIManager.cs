@@ -13,6 +13,7 @@ public class UIManager : MonoBehaviour
     [SerializeField] private BacklogManager backlogManager;
 
     [Header("대화창 UI")]
+    [SerializeField] private GameObject dialogBox;                      // DialogBox 오브젝트 추가
     [SerializeField] private Image dialogBoxImage;
     [SerializeField] private Sprite dialogBoxRed;
     [SerializeField] private Sprite dialogBoxBlue;
@@ -55,6 +56,7 @@ public class UIManager : MonoBehaviour
     private bool isPanelOpen = false;
     private bool isAutoPlay = false;
     private bool isHidden = false;
+    private bool isBreak = false;                                       // Break 상태 플래그 추가
     public bool IsHidden => isHidden;
 
     private Coroutine panelCoroutine;
@@ -221,7 +223,17 @@ public class UIManager : MonoBehaviour
 
         foreach (var obj in hideTargets) obj.SetActive(!hide);
 
+        // Hide 해제 시 Break 상태면 DialogBox는 숨긴 채로 유지
+        if (!hide && isBreak) dialogBox.SetActive(false);
+
         if (hide) ClosePanel();
+    }
+
+    // DialogBox 표시 여부 제어 (Break 타입 진입/탈출 시 호출)
+    public void SetDialogBoxVisible(bool visible)
+    {
+        isBreak = !visible;
+        if (dialogBox != null) dialogBox.SetActive(visible);
     }
 
     public void ToggleAutoPlay()
