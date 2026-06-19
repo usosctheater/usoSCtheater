@@ -4,21 +4,17 @@
 	<Line Type="BGM" Track="BGM_77" Volume="0.2"/>
 	<Line Type="BG" Key="bg_room_fuyuko"/>
 	<Line Type="TEXT" Name="후유코" Text="하아…" Voice="S002001" CG="fuyuko_homewear" Position="center" Animation="wait4" SpeakerType="1"/>
-	<Line Type="BREAK" duration="2"/>
 	<Line Type="TRANSITION" Effect="normal"/>
 	<Line Type="BG" Key="bg_phone"/>
 	<Line Type="TEXT" Name="프로듀서" Text="[스트레이라이트는 이어달리기에 나가는 걸로 결정됐어.]" Voice="S002002" SpeakerType="3"/>
 	<Line Type="TEXT" Name="프로듀서" Text="[다들 걱정되는 부분도 있겠지만, 최선을 다하면 좋은 결과가 있을 거라고 생각해.]" Voice="S002003" SpeakerType="3"/>
 	<Line Type="TEXT" Name="아사히" Text="[네.]" Voice="S002004" SpeakerType="3"/>
 	<Line Type="TEXT" Name="메이" Text="[OK~]" Voice="S002005" SpeakerType="3"/>
-	<Line Type="BREAK" duration="1"/>
 	<Line Type="TEXT" Name="후유코" Text="최선을 다하면, 말이지…" Voice="S002006" CG="none" SpeakerType="1"/>
 	<Line Type="SE" Track="se_phone_long" Volume="0.3"/>
-	<Line Type="BREAK" duration="1"/>
 	<Line Type="TRANSITION" Effect="normal"/>
 	<Line Type="BG" Effect="flashback" Key="bg_hikaesitu"/>
 	<Line Type="TEXT" Name="후유코" Text="죽을만큼 하기 싫어도, 해야 하는 일이라면 후유는 할 거야." Voice="s001074" CG="fuyuko_idol_3" Position="center" Animation="wait4" SpeakerType="1"/>
-	<Line Type="BREAK" duration="1"/>
 	<Line Type="TRANSITION" Effect="normal"/>
 	<Line Type="BG" Key="bg_room_fuyuko"/>
 	<Line Type="TEXT" Name="후유코" Text="그러게, 괜히 폼 같은 걸 잡아서…" Voice="S002007" CG="fuyuko_homewear" Position="center" Animation="wait1 face_jito lip_cry" SpeakerType="1"/>

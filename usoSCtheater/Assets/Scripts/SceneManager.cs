@@ -23,6 +23,13 @@ public class SceneManager : MonoBehaviour
         PlayNextScene();
     }
 
+    void Update()
+    {
+        //디버그용 씬 직행 기능 (PageUp: 다음 씬, PageDown: 이전 씬)
+        if (Input.GetKeyDown(KeyCode.PageUp)) DebugNextScene();
+        else if (Input.GetKeyDown(KeyCode.PageDown)) DebugPreviousScene();
+    }
+
     private void LoadSceneFiles()
     {
         sceneFiles.Clear();
@@ -70,6 +77,26 @@ public class SceneManager : MonoBehaviour
             uiManager.ShowSceneTitle(mainTitle, subTitle);
         
         dialogManager.LoadScene(nextFile);
+    }
+
+    //디버그용: 다음 씬으로 즉시 이동 (마지막 씬이면 무시)
+    private void DebugNextScene()
+    {
+        if (currentSceneIndex + 1 >= sceneFiles.Count) return;
+
+        currentSceneIndex++;
+        dialogManager.DebugResetState();
+        PlayNextScene();
+    }
+
+    //디버그용: 이전 씬으로 즉시 이동 (첫 씬이면 무시)
+    private void DebugPreviousScene()
+    {
+        if (currentSceneIndex - 1 < 0) return;
+
+        currentSceneIndex--;
+        dialogManager.DebugResetState();
+        PlayNextScene();
     }
 
 }

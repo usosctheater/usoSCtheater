@@ -380,6 +380,27 @@ public class DialogManager : MonoBehaviour
         isTyping = false;
     }
 
+    //디버그용: 씬 강제 전환 전 진행 중이던 타이핑/자동재생/트랜지션 상태 초기화
+    public void DebugResetState()
+    {
+        if (typingCoroutine != null)
+        {
+            StopCoroutine(typingCoroutine);
+            typingCoroutine = null;
+        }
+
+        if (autoPlayCoroutine != null)
+        {
+            StopCoroutine(autoPlayCoroutine);
+            autoPlayCoroutine = null;
+        }
+
+        isTyping = false;
+        isTransition = false;
+
+        ClearScene();
+    }
+
     public void SetAutoPlay(bool value)
     {
         isAutoPlay = value;
