@@ -39,7 +39,7 @@ public class CGManager : MonoBehaviour
     private Dictionary<string, Coroutine> lipCoroutineDict = new Dictionary<string, Coroutine>();
 
     private static readonly string[] DEFAULT_LIP_ANIM = { "lip_wait", "lip_bitter_smile" };
-    private static readonly string[] DEFAULT_LIP_S_ANIM = { "lip_wait_s", "lip_bitter_smile_s" };
+    private static readonly string[] DEFAULT_LIP_S_ANIM = { "lip_wait_s", "lip_serious_s", "lip_bitter_smile_s" };
     
     //강제 무한 Loop용 애니메이션 목록
     private static readonly HashSet<string> FORCE_LOOP_ANIMS = new HashSet<string> {"wait", "blank"};
