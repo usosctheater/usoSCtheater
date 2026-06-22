@@ -214,8 +214,9 @@ public class CGManager : MonoBehaviour
                 {
                     OnAnimationComplete(skAnim, cgKey, track);
 
+                    //ArmDown 기능 일시 비활성화
                     //relay가 있으면 Complete 시점에 arm 애니메이션 재생 후 마지막 프레임은 정지
-                    if (!string.IsNullOrEmpty(relayAnimName)) PlayArmDown(skAnim, relayAnimName);
+                    // if (!string.IsNullOrEmpty(relayAnimName)) PlayArmDown(skAnim, relayAnimName);
                 };
             }
             else if (shouldHold)
