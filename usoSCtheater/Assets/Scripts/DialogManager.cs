@@ -32,9 +32,6 @@ public class DialogManager : MonoBehaviour
     [Header("BREAK 설정")]
     [SerializeField] private float breakDuration = 1.0f;
 
-    [Header("트랜지션 설정")]
-    [SerializeField] private float transitionBreakDuration = 0.5f;
-
     private List<DialogLine> lines = new List<DialogLine>();
     //대사/BGM/SE를 순서대로 담을 노드 리스트
     private List<ScriptNode> scriptNodes = new List<ScriptNode>();
@@ -112,7 +109,8 @@ public class DialogManager : MonoBehaviour
                 case "TEXT":
                     DialogLine line = new DialogLine();
                     line.name = GetAttr(node, "Name");
-                    line.text = GetAttr(node, "Text");
+                    //Text 받을 때, \n 문자열을 실제 줄바꿈으로 변환
+                    line.text = GetAttr(node, "Text").Replace("\\n", "\n");
                     line.cgKey = GetAttr(node, "CG");
                     line.cgPos = GetAttr(node, "Position");
                     line.animation = GetAttr(node, "Animation");
@@ -277,12 +275,7 @@ public class DialogManager : MonoBehaviour
                     effectManager.PlayTransition(node.transition_effect, node.transition_se, ()=> {
                         ClearScene(stopBGM: !isNormalTransition);
                         isTransition = false;
-                        if (isNormalTransition) ProcessNext();
-                        else
-                        {
-                            if (autoPlayCoroutine != null) StopCoroutine(autoPlayCoroutine);
-                            autoPlayCoroutine = StartCoroutine(TransitionBreakCoroutine());
-                        }
+                        ProcessNext();
                     });
                     return;
 
@@ -296,7 +289,7 @@ public class DialogManager : MonoBehaviour
                     return;
 
                 case ScriptNode.NodeType.Line:
-                    uiManager.SetDialogBoxVisible(true);                // TEXT 진입 시 대화창 복귀
+                    uiManager.SetDialogBoxVisible(node.line.speakerType != 0);                // TEXT 진입 시 sType = 0이 아니라면 표시
                     ShowLine(node.line);
                     return;
             }
@@ -488,14 +481,6 @@ public class DialogManager : MonoBehaviour
 
         return maxDuration;
     }
-
-    private IEnumerator TransitionBreakCoroutine()
-    {
-        yield return new WaitForSecondsRealtime(transitionBreakDuration);
-        autoPlayCoroutine = null;
-        ProcessNext();
-    }
-
 }
 
     

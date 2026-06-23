@@ -4,6 +4,7 @@
 	<Line Type="BGM" Track="BGM_77" Volume="0.2"/>
 	<Line Type="BG" Key="bg_room_fuyuko"/>
 	<Line Type="TEXT" Name="후유코" Text="하아…" Voice="S002001" CG="fuyuko_homewear" Position="center" Animation="wait4" SpeakerType="1"/>
+	<Line Type="BREAK" Duration="0.5"/>
 	<Line Type="TRANSITION" Effect="normal"/>
 	<Line Type="BG" Key="bg_phone"/>
 	<Line Type="TEXT" Name="프로듀서" Text="[스트레이라이트는 이어달리기에 나가는 걸로 결정됐어.]" Voice="S002002" SpeakerType="3"/>
@@ -18,13 +19,15 @@
 	<Line Type="TEXT" Name="후유코" Text="죽을만큼 하기 싫어도, 해야 하는 일이라면 후유는 할 거야." Voice="s001074" CG="fuyuko_idol_3" Position="center" Animation="wait4" SpeakerType="1"/>
 	<Line Type="TRANSITION" Effect="normal"/>
 	<Line Type="BG" Key="bg_room_fuyuko"/>
+	<Line Type="BREAK" Duration="0.5" Effect="clean"/>
 	<Line Type="TEXT" Name="후유코" Text="그러게, 괜히 폼 같은 걸 잡아서…" Voice="S002007" CG="fuyuko_homewear" Position="center" Animation="wait1 face_jito lip_cry" SpeakerType="1"/>
 	<Line Type="TRANSITION" Effect="normal"/>
 	<Line Type="BG" Position="2" Effect="zoom" Value="1.5" Key="bg_room_fuyuko"/>
 	<Line Type="SE" Duration="1" Track="se_footstep_slip" Volume="1"/>
-	<Line Type="BREAK" Duration="1" Effect="clean"/>
+	<Line Type="BREAK" Effect="clean"/>
 	<Line Type="TRANSITION" Effect="iris" SE="se_trans_out|se_trans_in"/>
 	<Line Type="BG" Key="bg_living_fuyuko"/>
+	<Line Type="BREAK" Effect="clean"/>
 	<Line Type="TEXT" Name="후유코" Text="잠깐 운동 갔다 올게요." Voice="S002008" CG="fuyuko_sports_2" Position="center" Animation="wait2 face_serious" SpeakerType="1"/>
 	<Line Type="TEXT" Name="후유코의 엄마" Text="아침에 운동 갔다 왔잖아?" Voice="S002009" SpeakerType="3"/>
 	<Line Type="TEXT" Name="후유코" Text="이건 조금 다른 거." Voice="S002010" CG="fuyuko_sports_2" Position="center" Animation="wait1 face_serious" SpeakerType="1"/>
@@ -36,6 +39,7 @@
 	<Line Type="TRANSITION" Effect="iris" SE="se_trans_out|se_trans_in"/>
 	<Line Type="BG" Key="bg_hasisita_day"/>
 	<Line Type="SE" Duration="0.5" Track="se_phone_vibe" Volume="0.3"/>
+	<Line Type="BREAK" Duration="0.5"/>
 	<Line Type="TEXT" Name="후유코" Text="아." Voice="S002015" CG="fuyuko_sports_2" Position="center" Animation="wait2 face_serious" SpeakerType="1"/>
 	<Line Type="SE" Track="se_phone_short" Volume="1"/>
 	<Line Type="BREAK" Duration="1"/>

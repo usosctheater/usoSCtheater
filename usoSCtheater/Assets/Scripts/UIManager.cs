@@ -245,6 +245,9 @@ public class UIManager : MonoBehaviour
     {
         if (dialogBoxImage == null) return;
 
+        //SpeakerType이 0이면 조기 반환
+        if (speakerType == 0) return;
+
         dialogBoxImage.sprite = speakerType switch
         {
             1 => dialogBoxRed,

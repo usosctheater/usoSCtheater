@@ -33,7 +33,7 @@
 	<Line Type="TRANSITION" Effect="iris" SE="se_trans_out|se_trans_in"/>
 	<Line Type="BGM" Track="BGM_nanndesyou" Volume="0.2"/>
 	<Line Type="BG" Key="bg_hikaesitu"/>
-	<Line Type="TEXT" CG="asahi_idol_3" Position="center" Animation="wait1 face_smile" SpeakerType="1"/>
+	<Line Type="TEXT" CG="asahi_idol_3" Position="center" Animation="wait1 face_smile" SpeakerType="0"/>
 	<Line Type="BREAK" Duration="0.3" Effect="clean"/>
 	<Line Type="TEXT" Name="방송 PD" Text="와하하! 좋네, 그거!" Voice="s001021" SpeakerType="3"/>
 	<Line Type="TEXT" Name="방송 PD" Text="아사히쨩이 달리는 거, 분명 그림이 될 테니까!" Voice="s001022" SpeakerType="3"/>
@@ -55,7 +55,7 @@
 	<Line Type="TRANSITION" Effect="normal"/>
 	<Line Type="BG" Key="bg_hikaesitu"/>
 	<Line Type="SE" Track="door_knock"/>
-	<Line Type="BREAK" Duration="1" Effect="clean"/>
+	<Line Type="BREAK" Effect="clean"/>
 	<Line Type="TEXT" Name="후유코" Text="수고하십니다~" Voice="s001038" CG="fuyuko_idol_3" Position="left" Animation="smile1" SpeakerType="1"/>
 	<Line Type="TEXT" Name="메이" Text="수고하십니다." Voice="s001039" CG="mei_idol_3" Position="right" Animation="wait2" SpeakerType="1"/>
 	<Line Type="TEXT" Name="아사히" Text="다음 달까지는 못 기다림다~" Voice="s001040" CG="asahi_idol_3" Position="center" Animation="anger1" SpeakerType="1"/>
@@ -73,10 +73,11 @@
 	<Line Type="TEXT" Name="방송 PD" Text="아하하, 좋네! 그럼 다음 달에 잘 부탁해!" Voice="s001052" SpeakerType="3"/>
 	<Line Type="TEXT" Name="후유코" Text="네, 잘 부탁드립니다~" Voice="s001053" CG="fuyuko_idol_3" Position="left" Animation="smile1" SpeakerType="1"/>
 	<Line Type="SE" Track="door_sime"/>
-	<Line Type="BREAK" Duration="1" Effect="clean"/>
+	<Line Type="BREAK" Effect="clean"/>
 	<Line Type="TRANSITION" Effect="iris" SE="se_trans_out|se_trans_in"/>
 	<Line Type="BGM" Track="BGM_100" Volume="0.2"/>
 	<Line Type="BG" Key="bg_hikaesitu"/>
+	<Line Type="BREAK" Effect="clean"/>
 	<Line Type="TEXT" Name="메이" Text="후유코쨩, 정말 괜찮아?" Voice="s001054" CG="mei_idol_3" Position="left" Animation="wait1 face_serious lip_anger2" SpeakerType="1"/>
 	<Line Type="TEXT" Name="후유코" Text="괜찮을 리가 없잖아." Voice="s001055" CG="fuyuko_idol_3" Position="right" Animation="shrug2 lip_anger" SpeakerType="1"/>
 	<Line Type="TEXT" Name="후유코" Text="왜 후유가 이 녀석 때문에 이어달리기에 나가야 되는 건데" Voice="s001056" SpeakerType="1"/>
@@ -107,6 +108,7 @@
 	<Line Type="TEXT" Name="후유코" Text="자, 이거." Voice="s001078" SpeakerType="1"/>
 	<Line Type="SE" Track="se_tansan" Volume="0.3"/>
 	<Line Type="TEXT" Name="아사히" Text="감사함다." Voice="s001079" CG="asahi_idol_3" Position="right" Animation="wait1 face_serious lip_surp" SpeakerType="1"/>
+	<Line Type="BREAK" Duration="0.5"/>
 	<Line Type="TEXT" Name="아사히" Text="그치만, 후유코쨩 느리니까 1등은 못할 것 같슴다." Voice="s001080" SpeakerType="1"/>
 	<Line Type="TEXT" Name="후유코" Text="시끄러! 알고 있거든!" Voice="s001081" CG="fuyuko_idol_3" Position="left" Animation="anger1" SpeakerType="1"/>
 	<Line Type="TEXT" Name="메이" Text="아하하, 후유코쨩… 진정 진정~" Voice="s001082" CG="mei_idol_3" Position="center" Animation="smile2" SpeakerType="1"/>
