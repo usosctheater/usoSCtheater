@@ -2907,6 +2907,8 @@ MonoBehaviour:
   typingSpeed: 0.1
   autoPlayTextCoeff: 0.05
   autoPlayDelay: 0.8
+  breakDuration: 1
+  transitionBreakDuration: 2
 --- !u!1 &1268738735
 GameObject:
   m_ObjectHideFlags: 0

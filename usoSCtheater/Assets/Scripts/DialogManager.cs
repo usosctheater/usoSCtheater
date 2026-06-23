@@ -29,6 +29,12 @@ public class DialogManager : MonoBehaviour
     [SerializeField] private float autoPlayTextCoeff = 0.05f;   //텍스트 길이 계수
     [SerializeField] private float autoPlayDelay = 0.3f;
 
+    [Header("BREAK 설정")]
+    [SerializeField] private float breakDuration = 1.0f;
+
+    [Header("트랜지션 설정")]
+    [SerializeField] private float transitionBreakDuration = 0.5f;
+
     private List<DialogLine> lines = new List<DialogLine>();
     //대사/BGM/SE를 순서대로 담을 노드 리스트
     private List<ScriptNode> scriptNodes = new List<ScriptNode>();
@@ -136,10 +142,7 @@ public class DialogManager : MonoBehaviour
                     break;
 
                 case "BREAK":
-                    scriptNodes.Add(new ScriptNode(
-                        ScriptNode.NodeType.Break,
-                        float.TryParse(GetAttr(node, "Duration"), out float breakDur) ? breakDur : 0f,   // Duration 파싱
-                        GetAttr(node, "Effect").Trim().ToLower()));                                       // Effect(flag) 파싱
+                    scriptNodes.Add(new ScriptNode(ScriptNode.NodeType.Break, float.TryParse(GetAttr(node, "Duration"), out float breakDur) ? breakDur : 0f, GetAttr(node, "Effect").Trim().ToLower()));
                     break;
 
                 case "CGGROUP":
@@ -274,21 +277,22 @@ public class DialogManager : MonoBehaviour
                     effectManager.PlayTransition(node.transition_effect, node.transition_se, ()=> {
                         ClearScene(stopBGM: !isNormalTransition);
                         isTransition = false;
-                        ProcessNext();
-                        });
+                        if (isNormalTransition) ProcessNext();
+                        else
+                        {
+                            if (autoPlayCoroutine != null) StopCoroutine(autoPlayCoroutine);
+                            autoPlayCoroutine = StartCoroutine(TransitionBreakCoroutine());
+                        }
+                    });
                     return;
 
                 case ScriptNode.NodeType.Break:
-                    // clean flag일 때만 DialogBox 숨김 (무조건 숨김 로직 제거)
+                    // clean flag일 때만 DialogBox 숨김
                     uiManager.SetDialogBoxVisible(node.breakEffect != "clean");
-                    ShowLine(new DialogLine());                          // 빈 DialogLine으로 클릭 대기
 
-                    // Duration이 있으면 최대 대기시간 코루틴 시작 (클릭 시 즉시 스킵)
-                    if (node.breakDuration > 0f)
-                    {
-                        if (autoPlayCoroutine != null) StopCoroutine(autoPlayCoroutine);
-                        autoPlayCoroutine = StartCoroutine(BreakWaitCoroutine(node.breakDuration));
-                    }
+                    float waitDur = node.breakDuration > 0f ? node.breakDuration : breakDuration;
+                    if (autoPlayCoroutine != null) StopCoroutine(autoPlayCoroutine);
+                    autoPlayCoroutine = StartCoroutine(BreakWaitCoroutine(waitDur));
                     return;
 
                 case ScriptNode.NodeType.Line:
@@ -372,10 +376,10 @@ public class DialogManager : MonoBehaviour
             autoPlayCoroutine = null;
         }    
 
-        DialogLine line = scriptNodes[currentIndex - 1].type == ScriptNode.NodeType.Break
-            ? new DialogLine()                                          // Break 노드면 빈 DialogLine
-            : scriptNodes[currentIndex - 1].line;
-        dialogText.text = line.text;
+        // Break 노드에서는 텍스트 건드리지 않음
+        if (scriptNodes[currentIndex - 1].type == ScriptNode.NodeType.Break) return;
+        
+        dialogText.text = scriptNodes[currentIndex - 1].line.text;
 
         isTyping = false;
     }
@@ -419,12 +423,13 @@ public class DialogManager : MonoBehaviour
                 if (autoPlayCoroutine != null) StopCoroutine(autoPlayCoroutine);
                 autoPlayCoroutine = StartCoroutine(AutoPlayCoroutine(scriptNodes[currentIndex - 1].line));
             }
-            //Duration이 있는 Break 도중 자동재생이 켜지면 BreakWaitCoroutine 시작
-            else if (currentIndex > 0 && scriptNodes[currentIndex - 1].type == ScriptNode.NodeType.Break
-                     && scriptNodes[currentIndex - 1].breakDuration > 0f)
+            //Break 도중 AutoPlay 활성화 시, 기본 Duration 처리
+            else if (currentIndex > 0 && scriptNodes[currentIndex - 1].type == ScriptNode.NodeType.Break)
             {
+                float dur = scriptNodes[currentIndex - 1].breakDuration > 0f ? scriptNodes[currentIndex - 1].breakDuration : breakDuration;
+
                 if (autoPlayCoroutine != null) StopCoroutine(autoPlayCoroutine);
-                autoPlayCoroutine = StartCoroutine(BreakWaitCoroutine(scriptNodes[currentIndex - 1].breakDuration));
+                autoPlayCoroutine = StartCoroutine(BreakWaitCoroutine(dur));
             }
         }
     }
@@ -482,6 +487,13 @@ public class DialogManager : MonoBehaviour
         }
 
         return maxDuration;
+    }
+
+    private IEnumerator TransitionBreakCoroutine()
+    {
+        yield return new WaitForSecondsRealtime(transitionBreakDuration);
+        autoPlayCoroutine = null;
+        ProcessNext();
     }
 
 }

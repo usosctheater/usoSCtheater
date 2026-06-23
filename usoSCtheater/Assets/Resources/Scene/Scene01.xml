@@ -34,6 +34,7 @@
 	<Line Type="BGM" Track="BGM_nanndesyou" Volume="0.2"/>
 	<Line Type="BG" Key="bg_hikaesitu"/>
 	<Line Type="TEXT" CG="asahi_idol_3" Position="center" Animation="wait1 face_smile" SpeakerType="1"/>
+	<Line Type="BREAK" Duration="0.3" Effect="clean"/>
 	<Line Type="TEXT" Name="방송 PD" Text="와하하! 좋네, 그거!" Voice="s001021" SpeakerType="3"/>
 	<Line Type="TEXT" Name="방송 PD" Text="아사히쨩이 달리는 거, 분명 그림이 될 테니까!" Voice="s001022" SpeakerType="3"/>
 	<Line Type="TEXT" Name="방송 PD" Text="작년 방송이 꽤 화제가 돼서 말이야." Voice="s001023" SpeakerType="3"/>
@@ -82,7 +83,7 @@
 	<Line Type="TEXT" Name="아사히" Text="그치만 나가겠다고 한 건 후유코쨩임다." Voice="s001057" CG="asahi_idol_3" Position="center" Animation="wait lip_surp" SpeakerType="1"/>
 	<Line Type="TEXT" Name="후유코" Text="그 분위기에서 나가기 싫다고 할 수 있겠냐고!" Voice="s001058" CG="fuyuko_idol_3" Position="right" Animation="anger3" SpeakerType="1"/>
 	<Line Type="TEXT" Name="프로듀서" Text="나가는 종목에 대해서는 조금 더 생각해보겠다고 지금이라도 이야기하면…" Voice="s001059" SpeakerType="2"/>
-	<Line Type="BREAK" Duration="0.5" Effect="clean"/>
+	<Line Type="BREAK" Duration="0.5"/>
 	<Line Type="TEXT" Name="후유코" Text="아니." Voice="s001060" CG="none" SpeakerType="1"/>
 	<Line Type="TEXT" Name="후유코" Text="후유가 좋고 싫고 이전에, 이건 확실히 좋은 기회야." Voice="s001061" CG="fuyuko_idol_3" Position="center" Animation="wait4 lip_anger" SpeakerType="1"/>
 	<Line Type="TEXT" Name="후유코" Text="메이가 이야기했듯이, 이어달리기는 운동회의 꽃이니까." Voice="s001062" SpeakerType="1"/>
@@ -96,7 +97,7 @@
 	<Line Type="TEXT" Name="아사히" Text="그런 거, 전혀 재미있지 않슴다…" Voice="s001070" SpeakerType="1"/>
 	<Line Type="BG" Position="2" Effect="zoom" Value="1.5" Key="bg_hikaesitu"/>
 	<Line Type="TEXT" Name="아사히" Text="만약 후유코쨩이 하기 싫다면…" Voice="s001071" CG="none" SpeakerType="1"/>
-	<Line Type="BREAK" Duration="1" Effect="clean"/>
+	<Line Type="BREAK" Duration="1"/>
 	<Line Type="TEXT" Name="후유코" Text="바보네." Voice="s001072" CG="fuyuko_idol_3" Position="left" Animation="wait4" SpeakerType="1"/>
 	<Line Type="TEXT" Name="후유코" Text="어른에게는 하기 싫어도 해야 하는 일이라는 게 있거든." Voice="s001073" SpeakerType="1"/>
 	<Line Type="TEXT" Name="후유코" Text="죽을만큼 하기 싫어도, 해야 하는 일이라면 후유는 할 거야." Voice="s001074" SpeakerType="1"/>
