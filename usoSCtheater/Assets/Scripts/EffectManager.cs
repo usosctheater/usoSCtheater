@@ -9,6 +9,7 @@ using UnityEngine.UI;
 
 public class EffectManager : MonoBehaviour
 {
+
     [Header("매니저 연결")]
     [SerializeField] private AudioManager audioManager;
 
@@ -30,12 +31,20 @@ public class EffectManager : MonoBehaviour
     private bool _onCompleteInvoked = false;
     float wipeMaskWidth = 2560f;
 
-
     [Header("Fade 설정")]
     [SerializeField] private float fadeOutDuration = 0.5f;
     [SerializeField] private float fadeInDuration = 0.5f;
     [SerializeField] private AnimationCurve fadeOutCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
     [SerializeField] private AnimationCurve fadeInCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
+
+    [Header("Eyeblink 설정")]
+    [SerializeField] private RectTransform eyeblinkTop;
+    [SerializeField] private RectTransform eyeblinkBottom;
+    [SerializeField] private int eyeblinkCount = 3;
+    [SerializeField] private float eyeblinkDuration = 0.15f;
+    [SerializeField] private float eyeblinkCloseDuration = 0.4f;
+    [SerializeField] private AnimationCurve eyeblinkCloseCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
+
 
     [Header("Iris Simple 설정")]
     [SerializeField] private UnityEngine.UI.Image irisImage;                                            //패널 이미지
@@ -47,7 +56,6 @@ public class EffectManager : MonoBehaviour
 
     [SerializeField] private AnimationCurve irisOutCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
     [SerializeField] private AnimationCurve irisInCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
-    private Material irisMaterial;
 
     void Awake()
     {
@@ -61,6 +69,10 @@ public class EffectManager : MonoBehaviour
         wipeMaskRect.gameObject.SetActive(false);
         wipeTransitionScene.gameObject.SetActive(false);
         wipeBarRect.gameObject.SetActive(false);
+
+        //Eyeblink 트랜지션 세팅
+        eyeblinkTop.gameObject.SetActive(false);
+        eyeblinkBottom.gameObject.SetActive(false);
     }
 
     public void PlayTransition(string effect, string se, Action onComplete)
@@ -82,6 +94,10 @@ public class EffectManager : MonoBehaviour
 
             case "iris":
                 StartCoroutine(IrisCoroutine(se, onComplete));
+            break;
+
+            case "eyeblink":
+                StartCoroutine(EyeblinkCoroutine(onComplete));
             break;
 
             default:
@@ -263,6 +279,93 @@ public class EffectManager : MonoBehaviour
 
         irisImage.gameObject.SetActive(false);
         irisIcon.gameObject.SetActive(false);
+    }
+
+    private IEnumerator EyeblinkCoroutine(Action onComplete)
+    {
+        float screenH = Screen.height;
+
+        //Top 패널: 화면 상단 밖에서 시작, 아래로 이동
+        //Bottom 패널: 화면 하단 밖에서 시작, 위로 이동
+        //닫힐 때 각 패널의 anchoredPosition.y 목표값
+        float topStart    =  0f;                            //화면 상단 밖 (위)
+        float topHalf     = -screenH * 0.35f;               //절반만 닫힌 위치
+        float topClose    = -screenH * 0.7f;                //완전히 닫힌 위치 (중앙 경계)
+
+        float bottomStart = 0f;                             //화면 하단 밖 (아래)
+        float bottomHalf  =  screenH * 0.35f;               //절반만 닫힌 위치
+        float bottomClose =  screenH * 0.7f;                //완전히 닫힌 위치 (중앙 경계)
+
+        eyeblinkTop.gameObject.SetActive(true);
+        eyeblinkBottom.gameObject.SetActive(true);
+
+        //패널 시작 위치 세팅
+        eyeblinkTop.anchoredPosition = new UnityEngine.Vector2(0f, topStart);
+        eyeblinkBottom.anchoredPosition = new UnityEngine.Vector2(0f, bottomStart);
+
+        //깜빡
+        for (int i = 0; i < eyeblinkCount; i++)
+        {
+            //눈 감기
+            float elapsed = 0f;
+            float halfDuration = eyeblinkDuration * 0.5f;
+
+            while (elapsed < halfDuration)
+            {
+                elapsed += Time.deltaTime;
+                float t = elapsed / halfDuration;
+
+                eyeblinkTop.anchoredPosition = new UnityEngine.Vector2(0f, Mathf.Lerp(topStart, topHalf, t));
+                eyeblinkBottom.anchoredPosition = new UnityEngine.Vector2(0f, Mathf.Lerp(bottomStart, bottomHalf, t));
+
+                yield return null;
+            }
+
+            eyeblinkTop.anchoredPosition = new UnityEngine.Vector2(0f, topHalf);
+            eyeblinkBottom.anchoredPosition = new UnityEngine.Vector2(0f, bottomHalf);
+
+            //눈 뜨기
+            elapsed = 0f;
+
+            while (elapsed < halfDuration)
+            {
+                elapsed += Time.deltaTime;
+                float t = elapsed / halfDuration;
+
+                eyeblinkTop.anchoredPosition = new UnityEngine.Vector2(0f, Mathf.Lerp(topHalf, topStart, t));
+                eyeblinkBottom.anchoredPosition = new UnityEngine.Vector2(0f, Mathf.Lerp(bottomHalf, bottomStart, t));
+
+                yield return null;
+            }
+
+            eyeblinkTop.anchoredPosition = new UnityEngine.Vector2(0f, topStart);
+            eyeblinkBottom.anchoredPosition = new UnityEngine.Vector2(0f, bottomStart);
+
+        }
+
+        //마지막 완전히 닫힘
+        float closeElapsed = 0f;
+
+        while (closeElapsed < eyeblinkCloseDuration)
+        {
+            closeElapsed += Time.deltaTime;
+            float t = eyeblinkCloseCurve.Evaluate(closeElapsed / eyeblinkCloseDuration);
+
+            eyeblinkTop.anchoredPosition = new UnityEngine.Vector2(0f, Mathf.Lerp(topStart, topClose, t));
+            eyeblinkBottom.anchoredPosition = new UnityEngine.Vector2(0f, Mathf.Lerp(bottomStart, bottomClose, t));
+
+            yield return null;
+        }
+
+        eyeblinkTop.anchoredPosition = new UnityEngine.Vector2(0f, topClose);
+        eyeblinkBottom.anchoredPosition = new UnityEngine.Vector2(0f, bottomClose);
+
+        //화면이 완전히 가려진 순간 콜백 호출
+        onComplete?.Invoke();
+
+        eyeblinkTop.gameObject.SetActive(false);
+        eyeblinkBottom.gameObject.SetActive(false);
+
     }
 
 }
