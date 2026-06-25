@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Scene>
+	<Line Type="BG" Key="bg_hikaesitu2"/>
+	<Line Type="BGM" Track="bgm_101" Volume="0.2"/>
+	<Line Type="BREAK" Effect="clean"/>
+	<Line Type="TEXT" Name="후유코" Text="아사히." Voice="S003001" CG="fuyuko_sports_2" Position="left" Animation="wait3 face_serious lip_sad" SpeakerType="1"/>
+	<Line Type="TEXT" Name="아사히" Text="뭠까?" Voice="S003002" CG="asahi_sports_2" Position="right" Animation="wait2 face_wait lip_surp" SpeakerType="1"/>
+	<Line Type="TEXT" Name="후유코" Text="후유 때문에 1등 못해도 불평하지 마." Voice="S003003" CG="fuyuko_sports_2" Position="left" Animation="shrug face_serious lip_sad" SpeakerType="1"/>
+	<Line Type="TEXT" Name="아사히" Text="상관 없슴다." Voice="S003004" CG="none" SpeakerType="1"/>
+	<Line Type="BREAK" Duration="0.5"/>
+	<Line Type="TEXT" Name="아사히" Text="제가 다 이길 거니까." Voice="S003005" CG="asahi_sports_2" Position="right" Animation="skill1 face_wait lip_smile" SpeakerType="1"/>
+	<Line Type="TEXT" Name="후유코" Text="저 자신은 어디서 오는 지 몰라." Voice="S003006" CG="fuyuko_sports_2" Position="left" Animation="shrug2 face_bitter_smile lip_bitter_smile" SpeakerType="1"/>
+	<Line Type="TEXT" Name="메이" Text="우리들만 믿어, 후유코쨩!" Voice="S003007" CG="mei_sports_2" Position="center" Animation="skill1" SpeakerType="1"/>
+	<Line Type="TEXT" Name="메이" Text="후유코쨩이 안 뛰고 걸어도 될 만큼 차이를 벌려줄게!" Voice="S003008" SpeakerType="1"/>
+	<Line Type="TEXT" Name="후유코" Text="그건 역으로 다른 사람들 눈치 보이니까 그만 둬…" Voice="S003009" CG="fuyuko_sports_2" Position="left" Animation="wait4 face_jito" SpeakerType="1"/>
+	<Line Type="TEXT" Name="후유코" Text="그리고 이어달리기에 출전하는 그룹들, 다 피지컬 좋기로 유명하니까." Voice="S003010" CG="fuyuko_sports_2" Position="left" Animation="anger3 face_serious lip_sad" SpeakerType="1"/>
+	<Line Type="TEXT" Name="후유코" Text="그렇게 간단히 이길 수 있는 상대는 아니야." Voice="S003011" SpeakerType="1"/>
+	<Line Type="TEXT" Name="메이" Text="에, 진심? 그럼 좀 위험한 거 아냐?" Voice="S003012" CG="mei_sports_2" Position="center" Animation="surp1" SpeakerType="1"/>
+	<Line Type="TEXT" Name="후유코" Text="객관적으로 봤을 때, 우리가 1등을 할 수 있을 확률이…" Voice="S003013" CG="fuyuko_sports_2" Position="left" Animation="anger1 face_serious lip_sad" SpeakerType="1"/>
+	<Line Type="TRANSITION" Effect="normal"/>
+	<Line Type="BG" Effect="zoom" Value="1.5" Key="bg_hikaesitu2"/>
+	<Line Type="SE" Duration="1" Track="se_rouka_run"/>
+	<Line Type="TEXT" Name="후유코" Text="잠깐, 아사히?!" Voice="S003014" CG="fuyuko_sports_2" Position="left" Animation="surp2" SpeakerType="1"/>
+	<Line Type="TEXT" Name="아사히" Text="잠깐 다른 팀들 좀 보고 오겠슴다!" Voice="S003015" SpeakerType="1"/>
+	<Line Type="TEXT" Name="후유코" Text="하아?" Voice="S003016" CG="fuyuko_sports_2" Position="left" Animation="anger3 face_jito" SpeakerType="1"/>
+	<Line Type="TEXT" Name="메이" Text="아하하… 내가 따라가서 보고 올게." Voice="S003017" CG="mei_sports_2" Position="right" Animation="serious face_smile1" SpeakerType="1"/>
+	<Line Type="TEXT" Name="후유코" Text="응, 부탁할게." Voice="S003018" CG="fuyuko_sports_2" Position="left" Animation="wait5 face_jito lip_cry" SpeakerType="1"/>
+	<Line Type="SE" Track="door_sime" Volume="1"/>
+	<Line Type="TRANSITION" Effect="normal"/>
+	<Line Type="BG" Key="bg_hikaesitu2"/>
+	<Line/>
+	<Line Type="TEXT" Name="후유코" Text="원래부터 목적은 두 사람을 돋보이게 하는 거였으니까…" Voice="S003019" SpeakerType="1"/>
+	<Line Type="TEXT" Name="후유코" Text="후유는 적당히 달리다가, 아사히한테 넘겨주면 돼." Voice="S003020" SpeakerType="1"/>
+	<Line Type="TEXT" Name="후유코" Text="1등같은 건…" Voice="S003021" SpeakerType="1"/>
+	<Line Type="TRANSITION" Effect="iris" SE="se_trans_out|se_trans_in"/>
+	<Line Type="BG" Key="bg_runninTrack_1"/>
+	<Line Type="BGM" Track="bgm_121" Volume="0.2"/>
+	<Line Type="SE" Effect="loop" Track="se_zawa" Volume="0.2"/>
+	<Line Type="BREAK" Effect="clean"/>
+	<Line Type="TEXT" Name="캐스터" Text="자, 그룹 대항 이어달리기!" Voice="S003022" SpeakerType="3"/>
+	<Line Type="TRANSITION" Effect="iris" SE="se_trans_out|se_trans_in"/>
+	<Line Type="BG" Position="1" Effect="zoom" Value="1.5" Key="bg_runninTrack_1"/>
+	<Line Type="TEXT" Name="캐스터" Text="선수들 일제히 달려나가기 시작합니다." Voice="S003023" SpeakerType="3"/>
+	<Line Type="TEXT" Name="해설" Text="코너를 지나면서 선두 그룹이 치고 나왔네요." Voice="S003024" SpeakerType="3"/>
+	<Line Type="TEXT" Name="캐스터" Text="가장 앞에 있는 선수는…" Voice="S003025" SpeakerType="3"/>
+	<Line Type="TEXT" Name="캐스터" Text="스트레이라이트의 이즈미 메이!" Voice="S003026" SpeakerType="3"/>
+	<Line Type="TEXT" Name="해설" Text="달리는 폼이 예사롭지 않네요." Voice="S003027" SpeakerType="3"/>
+	<Line Type="TEXT" Name="캐스터" Text="그 옆에서 바짝 쫓고 있는 ---선수." Voice="S003028" SpeakerType="3"/>
+	<Line Type="TEXT" Name="캐스터" Text="두 사람의 치열한 선두 싸움이 진행되고 있습니다!" Voice="S003029" SpeakerType="3"/>
+	<Line Type="TEXT" Name="해설" Text="직선 코스에서 결착이 날 것 같은데요." Voice="S003030" SpeakerType="3"/>
+	<Line Type="TEXT" Name="캐스터" Text="말씀드리는 순간, 선두 그룹이 직선 코스에 진입!" Voice="S003031" SpeakerType="3"/>
+	<Line Type="TEXT" Name="캐스터" Text="조금 떨어진 곳에서 두번째 주자들이 몸을 푸는 모습이 보입니다." Voice="S003032" SpeakerType="3"/>
+	<Line Type="TRANSITION" Effect="normal"/>
+	<Line Type="BG" Key="bg_runninTrack_1"/>
+	<Line Type="BREAK" Effect="clean"/>
+	<Line Type="TEXT" Name="후유코" Text="… 바보 같아." Voice="S003033" CG="fuyuko_sports_2" Position="left" Animation="wait5 face_jito lip_cry" SpeakerType="1"/>
+	<Line Type="TEXT" Name="스트레이라이트의 팬" Text="메이 님!!!" Voice="S003034" CG="none" SpeakerType="3"/>
+	<Line Type="TEXT" Name="스트레이라이트의 팬" Text="앞으로 조금…!" Voice="S003035" SpeakerType="3"/>
+	<Line Type="TEXT" Name="후유코" Text="적당히 달리다가, 아사히한테 넘겨주면 되는데." Voice="S003036" CG="fuyuko_sports_2" Position="left" Animation="wait4 face_close lip_cry" SpeakerType="1"/>
+	<Line Type="TEXT" Name="캐스터" Text="자, 마지막 스퍼트!" Voice="S003037" CG="none" SpeakerType="3"/>
+	<Line Type="TEXT" Name="캐스터" Text="이즈미 선수가 선두를 빼앗겼습니다!" Voice="S003038" SpeakerType="3"/>
+	<Line Type="TEXT" Name="후유코" Text="이런 걸로 1등을 해도, 후유한테는 조금도 이득이…" Voice="S003039" CG="fuyuko_sports_2" Position="left" Animation="wait3 face_serious lip_sad" SpeakerType="1"/>
+	<Line Type="TRANSITION" Effect="normal"/>
+	<Line Type="BGM" Key="none"/>
+	<Line Type="BG" Effect="flashback" Key="bg_hasisita_day"/>
+	<Line Type="BREAK" Effect="clean" Duration="0.5"/>
+	<Line Type="TEXT" Name="프로듀서" Text="후유코는 이미 충분히 열심히 하고 있으니까." Voice="S002036" SpeakerType="2"/>
+	<Line Type="TEXT" Name="프로듀서" Text="가끔은 자신에게 솔직해져도 된다고 생각해." Voice="S002037" SpeakerType="2"/>
+	<Line Type="TRANSITION" Effect="normal"/>
+	<Line Type="BG" Effect="flashback" Key="bg_car_sunset"/>
+	<Line Type="BREAK" Effect="clean" Duration="0.5"/>
+	<Line Type="TEXT" Name="아사히" Text="1등을 하는 건 최강이라는 검다." Voice="S002110" SpeakerType="1"/>
+	<Line Type="TEXT" Name="아사히" Text="그리고 스트레이라이트는 항상 최강을 목표로 함다." Voice="S002111" SpeakerType="1"/>
+	<Line Type="TEXT" Name="아사히" Text="그러니까, 저는 항상 1등을 하고 싶슴다. 스트레이라이트니까요." Voice="S002112" SpeakerType="1"/>
+	<Line Type="TRANSITION" Effect="normal"/>
+	<Line Type="BG" Effect="flashback" Key="bg_hasisita_sunset"/>
+	<Line Type="BREAK" Effect="clean" Duration="0.5"/>
+	<Line Type="TEXT" Name="메이" Text="그럼, 내가 후유코쨩이 진심으로 달리지 않아도 될 만큼\n엄~청 빠르게 달리면 된다는 거잖아?" Voice="S002077" SpeakerType="1"/>
+	<Line Type="TEXT" Name="메이" Text="우리는 한 팀이니까!" Voice="S002078" SpeakerType="1"/>
+	<Line Type="TRANSITION" Effect="normal"/>
+	<Line Type="BG" Key="bg_runninTrack_1"/>
+	<Line Type="BGM" Track="bgm_80" Volume="0.2"/>
+	<Line Type="BREAK" Effect="clean"/>
+	<Line Type="TEXT" Name="메이" Text="후유코쨩!" Voice="S003040" SpeakerType="1"/>
+	<Line Type="TEXT" Name="후유코" Text="메이…" Voice="S003041" CG="fuyuko_sports_2" Position="left" Animation="surp2" SpeakerType="1"/>
+	<Line Type="TEXT" Name="메이" Text="…" CG="mei_sports_2" Position="right" Animation="sad2" SpeakerType="1"/>
+	<Line Type="BREAK"/>
+	<Line Type="TEXT" Name="후유코" Text="아아, 정말." Voice="S003042" CG="none" SpeakerType="1"/>
+	<Line Type="BREAK" Duration="0.5"/>
+	<Line Type="TEXT" Name="후유코" Text="너희들 때문에," Voice="S003043" CG="fuyuko_sports_2" Position="center" Animation="smile1 face_bitter_smile lip_bitter_smile" SpeakerType="1"/>
+	<Line Type="BREAK" Duration="0.5"/>
+	<Line Type="TEXT" Name="후유코" Text="바보가 옮아 버렸잖아," Voice="S003044" CG="fuyuko_sports_2" Position="center" Animation="anger1 face_smile lip_sad" SpeakerType="1"/>
+	<Line Type="BREAK" Duration="0.5"/>
+	<Line Type="SE" Volume="0.5" Key="se_kansei"/>
+	<Line Type="TRANSITION" Effect="normal"/>
+	<Line Type="BG" Key="bg_runninTrack_1"/>
+	<Line Type="BREAK" Effect="clean"/>
+	<Line Type="TEXT" Name="캐스터" Text="바통은 두 팀 모두 거의 동시에 넘겨받았습니다." Voice="S003045" SpeakerType="3"/>
+	<Line Type="TEXT" Name="캐스터" Text="두번째 주자 모두 달려나갑니다!" Voice="S003046" SpeakerType="3"/>
+	<Line Type="TEXT" Name="해설" Text="선수들 모두 아주 필사적으로 달리네요." Voice="S003047" SpeakerType="3"/>
+	<Line Type="TEXT" Name="캐스터" Text="동료들과 팬들의 응원 소리 덕분에, 회장은 아주 열정적인 분위기입니다!" Voice="S003048" SpeakerType="3"/>
+	<Line Type="TEXT" Name="캐스터" Text="말씀드리는 순간, 코너에 진입!" Voice="S003049" SpeakerType="3"/>
+	<Line Type="TEXT" Name="후유코" Text="하아… 하아…" Voice="S003050" CG="fuyuko_sports_2" Position="center" Animation="wait5 face_jito lip_cry" SpeakerType="1"/>
+	<Line Type="TEXT" Name="후유코" Text="(지금의 후유, 분명 귀엽지 않은 얼굴 하고 있어…)" Voice="S003051" SpeakerType="1"/>
+	<Line Type="TEXT" Name="후유코" Text="(그래도, 뭐 생각보다 차이가 나고 있지 않아서 다행이야.)" Voice="S003052" SpeakerType="1"/>
+	<Line Type="TEXT" Name="후유코" Text="(이대로 아사히한테 넘겨주기만 하면…)" Voice="S003053" SpeakerType="1"/>
+	<Line Type="TEXT" Name="팬" Text="후유쨩!" Voice="S003054" CG="none" SpeakerType="3"/>
+	<Line Type="TEXT" Name="관객" Text="야, 마유즈미 원래 저런 캐릭터였냐?" Voice="S003055" SpeakerType="3"/>
+	<Line Type="TEXT" Name="관객 2" Text="평소 성격만 보면 저런 거 안 할것 같은데… 의외네." Voice="S003056" SpeakerType="3"/>
+	<Line Type="TEXT" Name="캐스터" Text="자, 슬슬 직선 코스에 들어왔습니다." Voice="S003057" SpeakerType="3"/>
+	<Line Type="TEXT" Name="캐스터" Text="다음 주자의 뒷모습이 보이고 있습니다!" Voice="S003058" SpeakerType="3"/>
+	<Line Type="TEXT" Name="해설" Text="스트레이라이트가 뒤쳐져 있지만, 역전 불가능한 차이는 아닙니다." Voice="S003059" SpeakerType="3"/>
+	<Line Type="TEXT" Name="후유코" Text="하아… 하아…" Voice="S003060" SpeakerType="1"/>
+	<Line Type="TEXT" Name="캐스터" Text="자, 교대 직전!" Voice="S003061" SpeakerType="3"/>
+	<Line Type="TEXT" Name="캐스터" Text="선두가 먼저 교대했고, 그 다음으로…" Voice="S003062" SpeakerType="3"/>
+	<Line Type="TEXT" Name="후유코" Text="아사히쨩, 미안…!" Voice="S003063" CG="fuyuko_sports_2" Position="center" Animation="smile1 face_sad lip_sad" SpeakerType="1"/>
+	<Line Type="TEXT" Name="후유코" Text="격차가…!" Voice="S003064" SpeakerType="1"/>
+	<Line Type="TEXT" Name="아사히" Text="괜찮슴다." Voice="S003065" CG="none" SpeakerType="1"/>
+	<Line Type="TEXT" Name="아사히" Text="이 정도면 충분하니까." Voice="S003066" CG="asahi_sports_2" Position="center" Animation="skill3 face_serious lip_smile" SpeakerType="1"/>
+	<Line Type="TRANSITION" Effect="normal"/>
+	<Line Type="BG" Key="bg_runninTrack_1"/>
+	<Line Type="BREAK" Effect="clean"/>
+	<Line Type="TEXT" Name="후유코" Text="하아… 하아…" Voice="S003067" SpeakerType="1"/>
+	<Line Type="TEXT" Name="후유코" Text="뒤는 맡길게, 아사히…" Voice="S003068" SpeakerType="1"/>
+	<Line Type="SE" Effect="eyeblink"/>
+	<Line Type="BREAK" Effect="clean"/>
+	<Line Type="TRANSITION" Effect="fadeout"/>
+	<Line Type="TEXT" Name="캐스터" Text="바통을 넘겨받은 스트레이라이트의 세리자와 아사히!" Voice="S003069" SpeakerType="3"/>
+	<Line Type="TEXT" Name="캐스터" Text="1등을 맹렬하게 추격!" Voice="S003070" SpeakerType="3"/>
+	<Line Type="TEXT" Name="캐스터" Text="아, 빠릅니다! 점점 차이가 줄어들고 있습니다!" Voice="S003071" SpeakerType="3"/>
+	<Line Type="TEXT" Name="후유코" Text="1등 못하면 용서 안할거니까…" Voice="S003072" SpeakerType="1"/>
+	<Line Type="TRANSITION" Effect="iris" SE="se_trans_out|se_trans_in"/>
+	<Line Type="BG" Key="bg_hikaesitu2"/>
+	<Line Type="BGM" Track="BGM_nanndesyou" Volume="0.2"/>
+	<Line Type="BREAK" Effect="clean"/>
+	<Line Type="TEXT" Name="아사히" Text="SNS에서 후유코쨩이 좋은 얼굴을 하고 있다고 화제가 되고 있슴다." Voice="S003073" CG="asahi_sports_2" Position="left" Animation="surp4 face_serious" SpeakerType="1"/>
+	<Line Type="TEXT" Name="메이" Text="아하하~ 열심히 달리길 잘 했네~" Voice="S003074" CG="mei_sports_2" Position="center" Animation="smile3" SpeakerType="1"/>
+	<Line Type="TEXT" Name="후유코" Text="… 왠지 열 받아." Voice="S003075" CG="fuyuko_sports_2" Position="right" Animation="wait5 face_jito lip_anger" SpeakerType="1"/>
+	<Line Type="TEXT" Name="메이" Text="그래도, 후유코쨩이 열심히 달려주지 않았다면 1등 못했을 테니까~" Voice="S003076" CG="mei_sports_2" Position="center" Animation="smile2" SpeakerType="1"/>
+	<Line Type="TEXT" Name="메이" Text="진심 덕분에 살았어~" Voice="S003077" SpeakerType="1"/>
+	<Line Type="TEXT" Name="후유코" Text="후유의 목적은 애초에 1등하는 게 아니었긴 하지만…" Voice="S003078" CG="fuyuko_sports_2" Position="right" Animation="anger1 face_jito_lip_smile" SpeakerType="1"/>
+	<Line Type="TEXT" Name="후유코" Text="뭐, 좋은 게 좋은 거려나…" Voice="S003079" CG="fuyuko_sports_2" Position="right" Animation="smile2 face_close3" SpeakerType="1"/>
+	<Line Type="TEXT" Name="프로듀서" Text="하하, 1등도 하고 좋은 반응도 얻었으니 다행이야." Voice="S003080" SpeakerType="2"/>
+	<Line Type="TEXT" Name="아사히" Text="그래도, 간발의 차였슴다." Voice="S003081" CG="asahi_sports_2" Position="left" Animation="wait3 face_serious lip_surp" SpeakerType="1"/>
+	<Line Type="TEXT" Name="아사히" Text="후유코쨩이 주말에 몰래 연습 안 했으면 졌을지도 모름다." Voice="S003082" SpeakerType="1"/>
+	<Line Type="TEXT" Name="후유코" Text="하? 아사히, 네가 그걸 어떻게…" Voice="S003083" CG="fuyuko_sports_2" Position="right" Animation="surp2 face_anger lip_anger" SpeakerType="1"/>
+	<Line Type="TEXT" Name="아사히" Text="?" Voice="S003084" CG="asahi_sports_2" Position="left" Animation="why" SpeakerType="1"/>
+	<Line Type="TEXT" Name="아사히" Text="프로듀서님이 전화로 알려줬슴다." Voice="S003085" SpeakerType="1"/>
+	<Line Type="TEXT" Name="아사히" Text="후유코쨩도 나름 열심히 하고 있으니까, 너무 그렇게…" Voice="S003086" SpeakerType="1"/>
+	<Line Type="TEXT" Name="프로듀서" Text="아, 아사히…! 그건…!" Voice="S003087" CG="none" SpeakerType="2"/>
+	<Line Type="TEXT" Name="후유코" Text="프로듀서 님~?" Voice="S003088" CG="fuyuko_sports_2" Position="center" Animation="smile4" SpeakerType="1"/>
+	<Line Type="TEXT" Name="프로듀서" Text="후유코, 들어 줘! 이건…!" Voice="S003089" SpeakerType="2"/>
+	<Line Type="TEXT" Name="후유코" Text="네, 전부 들어드릴 테니, 밖에서 이야기할까요~?" Voice="S003090" CG="fuyuko_sports_2" Position="center" Animation="smile1" SpeakerType="1"/>
+	<Line Type="TEXT" Name="프로듀서" Text="네…" Voice="S003091" SpeakerType="2"/>
+	<Line Type="SE" Track="door_sime"/>
+	<Line Type="TRANSITION" Effect="normal"/>
+	<Line Type="BG" Key="bg_hikaesitu2"/>
+	<Line Type="BREAK" Effect="clean"/>
+	<Line Type="TEXT" Name="메이" Text="가버렸네." Voice="S003092" CG="mei_sports_2" Position="left" Animation="anger2 face_serious lip_smile" SpeakerType="1"/>
+	<Line Type="TEXT" Name="아사히" Text="가버렸슴다." Voice="S003093" CG="asahi_sports_2" Position="left" Animation="wait3 face_surp lip_surp" SpeakerType="1"/>
+	<Line Type="TRANSITION" Effect="wipe_left" SE="se_trans_out|se_trans_in"/>
+	<Line/>
+	<Line/>
+	<Line/>
+	<Line/>
+	<Line/>
+	<Line/>
+	<Line/>
+	<Line/>
+</Scene>
