@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using UnityEngine;
 
 public class AudioManager : MonoBehaviour
@@ -14,14 +15,22 @@ public class AudioManager : MonoBehaviour
     private AudioSource bgmSource;
     private AudioSource seSource;
 
+    private Dictionary<string, AudioSource> audioSlots = new Dictionary<string, AudioSource>();
+
+
 
     void Awake()
     {
-        voiceSources.Add(gameObject.AddComponent<AudioSource>());
-        bgmSource = gameObject.AddComponent<AudioSource>();
-        seSource = gameObject.AddComponent<AudioSource>();
+        string[] slotKeys = {"bgm", "1", "2", "3"};
+        foreach (string key in slotKeys)
+        {
+            AudioSource source = gameObject.AddComponent<AudioSource>();
+            source.loop = (key == "bgm");
+            audioSlots[key] = source;
+        }
 
-        bgmSource.loop = true;
+        voiceSources.Add(gameObject.AddComponent<AudioSource>());
+        seSource = gameObject.AddComponent<AudioSource>();
     }
 
     // 보이스
@@ -42,7 +51,7 @@ public class AudioManager : MonoBehaviour
 
             if (clip == null)
             {
-                Debug.LogWarning($"[AudioManager] 보이스 파일 없음: {trimmed}");
+                UnityEngine.Debug.LogWarning($"[AudioManager] 보이스 파일 없음: {trimmed}");
                 continue;
             }
 
@@ -57,34 +66,50 @@ public class AudioManager : MonoBehaviour
         foreach (var voice in voiceSources) voice.Stop();
     }
 
-    // BGM
-    public void PlayBGM(string bgmKey, float volume = 1.0f)
+    // Audio
+    public void PlayAudio(string slot, string track, float volume = 1.0f, bool loop = false)
     {
-        //BGM 할당 없으면 무시
-        if (string.IsNullOrEmpty(bgmKey)) return;
-        //이미 BGM이 재생중이고, BGM의 이름이 같으면 무시
-        if (bgmSource.isPlaying && bgmSource.clip != null && bgmSource.clip.name == bgmKey) return;
-
-        AudioClip clip = Resources.Load<AudioClip>($"{bgmPath}/{bgmKey}");
-
-        if (clip == null)
+        if (!audioSlots.ContainsKey(slot))
         {
-            Debug.LogWarning($"[AudioManager] BGM 파일 없음: {bgmKey}");
+            UnityEngine.Debug.LogWarning($"[AudioManager] 존재하지 않는 슬롯: {slot}");
             return;
         }
 
-        bgmSource.volume = volume;
-        bgmSource.Stop();
-        bgmSource.clip = clip;
-        bgmSource.loop = true;
-        bgmSource.Play();
+        if (string.IsNullOrEmpty(track)) return;
+
+        AudioSource source = audioSlots[slot];
+        string path = slot == "bgm" ? bgmPath : sePath;
+        AudioClip clip = Resources.Load<AudioClip>($"{path}/{track}");
+
+        if (clip == null)
+        {
+            UnityEngine.Debug.LogWarning($"[AudioManager] 오디오 파일 없음: {track}");
+            return;
+        }
+
+        if (source.isPlaying) UnityEngine.Debug.LogWarning($"[AudioManager] 슬롯 {slot} 강제 덮어쓰기: {source.clip?.name} → {track}");
+
+        source.loop = (slot == "bgm") ? true : loop;
+        source.volume = volume;
+        source.Stop();
+        source.clip = clip;
+        source.Play();
     }
 
-    public void StopBGM()
+    public void StopAudio(string slot)
     {
-        if (bgmSource == null) return;
+        if (!audioSlots.ContainsKey(slot))
+        {
+            UnityEngine.Debug.LogWarning($"[AudioManager] 존재하지 않는 슬롯: {slot}");
+            return;
+        }
         
-        bgmSource.Stop();
+        audioSlots[slot].Stop();
+    }
+
+    public void StopAllAudio()
+    {
+        foreach(var source in audioSlots.Values) source.Stop();
     }
 
     // SE
@@ -96,7 +121,7 @@ public class AudioManager : MonoBehaviour
 
         if (clip == null)
         {
-            Debug.LogWarning($"[AudioManager] SE 파일 없음: {seKey}");
+            UnityEngine.Debug.LogWarning($"[AudioManager] SE 파일 없음: {seKey}");
             return;
         }
 

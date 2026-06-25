@@ -7,6 +7,7 @@ using TMPro;
 using NUnit.Framework;
 using Unity.GraphToolkit.Editor;
 using UnityEngine.EventSystems;
+using UnityEditor.Audio;
 
 public class DialogManager : MonoBehaviour
 {
@@ -123,8 +124,8 @@ public class DialogManager : MonoBehaviour
                     scriptNodes.Add(new ScriptNode(line));
                     break;
 
-                case "BGM":
-                    scriptNodes.Add(new ScriptNode(ScriptNode.NodeType.BGM, GetAttr(node, "Track"), float.TryParse(GetAttr(node, "Volume"), out float bgmVol) ? bgmVol : 1.0f));
+                case "AUDIO":
+                    scriptNodes.Add(new ScriptNode(ScriptNode.NodeType.Audio, GetAttr(node, "Value").ToLower(), GetAttr(node, "Track"), float.TryParse(GetAttr(node, "Volume"), out float aVol) ? aVol : 1.0f, GetAttr(node, "Effect").ToLower()));
                     break;
 
                 case "SE":
@@ -252,8 +253,9 @@ public class DialogManager : MonoBehaviour
 
             switch (node.type)
             {
-                case ScriptNode.NodeType.BGM:
-                    audioManager.PlayBGM(node.track, node.volume);
+                case ScriptNode.NodeType.Audio:
+                    if (node.audioEffect == "stop") audioManager.StopAudio(node.audioSlot);
+                    else audioManager.PlayAudio(node.audioSlot, node.track, node.volume, node.audioEffect == "loop");
                     continue;
 
                 case ScriptNode.NodeType.SE:
@@ -323,7 +325,7 @@ public class DialogManager : MonoBehaviour
         bgManager.hideZoom();
 
         // normal 트랜지션 시 BGM 유지를 위해 조건부 정지
-        if (stopBGM) audioManager.StopBGM();
+        if (stopBGM) audioManager.StopAllAudio();
 
         //안전을 위해서 CGGroupDict도 초기화
         cgGroupDict.Clear();
@@ -507,7 +509,7 @@ public class DialogLine
 public class ScriptNode
 {
     //노드를 타입별로 구분
-    public enum NodeType {Line, BGM, SE, Transition, BG, Break}  // Break 추가
+    public enum NodeType {Line, Audio, SE, Transition, BG, Break}  // Break 추가
 
     //type == Line일 때 사용
     public NodeType type;
@@ -517,6 +519,8 @@ public class ScriptNode
     public string track;                
     public float volume;
     public float seDuration;
+    public string audioSlot;
+    public string audioEffect;
     
     public string transition_effect;
     public string transition_se;
@@ -536,7 +540,17 @@ public class ScriptNode
         this.line = line;
     }
 
-    //BGM / SE 노드 생성자
+    //Audio 노드 생성자
+    public ScriptNode(NodeType type, string slot, string track, float volume, string effect = "")
+    {
+        this.type = type;
+        this.audioSlot = slot;
+        this.track = track;
+        this.volume = volume;
+        this.audioEffect = effect;
+    }
+
+    //SE 노드 생성자
     public ScriptNode(NodeType type, string track, float volume, float seDuration = 0f)
     {
         this.type = type;
