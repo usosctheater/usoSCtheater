@@ -28,6 +28,7 @@ public class SceneManager : MonoBehaviour
         //디버그용 씬 직행 기능 (PageUp: 다음 씬, PageDown: 이전 씬)
         if (Input.GetKeyDown(KeyCode.PageUp)) DebugNextScene();
         else if (Input.GetKeyDown(KeyCode.PageDown)) DebugPreviousScene();
+        else if (Input.GetKeyDown(KeyCode.Backspace)) dialogManager.DebugPrevLine();
     }
 
     private void LoadSceneFiles()

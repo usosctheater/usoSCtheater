@@ -379,27 +379,6 @@ public class DialogManager : MonoBehaviour
         isTyping = false;
     }
 
-    //디버그용: 씬 강제 전환 전 진행 중이던 타이핑/자동재생/트랜지션 상태 초기화
-    public void DebugResetState()
-    {
-        if (typingCoroutine != null)
-        {
-            StopCoroutine(typingCoroutine);
-            typingCoroutine = null;
-        }
-
-        if (autoPlayCoroutine != null)
-        {
-            StopCoroutine(autoPlayCoroutine);
-            autoPlayCoroutine = null;
-        }
-
-        isTyping = false;
-        isTransition = false;
-
-        ClearScene();
-    }
-
     public void SetAutoPlay(bool value)
     {
         isAutoPlay = value;
@@ -482,6 +461,50 @@ public class DialogManager : MonoBehaviour
         }
 
         return maxDuration;
+    }
+
+    //디버그용 기능
+    //씬 강제 전환 전 진행 중이던 타이핑/자동재생/트랜지션 상태 초기화
+    public void DebugResetState()
+    {
+        if (typingCoroutine != null)
+        {
+            StopCoroutine(typingCoroutine);
+            typingCoroutine = null;
+        }
+
+        if (autoPlayCoroutine != null)
+        {
+            StopCoroutine(autoPlayCoroutine);
+            autoPlayCoroutine = null;
+        }
+
+        isTyping = false;
+        isTransition = false;
+
+        ClearScene();
+    }
+
+    public void DebugPrevLine()
+    {
+        int searchFrom = currentIndex -2;
+
+        for (int i = searchFrom; i >= 0; i++)
+        {
+            //Line 노드만 탐색해서
+            if (scriptNodes[i].type != ScriptNode.NodeType.Line) continue;
+
+            //CurrentIndex 반영
+            currentIndex = i + 1;
+
+            //진행중이던 코루틴 모두 중지
+            if (typingCoroutine != null) { StopCoroutine(typingCoroutine); typingCoroutine = null; }
+            if (autoPlayCoroutine != null) { StopCoroutine(autoPlayCoroutine); autoPlayCoroutine = null; }
+            isTyping = false;
+
+            ShowLine(scriptNodes[i].line);
+            return;
+        }
     }
 }
 
