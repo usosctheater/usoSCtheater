@@ -1,271 +1,440 @@
-// using UnityEngine;
-// using UnityEditor;
-// using System.IO;
-// using System.Collections.Generic;
-// using Spine;
-// using Spine.Unity;
-// using Spine.Unity.Editor;
+using UnityEngine;
+using UnityEditor;
+using System.IO;
+using System.Collections.Generic;
+using System.Linq;
+using Spine.Unity;
 
-// /// <summary>
-// /// Spine 자동 임포터 에디터 창
-// /// json / .atlas.txt / png 3개 파일을 드래그&드롭하거나 지정하면
-// /// AtlasAsset → SkeletonDataAsset 을 자동 생성하고
-// /// SkeletonAnimation 이 달린 게임오브젝트를 씬에 배치합니다.
-// /// 메뉴: Window > Spine > Auto Importer
-// /// </summary>
-// namespace Spine.Unity.Editor {
-//     public class SpineAutoImporter : EditorWindow {
+/// <summary>
+/// Spine 자동 세팅 에디터 창
+/// 메뉴: Tools > Spine Auto Setup
+/// </summary>
+public class SpineAutoImporter : EditorWindow
+{
+    // ── 탭 ───────────────────────────────────────────────────────────────
+    private int selectedTab = 0;
+    private readonly string[] tabLabels = new[] { "Auto Setup", "Atlas Converter" };
 
-//         // ── 드래그&드롭 입력 필드 ──────────────────────────────────────────
-//         private TextAsset jsonAsset;      // .json (Spine 스켈레톤 데이터)
-//         private TextAsset atlasTextAsset; // .atlas.txt (Atlas 텍스트)
-//         private Texture2D pngTexture;     // .png (Atlas 텍스처)
+    // ── Auto Setup 탭 ────────────────────────────────────────────────────
+    private Vector2 scrollPos;
 
-//         // ── 출력 옵션 ─────────────────────────────────────────────────────
-//         private bool placeInScene = true;               // 씬에 게임오브젝트 생성 여부
-//         private string outputFolder = "Assets/Spine Characters"; // 에셋 저장 경로
+    private struct SpineCandidate
+    {
+        public string spineName;        // ex) mei_sports_1
+        public string idolName;         // ex) mei
+        public string skeletonDataPath; // Assets/Resources/Spine/mei/mei_sports_1_SkeletonData.asset
+        public string materialPath;     // Assets/Resources/Spine/mei/mei_sports_1_Material.mat
+        public bool alreadyRegistered;
+    }
 
-//         // ── 결과 참조 ─────────────────────────────────────────────────────
-//         private AtlasAsset createdAtlas;
-//         private SkeletonDataAsset createdSkeletonData;
-//         private string lastLog = "";
+    private List<SpineCandidate> candidates = new List<SpineCandidate>();
+    private List<bool> selected = new List<bool>();
+    private string scanLog = "";
+    private bool scanned = false;
 
-//         // ─────────────────────────────────────────────────────────────────
-//         [MenuItem("Window/Spine/Auto Importer")]
-//         public static void ShowWindow() {
-//             var window = GetWindow<SpineAutoImporter>("Spine Auto Importer");
-//             window.minSize = new Vector2(380f, 420f);
-//         }
+    // ── Atlas Converter 탭 ──────────────────────────────────────────────
+    private string atlasSourceFolder = "";
+    private string convertLog = "";
 
-//         // ─────────────────────────────────────────────────────────────────
-//         private void OnGUI() {
-//             GUILayout.Label("Spine Auto Importer", EditorStyles.boldLabel);
-//             EditorGUILayout.HelpBox(
-//                 "json, Atlas(.atlas.txt), PNG 세 파일을 아래 필드에 지정하면\n" +
-//                 "AtlasAsset → SkeletonDataAsset 을 자동 생성합니다.",
-//                 MessageType.Info);
+    // ── 상수 ─────────────────────────────────────────────────────────────
+    private const string SPINE_RESOURCE_PATH = "Assets/Resources/Spine";
+    private const string SHADER_NAME = "Spine/Straight Alpha/Skeleton Fill";
+    private const string CANVAS_NAME = "Canvas";
+    private const string CG_NAME = "CG";
+    private const string CGMANAGER_NAME = "CGManager";
+    private const string SORTING_LAYER = "CG";
+    private const int ORDER_IN_LAYER = 1;
 
-//             EditorGUILayout.Space();
+    // ─────────────────────────────────────────────────────────────────────
+    [MenuItem("Tools/Spine Auto Setup")]
+    public static void ShowWindow()
+    {
+        var window = GetWindow<SpineAutoImporter>("Spine Auto Setup");
+        window.minSize = new Vector2(480f, 520f);
+    }
 
-//             // ── 파일 입력 ─────────────────────────────────────────────────
-//             EditorGUILayout.LabelField("① 파일 지정", EditorStyles.boldLabel);
-//             jsonAsset      = (TextAsset) EditorGUILayout.ObjectField(
-//                                 "Skeleton JSON (.json)", jsonAsset, typeof(TextAsset), false);
-//             atlasTextAsset = (TextAsset) EditorGUILayout.ObjectField(
-//                                 "Atlas Text (.atlas.txt)", atlasTextAsset, typeof(TextAsset), false);
-//             pngTexture     = (Texture2D) EditorGUILayout.ObjectField(
-//                                 "Atlas PNG (.png)", pngTexture, typeof(Texture2D), false);
+    // ─────────────────────────────────────────────────────────────────────
+    private void OnGUI()
+    {
+        selectedTab = GUILayout.Toolbar(selectedTab, tabLabels);
+        EditorGUILayout.Space(6);
 
-//             EditorGUILayout.Space();
+        if (selectedTab == 0) DrawAutoSetupTab();
+        else DrawAtlasConverterTab();
+    }
 
-//             // ── 옵션 ──────────────────────────────────────────────────────
-//             EditorGUILayout.LabelField("② 옵션", EditorStyles.boldLabel);
-//             outputFolder = EditorGUILayout.TextField("출력 폴더", outputFolder);
-//             placeInScene = EditorGUILayout.Toggle("씬에 게임오브젝트 생성", placeInScene);
+    // ── Auto Setup 탭 그리기 ─────────────────────────────────────────────
+    private void DrawAutoSetupTab()
+    {
+        EditorGUILayout.HelpBox(
+            "Assets/Resources/Spine 폴더를 스캔하여 미등록 Spine을 찾고,\n" +
+            "쉐이더 변경 / 씬 오브젝트 생성 / CGManager 등록을 자동으로 처리합니다.",
+            MessageType.Info);
 
-//             EditorGUILayout.Space();
+        EditorGUILayout.Space(4);
 
-//             // ── 버튼 ──────────────────────────────────────────────────────
-//             bool allAssigned = (jsonAsset != null && atlasTextAsset != null && pngTexture != null);
-//             GUI.enabled = allAssigned;
+        if (GUILayout.Button("▶ 스캔", GUILayout.Height(32)))
+        {
+            RunScan();
+        }
 
-//             if (GUILayout.Button("▶ Import & Create Assets", GUILayout.Height(36f))) {
-//                 RunImport();
-//             }
+        if (!scanned) return;
 
-//             GUI.enabled = true;
+        EditorGUILayout.Space(4);
+        EditorGUILayout.LabelField("스캔 결과", EditorStyles.boldLabel);
 
-//             // ── 결과 표시 ─────────────────────────────────────────────────
-//             if (!string.IsNullOrEmpty(lastLog)) {
-//                 EditorGUILayout.Space();
-//                 EditorGUILayout.HelpBox(lastLog, MessageType.None);
-//             }
+        if (!string.IsNullOrEmpty(scanLog))
+            EditorGUILayout.HelpBox(scanLog, MessageType.None);
 
-//             // ── 결과 에셋 핑 버튼 ─────────────────────────────────────────
-//             if (createdSkeletonData != null) {
-//                 EditorGUILayout.Space();
-//                 EditorGUILayout.LabelField("생성된 에셋", EditorStyles.boldLabel);
-//                 EditorGUILayout.ObjectField("AtlasAsset", createdAtlas, typeof(AtlasAsset), false);
-//                 EditorGUILayout.ObjectField("SkeletonDataAsset", createdSkeletonData, typeof(SkeletonDataAsset), false);
+        if (candidates.Count == 0)
+        {
+            EditorGUILayout.HelpBox("처리할 항목이 없습니다. 모두 등록되어 있거나 SkeletonData가 없습니다.", MessageType.Warning);
+            return;
+        }
 
-//                 if (GUILayout.Button("프로젝트 창에서 선택")) {
-//                     Selection.activeObject = createdSkeletonData;
-//                     EditorGUIUtility.PingObject(createdSkeletonData);
-//                 }
-//             }
+        // 전체 선택/해제
+        EditorGUILayout.BeginHorizontal();
+        if (GUILayout.Button("전체 선택", GUILayout.Width(80))) for (int i = 0; i < selected.Count; i++) selected[i] = true;
+        if (GUILayout.Button("전체 해제", GUILayout.Width(80))) for (int i = 0; i < selected.Count; i++) selected[i] = false;
+        EditorGUILayout.EndHorizontal();
 
-//             // ── 드래그&드롭 지원 (창 전체) ────────────────────────────────
-//             HandleDragAndDrop();
-//         }
+        EditorGUILayout.Space(2);
 
-//         // ─────────────────────────────────────────────────────────────────
-//         /// <summary>창 위로 파일을 드래그&드롭하면 자동 분류합니다.</summary>
-//         private void HandleDragAndDrop() {
-//             Event evt = Event.current;
-//             if (evt.type != EventType.DragUpdated && evt.type != EventType.DragPerform)
-//                 return;
+        // 후보 목록
+        scrollPos = EditorGUILayout.BeginScrollView(scrollPos, GUILayout.MaxHeight(260));
+        for (int i = 0; i < candidates.Count; i++)
+        {
+            EditorGUILayout.BeginHorizontal("box");
+            selected[i] = EditorGUILayout.Toggle(selected[i], GUILayout.Width(20));
+            EditorGUILayout.LabelField($"[{candidates[i].idolName}]  {candidates[i].spineName}");
+            EditorGUILayout.EndHorizontal();
+        }
+        EditorGUILayout.EndScrollView();
 
-//             DragAndDrop.visualMode = DragAndDropVisualMode.Copy;
+        EditorGUILayout.Space(4);
 
-//             if (evt.type == EventType.DragPerform) {
-//                 DragAndDrop.AcceptDrag();
-//                 foreach (Object dragObj in DragAndDrop.objectReferences) {
-//                     string path = AssetDatabase.GetAssetPath(dragObj);
-//                     if (dragObj is TextAsset ta) {
-//                         if (path.EndsWith(".json"))
-//                             jsonAsset = ta;
-//                         else if (path.EndsWith(".atlas.txt"))
-//                             atlasTextAsset = ta;
-//                     } else if (dragObj is Texture2D tex) {
-//                         pngTexture = tex;
-//                     }
-//                 }
-//                 evt.Use();
-//                 Repaint();
-//             }
-//         }
+        bool anySelected = selected.Any(s => s);
+        GUI.enabled = anySelected;
+        if (GUILayout.Button("▶ 선택 항목 자동 세팅 실행", GUILayout.Height(36)))
+        {
+            RunSetup();
+        }
+        GUI.enabled = true;
+    }
 
-//         // ─────────────────────────────────────────────────────────────────
-//         /// <summary>핵심 임포트 로직: Atlas → SkeletonData → (옵션) 게임오브젝트 생성</summary>
-//         private void RunImport() {
-//             // ── 출력 폴더 보장 ────────────────────────────────────────────
-//             if (!AssetDatabase.IsValidFolder(outputFolder)) {
-//                 // 중간 경로까지 순차 생성
-//                 EnsureFolderExists(outputFolder);
-//             }
+    // ── Atlas Converter 탭 그리기 ────────────────────────────────────────
+    private void DrawAtlasConverterTab()
+    {
+        EditorGUILayout.HelpBox(
+            "지정한 폴더 안의 .atlas 파일을 .atlas.txt로 변환합니다.\n" +
+            "변환 후 Resources/Spine/{아이돌} 폴더에 직접 넣으세요.",
+            MessageType.Info);
 
-//             // ── 1단계: AtlasAsset 생성 ────────────────────────────────────
-//             createdAtlas = CreateAtlasAsset();
-//             if (createdAtlas == null) {
-//                 lastLog = "❌ AtlasAsset 생성 실패. 콘솔 로그를 확인하세요.";
-//                 return;
-//             }
+        EditorGUILayout.Space(4);
+        EditorGUILayout.LabelField("변환할 폴더 경로 (절대 경로)");
 
-//             // ── 2단계: SkeletonDataAsset 생성 ─────────────────────────────
-//             createdSkeletonData = CreateSkeletonDataAsset(createdAtlas);
-//             if (createdSkeletonData == null) {
-//                 lastLog = "❌ SkeletonDataAsset 생성 실패. 콘솔 로그를 확인하세요.";
-//                 return;
-//             }
+        EditorGUILayout.BeginHorizontal();
+        atlasSourceFolder = EditorGUILayout.TextField(atlasSourceFolder);
+        if (GUILayout.Button("찾기", GUILayout.Width(50)))
+        {
+            string path = EditorUtility.OpenFolderPanel("Atlas 파일이 있는 폴더 선택", "", "");
+            if (!string.IsNullOrEmpty(path)) atlasSourceFolder = path;
+        }
+        EditorGUILayout.EndHorizontal();
 
-//             // ── 3단계: (옵션) 씬에 SkeletonAnimation 게임오브젝트 배치 ────
-//             if (placeInScene) {
-//                 PlaceSkeletonInScene(createdSkeletonData);
-//             }
+        EditorGUILayout.Space(4);
 
-//             lastLog = $"✅ 임포트 완료!\n" +
-//                       $"  AtlasAsset      : {AssetDatabase.GetAssetPath(createdAtlas)}\n" +
-//                       $"  SkeletonDataAsset: {AssetDatabase.GetAssetPath(createdSkeletonData)}";
+        GUI.enabled = !string.IsNullOrEmpty(atlasSourceFolder);
+        if (GUILayout.Button("▶ .atlas → .atlas.txt 변환", GUILayout.Height(32)))
+        {
+            RunAtlasConvert();
+        }
+        GUI.enabled = true;
 
-//             AssetDatabase.SaveAssets();
-//             AssetDatabase.Refresh();
-//             Repaint();
-//         }
+        if (!string.IsNullOrEmpty(convertLog))
+        {
+            EditorGUILayout.Space(4);
+            EditorGUILayout.HelpBox(convertLog, MessageType.None);
+        }
+    }
 
-//         // ─────────────────────────────────────────────────────────────────
-//         /// <summary>AtlasAsset 을 생성하고 반환합니다.</summary>
-//         private AtlasAsset CreateAtlasAsset() {
-//             string primaryName = Path.GetFileNameWithoutExtension(atlasTextAsset.name)
-//                                      .Replace(".atlas", "");
-//             string atlasAssetPath = $"{outputFolder}/{primaryName}_Atlas.asset";
+    // ─────────────────────────────────────────────────────────────────────
+    // 스캔 로직
+    // ─────────────────────────────────────────────────────────────────────
+    private void RunScan()
+    {
+        candidates.Clear();
+        selected.Clear();
+        scanLog = "";
+        scanned = true;
 
-//             // 기존 에셋이 있으면 재사용
-//             AtlasAsset atlas = AssetDatabase.LoadAssetAtPath<AtlasAsset>(atlasAssetPath);
-//             if (atlas == null) {
-//                 atlas = ScriptableObject.CreateInstance<AtlasAsset>();
-//                 AssetDatabase.CreateAsset(atlas, atlasAssetPath);
-//             }
+        // CGManager에 이미 등록된 key 수집
+        HashSet<string> registeredKeys = GetRegisteredKeys();
 
-//             // ── 머티리얼 생성 (PNG → Material) ────────────────────────────
-//             string texPath    = AssetDatabase.GetAssetPath(pngTexture);
-//             string matPath    = $"{outputFolder}/{primaryName}_Material.mat";
-//             Material mat = AssetDatabase.LoadAssetAtPath<Material>(matPath);
-//             if (mat == null) {
-//                 mat = new Material(Shader.Find(SpineEditorUtilities.defaultShader));
-//                 AssetDatabase.CreateAsset(mat, matPath);
-//             }
-//             mat.mainTexture = pngTexture;
-//             EditorUtility.SetDirty(mat);
+        // Spine 폴더 하위 아이돌 폴더 순회
+        string[] idolDirs = AssetDatabase.GetSubFolders(SPINE_RESOURCE_PATH);
+        int foundCount = 0;
 
-//             // ── Atlas 필드 설정 ───────────────────────────────────────────
-//             atlas.atlasFile = atlasTextAsset;
-//             atlas.materials = new Material[] { mat };
-//             EditorUtility.SetDirty(atlas);
-//             AssetDatabase.SaveAssets();
+        foreach (string idolDir in idolDirs)
+        {
+            string idolName = Path.GetFileName(idolDir).ToLower();
+            string[] allAssets = AssetDatabase.FindAssets("t:SkeletonDataAsset", new[] { idolDir });
 
-//             Debug.Log($"[SpineAutoImporter] AtlasAsset 생성: {atlasAssetPath}");
-//             return AssetDatabase.LoadAssetAtPath<AtlasAsset>(atlasAssetPath);
-//         }
+            foreach (string guid in allAssets)
+            {
+                string assetPath = AssetDatabase.GUIDToAssetPath(guid);
+                string assetName = Path.GetFileNameWithoutExtension(assetPath); // ex) mei_sports_1_SkeletonData
+                string spineName = assetName.Replace("_SkeletonData", "");      // ex) mei_sports_1
+                string matPath = $"{idolDir}/{spineName}_Material.mat";
 
-//         // ─────────────────────────────────────────────────────────────────
-//         /// <summary>SkeletonDataAsset 을 생성하고 반환합니다.</summary>
-//         private SkeletonDataAsset CreateSkeletonDataAsset(AtlasAsset atlasAsset) {
-//             string primaryName   = Path.GetFileNameWithoutExtension(jsonAsset.name);
-//             string skeletonPath  = $"{outputFolder}/{primaryName}_SkeletonData.asset";
+                var c = new SpineCandidate
+                {
+                    spineName = spineName,
+                    idolName = idolName,
+                    skeletonDataPath = assetPath,
+                    materialPath = matPath,
+                    alreadyRegistered = registeredKeys.Contains(spineName)
+                };
 
-//             SkeletonDataAsset skeletonData = AssetDatabase.LoadAssetAtPath<SkeletonDataAsset>(skeletonPath);
-//             if (skeletonData == null) {
-//                 skeletonData = ScriptableObject.CreateInstance<SkeletonDataAsset>();
-//                 AssetDatabase.CreateAsset(skeletonData, skeletonPath);
-//             }
+                if (!c.alreadyRegistered)
+                {
+                    candidates.Add(c);
+                    selected.Add(true);
+                    foundCount++;
+                }
+            }
+        }
 
-//             // ── SkeletonDataAsset 필드 설정 ───────────────────────────────
-//             skeletonData.skeletonJSON  = jsonAsset;
-//             skeletonData.atlasAssets   = new AtlasAsset[] { atlasAsset };
-//             skeletonData.defaultMix    = SpineEditorUtilities.defaultMix;
-//             skeletonData.scale         = SpineEditorUtilities.defaultScale;
+        scanLog = foundCount == 0
+            ? "미등록 항목 없음."
+            : $"미등록 Spine {foundCount}개 발견. 처리할 항목을 선택 후 실행하세요.";
 
-//             // 캐시 초기화 후 유효성 검증
-//             skeletonData.Clear();
-//             SkeletonData skelData = skeletonData.GetSkeletonData(true);
-//             if (skelData == null) {
-//                 Debug.LogError($"[SpineAutoImporter] SkeletonData 로드 실패: {skeletonPath}");
-//                 AssetDatabase.DeleteAsset(skeletonPath);
-//                 return null;
-//             }
+        Repaint();
+    }
 
-//             EditorUtility.SetDirty(skeletonData);
-//             AssetDatabase.SaveAssets();
+    // ─────────────────────────────────────────────────────────────────────
+    // 세팅 실행 로직
+    // ─────────────────────────────────────────────────────────────────────
+    private void RunSetup()
+    {
+        // Canvas > CG 찾기
+        GameObject canvasObj = GameObject.Find(CANVAS_NAME);
+        if (canvasObj == null) { Debug.LogError("[SpineAutoSetup] Canvas 오브젝트를 찾을 수 없습니다."); return; }
 
-//             Debug.Log($"[SpineAutoImporter] SkeletonDataAsset 생성: {skeletonPath}");
-//             return AssetDatabase.LoadAssetAtPath<SkeletonDataAsset>(skeletonPath);
-//         }
+        Transform cgTransform = canvasObj.transform.Find(CG_NAME);
+        if (cgTransform == null) { Debug.LogError("[SpineAutoSetup] Canvas > CG 오브젝트를 찾을 수 없습니다."); return; }
 
-//         // ─────────────────────────────────────────────────────────────────
-//         /// <summary>씬에 SkeletonAnimation 컴포넌트가 달린 게임오브젝트를 생성합니다.</summary>
-//         private void PlaceSkeletonInScene(SkeletonDataAsset skeletonDataAsset) {
-//             // InstantiateSkeletonAnimation 은 SkeletonAnimation 컴포넌트를 반환합니다.
-//             SkeletonAnimation skelAnim = SpineEditorUtilities.InstantiateSkeletonAnimation(skeletonDataAsset);
-//             if (skelAnim == null) {
-//                 Debug.LogWarning("[SpineAutoImporter] 씬 배치 실패: InstantiateSkeletonAnimation 이 null 을 반환했습니다.");
-//                 return;
-//             }
+        // CGManager 찾기
+        CGManager cgManager = FindCGManager();
+        if (cgManager == null) { Debug.LogError("[SpineAutoSetup] CGManager 컴포넌트를 찾을 수 없습니다."); return; }
 
-//             skelAnim.gameObject.name = skeletonDataAsset.name.Replace("_SkeletonData", "");
+        Shader targetShader = Shader.Find(SHADER_NAME);
+        if (targetShader == null) Debug.LogWarning($"[SpineAutoSetup] 쉐이더를 찾을 수 없습니다: {SHADER_NAME}");
 
-//             // 씬 뷰 카메라 앞 중앙에 배치
-//             if (SceneView.lastActiveSceneView != null) {
-//                 Camera sv = SceneView.lastActiveSceneView.camera;
-//                 skelAnim.transform.position = sv.ViewportToWorldPoint(new Vector3(0.5f, 0.5f, 10f));
-//             }
+        int successCount = 0;
 
-//             Undo.RegisterCreatedObjectUndo(skelAnim.gameObject, "Create Spine GameObject");
-//             Selection.activeGameObject = skelAnim.gameObject;
+        for (int i = 0; i < candidates.Count; i++)
+        {
+            if (!selected[i]) continue;
 
-//             Debug.Log($"[SpineAutoImporter] 씬에 게임오브젝트 생성: {skelAnim.gameObject.name}");
-//         }
+            SpineCandidate c = candidates[i];
+            bool ok = ProcessOne(c, cgTransform, cgManager, targetShader);
+            if (ok) successCount++;
+        }
 
-//         // ─────────────────────────────────────────────────────────────────
-//         /// <summary>"Assets/A/B/C" 형식의 경로를 단계별로 생성합니다.</summary>
-//         private static void EnsureFolderExists(string path) {
-//             string[] parts = path.Split('/');
-//             string current = parts[0]; // "Assets"
-//             for (int i = 1; i < parts.Length; i++) {
-//                 string next = current + "/" + parts[i];
-//                 if (!AssetDatabase.IsValidFolder(next))
-//                     AssetDatabase.CreateFolder(current, parts[i]);
-//                 current = next;
-//             }
-//         }
-//     }
-// }
+        // 씬 파일 임시 이동 타이밍과의 충돌 방지를 위해 한 프레임 뒤에 저장
+        int capturedCount = successCount;
+        EditorApplication.delayCall += () =>
+        {
+            UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(
+                UnityEngine.SceneManagement.SceneManager.GetActiveScene());
+            scanLog = $"✅ 완료: {capturedCount}개 처리됨. 씬을 저장해 주세요.";
+            RunScan();
+            Repaint();
+        };
+    }
+
+    private bool ProcessOne(SpineCandidate c, Transform cgTransform, CGManager cgManager, Shader targetShader)
+    {
+        // ① 쉐이더 변경 - 씬 dirty 전에 머티리얼 에셋을 먼저 수정 후 즉시 저장
+        //    (오브젝트 생성 이후에 SetDirty하면 씬 자동저장과 타이밍 충돌 발생)
+        if (targetShader != null)
+        {
+            Material mat = AssetDatabase.LoadAssetAtPath<Material>(c.materialPath);
+            if (mat != null)
+            {
+                mat.shader = targetShader;
+                EditorUtility.SetDirty(mat);
+                AssetDatabase.SaveAssetIfDirty(mat);
+            }
+            else Debug.LogWarning($"[SpineAutoSetup] 머티리얼 없음: {c.materialPath}");
+        }
+
+        // ② 아이돌 폴더 찾기 (대소문자 무시)
+        Transform idolFolder = FindChildIgnoreCase(cgTransform, c.idolName);
+        if (idolFolder == null)
+        {
+            // 없으면 새로 생성
+            GameObject newFolder = new GameObject(c.idolName);
+            newFolder.transform.SetParent(cgTransform, false);
+            idolFolder = newFolder.transform;
+            Undo.RegisterCreatedObjectUndo(newFolder, "Create Idol Folder");
+            Debug.Log($"[SpineAutoSetup] 아이돌 폴더 생성: {c.idolName}");
+        }
+
+        // ③ SkeletonDataAsset 로드
+        SkeletonDataAsset skeletonData = AssetDatabase.LoadAssetAtPath<SkeletonDataAsset>(c.skeletonDataPath);
+        if (skeletonData == null)
+        {
+            Debug.LogError($"[SpineAutoSetup] SkeletonDataAsset 로드 실패: {c.skeletonDataPath}");
+            return false;
+        }
+
+        // ④ SkeletonAnimation 오브젝트 생성 및 데이터 연결
+        SkeletonAnimation skelAnim = Spine.Unity.Editor.SpineEditorUtilities.InstantiateSkeletonAnimation(skeletonData);
+        if (skelAnim == null)
+        {
+            Debug.LogError($"[SpineAutoSetup] SkeletonAnimation 생성 실패: {c.spineName}");
+            return false;
+        }
+
+        GameObject spineObj = skelAnim.gameObject;
+        spineObj.name = c.spineName;
+        spineObj.transform.SetParent(idolFolder, false);
+        Undo.RegisterCreatedObjectUndo(spineObj, "Create Spine Object");
+
+        // ⑤ SortingLayer, Order 설정
+        MeshRenderer meshRenderer = spineObj.GetComponent<MeshRenderer>();
+        if (meshRenderer != null)
+        {
+            meshRenderer.sortingLayerName = SORTING_LAYER;
+            meshRenderer.sortingOrder = ORDER_IN_LAYER;
+            EditorUtility.SetDirty(meshRenderer);
+        }
+
+        // ⑥ CGManager SpineEntries 등록
+        RegisterToCGManager(cgManager, c.spineName, spineObj);
+
+        Debug.Log($"[SpineAutoSetup] 처리 완료: {c.spineName}");
+        return true;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // 헬퍼 메서드
+    // ─────────────────────────────────────────────────────────────────────
+
+    /// <summary>씬에서 CGManager 컴포넌트를 찾아 반환</summary>
+    private CGManager FindCGManager()
+    {
+        GameObject gmObj = GameObject.Find(CGMANAGER_NAME);
+        if (gmObj != null) return gmObj.GetComponent<CGManager>();
+        return null;
+    }
+
+    /// <summary>대소문자 무시하고 자식 Transform 탐색</summary>
+    private Transform FindChildIgnoreCase(Transform parent, string name)
+    {
+        foreach (Transform child in parent)
+        {
+            if (string.Equals(child.name, name, System.StringComparison.OrdinalIgnoreCase))
+                return child;
+        }
+        return null;
+    }
+
+    /// <summary>CGManager의 spineEntries에 이미 등록된 key 목록 반환</summary>
+    private HashSet<string> GetRegisteredKeys()
+    {
+        var keys = new HashSet<string>();
+        CGManager cgManager = FindCGManager();
+        if (cgManager == null) return keys;
+
+        SerializedObject so = new SerializedObject(cgManager);
+        SerializedProperty entries = so.FindProperty("spineEntries");
+        if (entries == null) return keys;
+
+        for (int i = 0; i < entries.arraySize; i++)
+        {
+            SerializedProperty entry = entries.GetArrayElementAtIndex(i);
+            SerializedProperty keyProp = entry.FindPropertyRelative("key");
+            if (keyProp != null) keys.Add(keyProp.stringValue);
+        }
+        return keys;
+    }
+
+    /// <summary>CGManager.spineEntries에 새 항목 추가</summary>
+    private void RegisterToCGManager(CGManager cgManager, string key, GameObject spineObj)
+    {
+        SerializedObject so = new SerializedObject(cgManager);
+        so.Update();
+
+        SerializedProperty entries = so.FindProperty("spineEntries");
+        if (entries == null)
+        {
+            Debug.LogError("[SpineAutoSetup] spineEntries 프로퍼티를 찾을 수 없습니다.");
+            return;
+        }
+
+        // 중복 체크
+        for (int i = 0; i < entries.arraySize; i++)
+        {
+            SerializedProperty e = entries.GetArrayElementAtIndex(i);
+            if (e.FindPropertyRelative("key").stringValue == key)
+            {
+                Debug.LogWarning($"[SpineAutoSetup] 이미 등록된 key: {key}");
+                return;
+            }
+        }
+
+        // 새 항목 추가
+        entries.arraySize++;
+        SerializedProperty newEntry = entries.GetArrayElementAtIndex(entries.arraySize - 1);
+        newEntry.FindPropertyRelative("key").stringValue = key;
+        newEntry.FindPropertyRelative("spineObject").objectReferenceValue = spineObj;
+
+        so.ApplyModifiedProperties();
+        EditorUtility.SetDirty(cgManager);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Atlas 변환 로직
+    // ─────────────────────────────────────────────────────────────────────
+    private void RunAtlasConvert()
+    {
+        convertLog = "";
+
+        if (!Directory.Exists(atlasSourceFolder))
+        {
+            convertLog = "❌ 폴더가 존재하지 않습니다.";
+            return;
+        }
+
+        string[] atlasFiles = Directory.GetFiles(atlasSourceFolder, "*.atlas", SearchOption.TopDirectoryOnly);
+
+        if (atlasFiles.Length == 0)
+        {
+            convertLog = "변환할 .atlas 파일이 없습니다.";
+            return;
+        }
+
+        int count = 0;
+        var log = new System.Text.StringBuilder();
+
+        foreach (string src in atlasFiles)
+        {
+            string dest = src + ".txt";
+            if (File.Exists(dest))
+            {
+                log.AppendLine($"  건너뜀 (이미 존재): {Path.GetFileName(dest)}");
+                continue;
+            }
+            File.Move(src, dest);
+            log.AppendLine($"  ✅ {Path.GetFileName(src)} → {Path.GetFileName(dest)}");
+            count++;
+        }
+
+        convertLog = $"변환 완료: {count}개\n{log}";
+        AssetDatabase.Refresh();
+        Repaint();
+    }
+}
