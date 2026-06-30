@@ -36,6 +36,12 @@ public class SpineDebugManager : MonoBehaviour
     private bool isPaused = false;
     private bool isSliderDragging = false;
 
+    // === 추가: 외부(SpineSnapshotExporter 등)에서 현재 선택된 스파인을 읽을 수 있도록 public 프로퍼티 노출 ===
+    public SkeletonAnimation CurrentSkeletonAnimation => currentSkAnim;
+
+    // === 추가: 현재 선택된 스파인 오브젝트 이름 노출 ===
+    public string CurrentSpineName => currentSpineObj != null ? currentSpineObj.name : "Unknown";
+
     void Start()
     {
         //Spine 선택 드롭다운 초기화

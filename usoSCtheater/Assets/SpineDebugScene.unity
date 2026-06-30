@@ -3292,6 +3292,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1049340479}
   - component: {fileID: 1049340478}
+  - component: {fileID: 1049340480}
   m_Layer: 0
   m_Name: DebugCamera
   m_TagString: MainCamera
@@ -3365,6 +3366,26 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1049340480
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1049340476}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: de93fb9e6b6fd3041b2c059fb00bcab5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SpineSnapshotExporter
+  captureCamera: {fileID: 1049340478}
+  spineDebugManager: {fileID: 1448217546}
+  saveFolder: SpineSnapshots
+  useSpineNativeSize: 1
+  width: 1024
+  height: 1024
+  transparentBackground: 1
+  captureKey: 286
 --- !u!1 &1108806047
 GameObject:
   m_ObjectHideFlags: 0
