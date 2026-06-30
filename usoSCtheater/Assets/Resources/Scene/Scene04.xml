@@ -34,7 +34,7 @@
 	<Line Type="TEXT" Name="아사히" Text="잠깐 뛰고 오겠슴다." Voice="S004012" CG="asahi_sports_2" Position="left" Animation="shy1 face_wait lip_surp" SpeakerType="1"/>
 	<Line Type="TEXT" Name="메이" Text="응…" Voice="S004013" CG="mei_sports_2" Position="right" Animation="wait1 face_serious lip_shy" SpeakerType="1"/>
 	<Line Type="SE" Track="se_door_sime" Volume="0.4"/>
-	<Line Type="TEXT" CG="none" SpeakerType="none"/>
+	<Line Type="TEXT" CG="none" SpeakerType="0"/>
 	<Line Type="BREAK" Effect="clean" Duration="0.5"/>
 	<Line Type="TEXT" Name="메이" Text="현장 정리 중이니까 안 된다고 해야 되는데…" Voice="S004014" CG="mei_sports_2" Position="right" Animation="sad2 lip_smile1" SpeakerType="1"/>
 	<Line Type="TEXT" Name="메이" Text="…" SpeakerType="1"/>
@@ -68,7 +68,7 @@
 	<Line Type="SE" Track="se_sofa_wakeup" Volume="0.4"/>
 	<Line Type="BREAK" Effect="clean"/>
 	<Line Type="TEXT" Name="메이" Text="… 역시 나도 뛰고 올래." Voice="S004020" CG="mei_sports_2" Position="center" Animation="anger1 face_serious lip_anger2" SpeakerType="1"/>
-	<Line Type="TEXT" CG="none" SpeakerType="none"/>
+	<Line Type="TEXT" CG="none" SpeakerType="0"/>
 	<Line Type="SE" Track="se_door_sime" Volume="0.4"/>
 	<Line Type="BREAK" Effect="clean" Duration="0.5"/>
 	<Line Type="TRANSITION" Effect="iris" SE="se_trans_out|se_trans_in"/>
@@ -107,7 +107,7 @@
 	<Line Type="BREAK" Duration="0.5"/>
 	<Line Type="TEXT" Name="후유코" Text="너는 가게나 예약해 놔." Voice="S004034" Animation="anger3 face_serious lip_smile" SpeakerType="1"/>
 	<Line Type="TEXT" Name="프로듀서" Text="예약…?" Voice="S004035" SpeakerType="2"/>
-	<Line Type="TEXT" Name="후유코" Text="담당 아이돌이 열심히 노력해서 1등을 했는데, 회식 정도는 해야 하지 않겠어?" Voice="S004036" CG="fuyuko_sports_2" Position="center" SpeakerType="1"/>
+	<Line Type="TEXT" Name="후유코" Text="담당 아이돌이 열심히 노력해서 1등을 했는데, 회식 정도는 해야 하지 않겠어?" Voice="S004036" CG="fuyuko_sports_2" Position="center" Animation="anger1 face_jito lip_smile" SpeakerType="1"/>
 	<Line Type="TEXT" Name="프로듀서" Text="그, 그렇네…" Voice="S004037" SpeakerType="2"/>
 	<Line Type="TEXT" Name="후유코" Text="물론, 프로듀서 님이 쏘시는 거죠?" Voice="S004038" CG="fuyuko_sports_2" Position="center" Animation="smile4" SpeakerType="1"/>
 	<Line Type="TEXT" Name="후유코" Text="후유는 소고기가 먹고싶은데~" Voice="S004039" SpeakerType="1"/>
