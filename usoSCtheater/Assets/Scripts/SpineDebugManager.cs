@@ -4,8 +4,8 @@ using NUnit.Framework;
 using Spine;
 using Spine.Unity;
 using TMPro;
-using UnityEditor.EditorTools;
-using UnityEditor.Search;
+// using UnityEditor.EditorTools;
+// using UnityEditor.Search;
 using UnityEngine;
 using UnityEngine.UI;
 
