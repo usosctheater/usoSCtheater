@@ -24,18 +24,23 @@ namespace UsoSCTheater.Ending
 
         private Coroutine _endingRoutine;
 
+        private void Start()
+        {
+            StartEnding();
+        }
+
         /// <summary>
         /// 트랜지션이 끝난 직후 외부(씬 흐름 관리자 등)에서 호출한다.
         /// appearedIdolNames: 이번 시나리오에 등장한 캐릭터 이름 목록 (예: "Mei", "Asahi")
         /// </summary>
-        public void StartEnding(List<string> appearedIdolNames)
+        public void StartEnding()
         {
             endingPanelRoot.SetActive(true);
 
             List<string> lines = EndingCreditsLoader.LoadLines(language);
             float totalTime = creditsScroller.Setup(lines);
 
-            sdSpineController.SetupRandomCharacter(appearedIdolNames);
+            sdSpineController.Setup();
             bgmPlayer.Play();
             creditsScroller.StartScrolling();
 
