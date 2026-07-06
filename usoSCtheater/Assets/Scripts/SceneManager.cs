@@ -58,7 +58,7 @@ public class SceneManager : MonoBehaviour
         currentSceneIndex++;
 
         if (currentSceneIndex < sceneFiles.Count) PlayNextScene();
-        else Debug.Log("[SceneManager] 모든 씬 종료");                  //추후 엔딩 처리 등 기능 추가 예정
+        else UnityEngine.SceneManagement.SceneManager.LoadScene("EndingScene");
     }
 
     private void PlayNextScene()

@@ -37,12 +37,14 @@ namespace UsoSCTheater.Ending
         {
             endingPanelRoot.SetActive(true);
 
-            List<string> lines = EndingCreditsLoader.LoadLines(language);
-            float totalTime = creditsScroller.Setup(lines);
+            // [임시 비활성화] LeftPanel 미사용
+            // List<string> lines = EndingCreditsLoader.LoadLines(language);
+            // float totalTime = creditsScroller.Setup(lines);
+            float totalTime = 999f; // 임시: 크레딧 없이 SD Spine만 무한 재생
 
             sdSpineController.Setup();
             bgmPlayer.Play();
-            creditsScroller.StartScrolling();
+            // creditsScroller.StartScrolling(); // [임시 비활성화]
 
             if (_endingRoutine != null)
             {
