@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<DefaultLipData>
+    <Asahi>
+        <Default Moving="lip_wait" Still="lip_wait_s" />
+        <Anger Moving="lip_anger" Still="lip_anger_s" />
+        <Smile Moving="lip_smile" Still="lip_wait_s" />
+        <Surp Moving="lip_surp" Still="lip_serious_s" />
+    </Asahi>
+    <Mei>
+        <Default Moving="lip_wait" Still="lip_smile_s" />
+        <Anger Moving="lip_anger2" Still="lip_serious_s" />
+        <Smile Moving="lip_smile1" Still="lip_smile_s" />
+        <Surp Moving="lip_surp" Still="lip_serious_s" />
+    </Mei>
+    <Fuyuko>
+        <Default Moving="lip_wait" Still="lip_smile_s" />
+        <Anger Moving="lip_anger" Still="lip_anger_s" />
+        <Smile Moving="lip_smile" Still="lip_smile_s" />
+        <Surp Moving="lip_surp" Still="lip_anger_s" />
+        <Sad Moving="lip_sad" Still="lip_sad_s" />
+    </Fuyuko>
+</DefaultLipData>
