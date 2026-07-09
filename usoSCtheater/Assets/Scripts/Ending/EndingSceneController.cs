@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UsoSCTheater.Recording; // [녹화] 종료 신호용
 
 namespace UsoSCTheater.Ending
 {
@@ -40,7 +41,7 @@ namespace UsoSCTheater.Ending
             // [임시 비활성화] LeftPanel 미사용
             // List<string> lines = EndingCreditsLoader.LoadLines(language);
             // float totalTime = creditsScroller.Setup(lines);
-            float totalTime = 999f; // 임시: 크레딧 없이 SD Spine만 무한 재생
+            float totalTime = 30f; // 임시: 크레딧 없이 SD Spine만 무한 재생
 
             sdSpineController.Setup();
             bgmPlayer.Play();
@@ -65,6 +66,9 @@ namespace UsoSCTheater.Ending
             sdSpineController.StopAndClear();
             bgmPlayer.Stop();
             endingPanelRoot.SetActive(false);
+
+            // [녹화] 엔딩 종료 시점에 녹화 중지 신호 전달 (구독자 없으면 무해하게 무시됨)
+            RecordingSignal.RequestStop();
         }
     }
 }

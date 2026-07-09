@@ -7,6 +7,7 @@ using TMPro;
 using NUnit.Framework;
 // using Unity.GraphToolkit.Editor;
 using UnityEngine.EventSystems;
+using UsoSCTheater.Recording; // [녹화] 에디터/빌드 페이싱 분기용
 // using UnityEditor.Audio;
 
 public class DialogManager : MonoBehaviour
@@ -350,7 +351,7 @@ public class DialogManager : MonoBehaviour
             //나중에 오디오 매니저 연결 시 여기서 타이핑 사운드 함수 호출
 
             //타이핑 효과 텀 설정 (어색하면 없애도 됨)
-            yield return new WaitForSecondsRealtime(typingSpeed);
+            yield return RecordingTimeUtil.PacingWait(typingSpeed);
         }
 
         isTyping = false;
@@ -416,13 +417,13 @@ public class DialogManager : MonoBehaviour
 
         //둘 중 더 긴 시간동안 대기
         float waitDuration = Mathf.Max(voiceDuration, typingDuration);
-        yield return new WaitForSecondsRealtime(waitDuration);
+        yield return RecordingTimeUtil.PacingWait(waitDuration);
 
         //만약 타이핑이 아직 진행 중이면 완료될 때까지 대기
         while (isTyping) yield return null;
 
         //고정 딜레이 적용
-        yield return new WaitForSecondsRealtime(autoPlayDelay);
+        yield return RecordingTimeUtil.PacingWait(autoPlayDelay);
 
         autoPlayCoroutine = null;
         ProcessNext();
@@ -431,10 +432,10 @@ public class DialogManager : MonoBehaviour
     // Break 전용 대기 코루틴: Duration만큼 대기 후 자동 진행 (클릭 시 즉시 스킵은 Update()에서 처리)
     private IEnumerator BreakWaitCoroutine(float duration)
     {
-        yield return new WaitForSecondsRealtime(duration);
+        yield return RecordingTimeUtil.PacingWait(duration);
 
         //자동재생이 켜져 있으면 기존 TEXT와 동일하게 autoPlayDelay까지 추가 대기
-        if (isAutoPlay) yield return new WaitForSecondsRealtime(autoPlayDelay);
+        if (isAutoPlay) yield return RecordingTimeUtil.PacingWait(autoPlayDelay);
 
         autoPlayCoroutine = null;
         ProcessNext();

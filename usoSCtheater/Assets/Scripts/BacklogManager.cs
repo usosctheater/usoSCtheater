@@ -49,8 +49,10 @@ public class BacklogManager : MonoBehaviour
 
     public void OpenBacklog()
     {
-        //백로그 열면 씬 시간 정지
+        //백로그 열면 씬 시간 정지 (에디터에서는 Recorder 가속 녹화와 충돌하므로 비활성화)
+#if !UNITY_EDITOR
         Time.timeScale = 0f;
+#endif
 
         //동일 화자가 연속해서 대사를 하는 경우, SDIcon 동기화를 위한 변수
         string lastCgKey = null;
@@ -113,8 +115,10 @@ public class BacklogManager : MonoBehaviour
 
     public void CloseBacklog()
     {
-        //백로그 닫으면 시간 정상화
+        //백로그 닫으면 시간 정상화 (에디터에서는 애초에 정지시키지 않았으므로 안전한 no-op)
+#if !UNITY_EDITOR
         Time.timeScale = 1f;
+#endif
 
         settingPanel.SetActive(true);
         backlogUI.SetActive(false);

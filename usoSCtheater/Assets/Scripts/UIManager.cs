@@ -4,6 +4,7 @@ using NUnit.Framework;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using UsoSCTheater.Recording; // [녹화] 에디터/빌드 페이싱 분기용
 
 public class UIManager : MonoBehaviour
 {
@@ -108,7 +109,7 @@ public class UIManager : MonoBehaviour
         if (sceneTitleSubText  != null) sceneTitleSubText.text  = subTitle;
         sceneTitleUI.SetActive(true);
 
-        yield return new WaitForSecondsRealtime(titleDisplayDuration);
+        yield return RecordingTimeUtil.PacingWait(titleDisplayDuration);
 
         sceneTitleUI.SetActive(false);
         titleCoroutine = null;
