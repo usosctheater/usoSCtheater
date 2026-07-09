@@ -20,9 +20,9 @@ public class CGManager : MonoBehaviour
 
     [Header("Spine Pos 설정")]
     [SerializeField] private float screenWidth = 1920f;
-    [SerializeField] private float basePosY = -100f;
-    [SerializeField] private float scale3 = 60f;           //3분할 기본 스케일
-    [SerializeField] private float scale5 = 40f;          //5분할 기본 스케일
+    [SerializeField] private float basePosY = -180f;
+    [SerializeField] private float scale3 = 100f;           //3분할 기본 스케일
+    [SerializeField] private float scale5 = 60f;          //5분할 기본 스케일
     [SerializeField] private float zoomYOffsetScale = 5f;     //줌인 할 때 Y축 보정계수
 
     //키 > GameObj 빠른 접근용 딕셔너리
@@ -82,9 +82,9 @@ public class CGManager : MonoBehaviour
 
         //포지션의 x좌표 등록 (화면 중심 기준, 단위는 px)
         //3분할
-        positionDict["left"] = screenWidth * -0.15f; //-480
+        positionDict["left"] = screenWidth * -0.25f; //-480
         positionDict["center"] = screenWidth * 0f; //0
-        positionDict["right"] = screenWidth * 0.15f; //480
+        positionDict["right"] = screenWidth * 0.25f; //480
 
         //5분할
         positionDict["wide_far_left"] = screenWidth * -0.40f; //-768

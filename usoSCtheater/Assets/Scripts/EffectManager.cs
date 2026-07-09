@@ -29,7 +29,6 @@ public class EffectManager : MonoBehaviour
     [SerializeField] private AnimationCurve wipeBarCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
 
     private bool _onCompleteInvoked = false;
-    float wipeMaskWidth = 2560f;
 
     [Header("Fade 설정")]
     [SerializeField] private float fadeOutDuration = 0.5f;
@@ -159,8 +158,9 @@ public class EffectManager : MonoBehaviour
         if (!string.IsNullOrEmpty(se_out)) audioManager.PlaySE(se_out);
 
         float screenW = Screen.width;
+        float wipeMaskWidth = wipeMaskRect.rect.width;
 
-        //Mask 너비가 2560이므로 평행사변형 양 끝이 화면 밖까지 가게        
+        //평행사변형 양 끝이 화면 밖까지 가게
         float startX = -(screenW * 0.5f + wipeMaskWidth * 0.5f);                    //화면 왼쪽 밖
         float endX = screenW * 0.5f + wipeMaskWidth * 0.5f;                         //화면 오른쪽 밖
 
@@ -193,7 +193,8 @@ public class EffectManager : MonoBehaviour
 
             //WipeBar는 Offset 유지하면서 이동
             float wipeBarX = posX + wipeBarOffset;
-            if (wipeBarX > screenW * 0.5f) wipeBarX = posX  - wipeBarOffset;
+            //HDUpdate 하면서 WipeBar 너무 빨리 사라지는 이슈 screenW * 0.5에서 screenW로 변경하여 대응
+            if (wipeBarX > screenW) wipeBarX = posX - wipeBarOffset;
             
             wipeBarRect.anchoredPosition = new UnityEngine.Vector2(wipeBarX, 0f);
             //Gear 회전

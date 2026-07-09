@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Scene MainTtitle="" SubTitle="" >
+    <Line Type="AUDIO" Value="bgm" Track="BGM_2" Volume="0.4"/>
+	<Line Type="BG" Key="bg_rouka"/>
+	<Line Type="SE" Track="se_jihannki"/>
+	<Line Type="TEXT" Name="메이" Text="아 후유코쨩, 그거 들었어?" Voice="s001001" CG="mei_idol_3" Position="left" Animation="wait1" SpeakerType="1"/>
+	<Line Type="TEXT" Name="후유코" Text="그거?" Voice="s001002" CG="fuyuko_idol_3" Position="right" Animation="wait1" SpeakerType="1"/>
+    <Line Type="TRANSITION" Effect="wipe_left" SE="se_trans_out|se_trans_in"/>
+</Scene>
