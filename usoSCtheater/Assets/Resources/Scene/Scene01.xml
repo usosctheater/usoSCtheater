@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Scene>
+<Scene MainTtitle="" SubTitle="" >
 	<Line Type="AUDIO" Value="bgm" Track="BGM_2" Volume="0.4"/>
 	<Line Type="BG" Key="bg_rouka"/>
 	<Line Type="SE" Track="se_jihannki"/>

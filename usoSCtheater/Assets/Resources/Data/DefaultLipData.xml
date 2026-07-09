@@ -18,5 +18,6 @@
         <Smile Moving="lip_smile" Still="lip_smile_s" />
         <Surp Moving="lip_surp" Still="lip_anger_s" />
         <Sad Moving="lip_sad" Still="lip_sad_s" />
+        <Bitter_Smile Moving="lip_bitter_smile" Still="lip_bitter_smile_s" />
     </Fuyuko>
 </DefaultLipData>

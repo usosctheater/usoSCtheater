@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Scene>
 	<Line Type="BG" Key="bg_hikaesitu2"/>
-	<Line Type="AUDIO" Value="bgm" Track="BGM_131" Volume="0.2"/>
+	<Line Type="AUDIO" Value="bgm" Track="BGM_131" Volume="0.4"/>
 	<Line Type="BREAK" Effect="clean"/>
-	<Line Type="TEXT" Name="메이" Text="가버렸네." Voice="S003092" CG="mei_sports_2" Position="left" Animation="anger2 face_serious lip_smile1" SpeakerType="1"/>
+	<Line Type="TEXT" Name="메이" Text="가버렸네." Voice="S003092" CG="mei_sports_2" Position="left" Animation="anger2 face_serious lip_surp" SpeakerType="1"/>
 	<Line Type="TEXT" Name="아사히" Text="가버렸슴다." Voice="S003093" CG="asahi_sports_2" Position="right" Animation="wait3 face_surp lip_surp" SpeakerType="1"/>
 	<Line Type="TRANSITION" Effect="normal"/>
 	<Line Type="BG" Position="8" Effect="zoom" Value="1.7" Key="bg_hikaesitu2"/>
-	<Line Type="BREAK" Effect="clean"/>
+	<Line Type="BREAK" Effect="clean" Duration="3"/>
 	<Line Type="TEXT" Name="메이" Text="아사히쨩." Voice="S004001" SpeakerType="1"/>
 	<Line Type="TEXT" Name="아사히" Text="뭠까?" Voice="S004002" SpeakerType="1"/>
 	<Line Type="TEXT" Name="메이" Text="분해?" Voice="S004003" SpeakerType="1"/>
@@ -20,7 +20,7 @@
 	<Line Type="TEXT" Name="아사히" Text="달리기 시작하면 바로 따라잡을 줄 알았슴다." Voice="S004004" SpeakerType="1"/>
 	<Line Type="TEXT" Name="아사히" Text="작년에 그랬던 것처럼." Voice="S004005" SpeakerType="1"/>
 	<Line Type="TEXT" Name="메이" Text="분명, 결승선 직전에 아슬아슬하게 추월했다고 했지." Voice="S004006" SpeakerType="1"/>
-	<Line Type="SE" Track="se_sofa_wait" Volume="0.4"/>
+	<Line Type="SE" Track="se_sofa_wait" Volume="1"/>
 	<Line Type="TEXT" Name="아사히" Text="저는 후유코쨩이나 메이쨩처럼 연습 같은 거 안 했슴다." Voice="S004007" SpeakerType="1"/>
 	<Line Type="TEXT" Name="아사히" Text="해야겠다는 생각도 안 했슴다." Voice="S004008" SpeakerType="1"/>
 	<Line Type="TEXT" Name="메이" Text="…" SpeakerType="1"/>
@@ -29,7 +29,7 @@
 	<Line Type="TEXT" Name="아사히" Text="책임…" Voice="S004011" SpeakerType="1"/>
 	<Line Type="TRANSITION" Effect="normal"/>
 	<Line Type="BG" Key="bg_hikaesitu2"/>
-	<Line Type="SE" Track="se_sofa_wakeup" Volume="0.4"/>
+	<Line Type="SE" Track="se_sofa_wakeup" Volume="1"/>
 	<Line Type="BREAK" Effect="clean"/>
 	<Line Type="TEXT" Name="아사히" Text="잠깐 뛰고 오겠슴다." Voice="S004012" CG="asahi_sports_2" Position="left" Animation="shy1 face_wait lip_surp" SpeakerType="1"/>
 	<Line Type="TEXT" Name="메이" Text="응…" Voice="S004013" CG="mei_sports_2" Position="right" Animation="wait1 face_serious lip_shy" SpeakerType="1"/>
@@ -50,22 +50,23 @@
 	<Line Type="TEXT" Name="메이" Text="이렇게 큰 소리 쳐놓고 진 사람도 있는데 말이야…" Voice="S004016" SpeakerType="1"/>
 	<Line Type="TRANSITION" Effect="normal"/>
 	<Line Type="BG" Key="bg_ceiling"/>
-	<Line Type="SE" Track="se_sofa_sitdown" Volume="0.4"/>
+	<Line Type="SE" Track="se_sofa_sitdown" Volume="1"/>
 	<Line Type="BREAK" Effect="clean"/>
 	<Line Type="TEXT" Name="메이" Text="그 때, 후유코쨩의 표정…" Voice="S004017" SpeakerType="1"/>
 	<Line Type="TRANSITION" Effect="normal"/>
 	<Line Type="BG" Effect="flashback" Key="bg_runninTrack_1"/>
 	<Line Type="BREAK" Effect="clean"/>
-	<Line Type="TEXT" Name="후유코" Text="메이…" Voice="S003041" CG="fuyuko_sports_2" Position="center" Animation="surp2" SpeakerType="1"/>
+	<Line Type="TEXT" Name="후유코" Text="…" CG="fuyuko_sports_2" Position="center" Animation="surp2" SpeakerType="1"/>
 	<Line Type="BREAK" Duration="0.5"/>
 	<Line Type="TRANSITION" Effect="normal"/>
 	<Line Type="BG" Key="bg_ceiling"/>
 	<Line Type="BREAK" Effect="clean" Duration="0.5"/>
 	<Line Type="TEXT" Name="메이" Text="나는 두 사람한테…" Voice="S004018" SpeakerType="1"/>
 	<Line Type="TEXT" Name="메이" Text="아무런 도움도…" Voice="S004019" SpeakerType="1"/>
+	<Line Type="BREAK" Duration="2"/>
 	<Line Type="TRANSITION" Effect="normal"/>
 	<Line Type="BG" Key="bg_hikaesitu2"/>
-	<Line Type="SE" Track="se_sofa_wakeup" Volume="0.4"/>
+	<Line Type="SE" Track="se_sofa_wakeup" Volume="1"/>
 	<Line Type="BREAK" Effect="clean"/>
 	<Line Type="TEXT" Name="메이" Text="… 역시 나도 뛰고 올래." Voice="S004020" CG="mei_sports_2" Position="center" Animation="anger1 face_serious lip_anger2" SpeakerType="1"/>
 	<Line Type="TEXT" CG="none" SpeakerType="0"/>
@@ -111,7 +112,8 @@
 	<Line Type="TEXT" Name="프로듀서" Text="그, 그렇네…" Voice="S004037" SpeakerType="2"/>
 	<Line Type="TEXT" Name="후유코" Text="물론, 프로듀서 님이 쏘시는 거죠?" Voice="S004038" CG="fuyuko_sports_2" Position="center" Animation="smile4" SpeakerType="1"/>
 	<Line Type="TEXT" Name="후유코" Text="후유는 소고기가 먹고싶은데~" Voice="S004039" SpeakerType="1"/>
-	<Line Type="TEXT" Name="프로듀서" Text="… 맡겨줘." Voice="S004040" SpeakerType="2"/>
+	<Line Type="TEXT" Name="프로듀서" Text="무, 물론이지." Voice="S004041" CG="none" SpeakerType="2"/>
+	<Line Type="TEXT" Name="프로듀서" Text="… 나한테 맡겨줘." Voice="S004040" SpeakerType="2"/>
 	<Line Type="SE" Track="se_door_sime" Volume="0.5"/>
-	<Line Type="TRANSITION" Effect="normal"/>
+	<Line Type="BREAK" Effect="clean" Duration="3"/>
 </Scene>
