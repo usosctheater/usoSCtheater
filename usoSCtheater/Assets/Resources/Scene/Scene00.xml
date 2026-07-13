@@ -4,6 +4,13 @@
 	<Line Type="BG" Key="bg_rouka"/>
 	<Line Type="SE" Track="se_jihannki"/>
 	<Line Type="TEXT" Name="메이" Text="아 후유코쨩, 그거 들었어?" Voice="s001001" CG="mei_idol_3" Position="left" Animation="wait1" SpeakerType="1"/>
+	<Line Type="SETCG" CG="mei_idol_3" Effect="clean"/>
 	<Line Type="TEXT" Name="후유코" Text="그거?" Voice="s001002" CG="fuyuko_idol_3" Position="right" Animation="wait1" SpeakerType="1"/>
+	<Line Type="TEXT" Name="메이" Text="다음 달에 있는 운동회 이야기!" Voice="s001003" CG="mei_idol_3" Position="left" Animation="wait2" SpeakerType="1"/>
+	<Line Type="SETCG" CG="mei_idol_3" Position="left" Animation="smile2" Effect="zoom" Value="1.5" Duration="2.0"/>
+	<Line Type="TEXT" Name="후유코" Text="아 그러고보니…" Voice="s001004" CG="fuyuko_idol_3" Position="right" Animation="think" SpeakerType="1"/>
+	<Line Type="TEXT" Name="메이" Text="이번에는 유닛 별로 종목을 고를 수 있대~" Voice="s001005" CG="mei_idol_3" Position="left" Animation="smile2" SpeakerType="1"/>
+	<Line Type="SETCG" CG="none"/>
+	<Line Type="TEXT" Name="메이" Text="후유코쨩은 뭐 나가고 싶어?" Voice="s001006" SpeakerType="1"/>
     <Line Type="TRANSITION" Effect="wipe_left" SE="se_trans_out|se_trans_in"/>
 </Scene>

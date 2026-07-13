@@ -152,6 +152,18 @@ public class DialogManager : MonoBehaviour
                     cgGroupDict[groupName].Add(new CGGroupEntry(GetAttr(node, "CG"), GetAttr(node, "Position"), GetAttr(node, "Animation")));
                     break;
 
+                case "SETCG":
+                    scriptNodes.Add(new ScriptNode(
+                        ScriptNode.NodeType.SetCG,
+                        GetAttr(node, "CG"),
+                        GetAttr(node, "Position"),
+                        GetAttr(node, "Animation"),
+                        GetAttr(node, "Effect").Trim().ToLower(),
+                        float.TryParse(GetAttr(node, "Value"), out float setCgVal) ? setCgVal : 1.0f,
+                        float.TryParse(GetAttr(node, "Duration"), out float setCgDur) ? setCgDur : 0f
+                    ));
+                    break;
+
                 default:
                     Debug.LogWarning($"[DialogManager] 알 수 없는 타입: {type}");
                     break;
@@ -188,6 +200,7 @@ public class DialogManager : MonoBehaviour
         // CG - None일 경우
         if (line.cgKey.ToLower() == "none")
         {
+            Debug.LogWarning($"[DialogManager] TEXT 타입에서 CG=none 사용 감지 (Name: {line.name}) - SETCG 타입 사용을 권장합니다.");
             cgManager.ClearAllCGState();
             lastCgKey = null;
             lastAnimation = null;
@@ -271,6 +284,10 @@ public class DialogManager : MonoBehaviour
                     else if (node.bgEffect.ToLower() == "zoom") bgManager.setZoom(node.zoomPos, node.zoomValue);
                     continue;
 
+                case ScriptNode.NodeType.SetCG:
+                    ProcessSetCG(node);
+                    continue;
+
                 case ScriptNode.NodeType.Transition:
                     isTransition = true;
                     // normal 트랜지션이면 BGM 유지
@@ -302,6 +319,56 @@ public class DialogManager : MonoBehaviour
         //Debug.Log("씬 종료");
         Debug.Log($"[DialogManager] 씬 종료 — SceneManager에 전달");
         sceneManager.OnSceneEnd();
+    }
+
+    // SETCG 노드 처리: TEXT의 CG 세팅 로직을 재사용하되, 클릭 없이 즉시 다음 라인으로 진행
+    private void ProcessSetCG(ScriptNode node)
+    {
+        // Effect = clean: CG 속성에 명시된 스파인만 제거 (트래킹 변수 미변경)
+        if (node.setCgEffect == "clean")
+        {
+            if (cgGroupDict.ContainsKey(node.setCgKey))
+            {
+                foreach (var entry in cgGroupDict[node.setCgKey])
+                {
+                    cgManager.HideCG(entry.cgKey);
+                    cgManager.ClearZoom(entry.cgKey);
+                }
+            }
+            else
+            {
+                cgManager.HideCG(node.setCgKey);
+                cgManager.ClearZoom(node.setCgKey);
+            }
+            return;
+        }
+
+        // CG = none: 전체 CG 제거 (기존 TEXT의 none 처리와 동일 - 트래킹 변수도 여기서만 초기화)
+        if (node.setCgKey.ToLower() == "none")
+        {
+            cgManager.ClearAllCGState();
+            lastCgKey = null;
+            lastAnimation = null;
+            lastSpeakerName = null;
+            return;
+        }
+
+        // CG 키가 CGGroup인 경우
+        // 주의: lastCgKey/lastAnimation은 여기서 절대 건드리지 않음.
+        // SETCG는 대사가 없는 타입이라, 이 값을 갱신하면 SETCG 이후에 나오는
+        // "같은 화자의 CG 생략 TEXT 라인"이 엉뚱한 캐릭터의 EndLoop/립을 재시작하게 됨.
+        if (cgGroupDict.ContainsKey(node.setCgKey))
+        {
+            foreach (var entry in cgGroupDict[node.setCgKey]) cgManager.SetCG(entry.cgKey, entry.cgPos, entry.animation, 0f);
+        }
+        // 단일 CG 처리
+        else
+        {
+            cgManager.SetCG(node.setCgKey, node.setCgPos, node.setCgAnimation, 0f);
+        }
+
+        // Effect = zoom
+        if (node.setCgEffect == "zoom") cgManager.SetZoom(node.setCgKey, node.setCgPos, node.setCgValue, node.setCgDuration);
     }
 
     // stopBGM: false이면 BGM을 정지하지 않음 (normal 트랜지션 등에서 BGM 유지 시 사용)
@@ -533,7 +600,7 @@ public class DialogLine
 public class ScriptNode
 {
     //노드를 타입별로 구분
-    public enum NodeType {Line, Audio, SE, Transition, BG, Break}  // Break 추가
+    public enum NodeType {Line, Audio, SE, Transition, BG, Break, SetCG}  // SetCG 추가
 
     //type == Line일 때 사용
     public NodeType type;
@@ -556,6 +623,14 @@ public class ScriptNode
     //type == Break일 때 사용
     public float breakDuration;
     public string breakEffect;
+
+    //type == SetCG일 때 사용
+    public string setCgKey;
+    public string setCgPos;
+    public string setCgAnimation;
+    public string setCgEffect;
+    public float setCgValue;
+    public float setCgDuration;
 
     //대사 노드 생성자
     public ScriptNode(DialogLine line)
@@ -607,6 +682,18 @@ public class ScriptNode
         this.bgEffect = bgEffect;
         this.zoomPos = zoomPos;
         this.zoomValue = zoomValue;
+    }
+
+    //SetCG 노드 생성자 (BG 생성자와 파라미터 개수를 다르게 해서 오버로드 모호성 방지 위해 전부 필수 인자로 처리)
+    public ScriptNode(NodeType type, string cgKey, string cgPos, string cgAnimation, string cgEffect, float cgValue, float cgDuration)
+    {
+        this.type = type;
+        this.setCgKey = cgKey;
+        this.setCgPos = cgPos;
+        this.setCgAnimation = cgAnimation;
+        this.setCgEffect = cgEffect;
+        this.setCgValue = cgValue;
+        this.setCgDuration = cgDuration;
     }
 }
 
