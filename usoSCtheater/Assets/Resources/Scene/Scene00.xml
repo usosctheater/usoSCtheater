@@ -6,6 +6,7 @@
 	<Line Type="TEXT" Name="메이" Text="아 후유코쨩, 그거 들었어?" Voice="s001001" CG="mei_idol_3" Position="left" Animation="wait1" SpeakerType="1"/>
 	<Line Type="SETCG" CG="mei_idol_3" Effect="clean"/>
 	<Line Type="TEXT" Name="후유코" Text="그거?" Voice="s001002" CG="fuyuko_idol_3" Position="right" Animation="wait1" SpeakerType="1"/>
+	<Line Type="IMAGE" Key="icon" Duration="2.5"/>
 	<Line Type="TEXT" Name="메이" Text="다음 달에 있는 운동회 이야기!" Voice="s001003" CG="mei_idol_3" Position="left" Animation="wait2" SpeakerType="1"/>
 	<Line Type="SETCG" CG="mei_idol_3" Position="left" Animation="smile2" Effect="zoom" Value="1.5" Duration="2.0"/>
 	<Line Type="TEXT" Name="후유코" Text="아 그러고보니…" Voice="s001004" CG="fuyuko_idol_3" Position="right" Animation="think" SpeakerType="1"/>

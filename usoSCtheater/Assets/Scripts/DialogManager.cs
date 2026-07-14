@@ -23,6 +23,7 @@ public class DialogManager : MonoBehaviour
     [SerializeField] private SceneManager sceneManager;
     [SerializeField] private EffectManager effectManager;
     [SerializeField] private UIManager uiManager;
+    [SerializeField] private ImageManager imageManager;
 
     [Header("타이핑 설정")]
     [SerializeField] private float typingSpeed = 0.1f;          //글자 당 딜레이 (s)
@@ -122,27 +123,27 @@ public class DialogManager : MonoBehaviour
                     line.duration = float.TryParse(GetAttr(node, "Duration"), out float dur) ? dur : 0f;
                     line.speakerType = int.TryParse(GetAttr(node, "SpeakerType"), out int st) ? st : 1;
 
-                    scriptNodes.Add(new ScriptNode(line));
+                    scriptNodes.Add(ScriptNode.CreateLine(line));
                     break;
 
                 case "AUDIO":
-                    scriptNodes.Add(new ScriptNode(ScriptNode.NodeType.Audio, GetAttr(node, "Value").ToLower(), GetAttr(node, "Track"), float.TryParse(GetAttr(node, "Volume"), out float aVol) ? aVol : 1.0f, GetAttr(node, "Effect").ToLower()));
+                    scriptNodes.Add(ScriptNode.CreateAudio(GetAttr(node, "Value").ToLower(), GetAttr(node, "Track"), float.TryParse(GetAttr(node, "Volume"), out float aVol) ? aVol : 1.0f, GetAttr(node, "Effect").ToLower()));
                     break;
 
                 case "SE":
-                    scriptNodes.Add(new ScriptNode(ScriptNode.NodeType.SE, GetAttr(node, "Track"), float.TryParse(GetAttr(node, "Volume"), out float seVol) ? seVol : 1.0f, float.TryParse(GetAttr(node, "Duration"), out float seDur) ? seDur : 0f));
+                    scriptNodes.Add(ScriptNode.CreateSE(GetAttr(node, "Track"), float.TryParse(GetAttr(node, "Volume"), out float seVol) ? seVol : 1.0f, float.TryParse(GetAttr(node, "Duration"), out float seDur) ? seDur : 0f));
                     break;
 
                 case "TRANSITION":
-                    scriptNodes.Add(new ScriptNode(GetAttr(node, "Effect"), GetAttr(node, "SE")));
+                    scriptNodes.Add(ScriptNode.CreateTransition(GetAttr(node, "Effect"), GetAttr(node, "SE")));
                     break;
 
                 case "BG":
-                    scriptNodes.Add(new ScriptNode(ScriptNode.NodeType.BG, GetAttr(node, "Key"), GetAttr(node, "Effect"), GetAttr(node, "Position"), float.TryParse(GetAttr(node, "Value"), out float bgVal) ? bgVal : 1.0f));
+                    scriptNodes.Add(ScriptNode.CreateBG(GetAttr(node, "Key"), GetAttr(node, "Effect"), GetAttr(node, "Position"), float.TryParse(GetAttr(node, "Value"), out float bgVal) ? bgVal : 1.0f));
                     break;
 
                 case "BREAK":
-                    scriptNodes.Add(new ScriptNode(ScriptNode.NodeType.Break, float.TryParse(GetAttr(node, "Duration"), out float breakDur) ? breakDur : 0f, GetAttr(node, "Effect").Trim().ToLower()));
+                    scriptNodes.Add(ScriptNode.CreateBreak(float.TryParse(GetAttr(node, "Duration"), out float breakDur) ? breakDur : 0f, GetAttr(node, "Effect").Trim().ToLower()));
                     break;
 
                 case "CGGROUP":
@@ -153,15 +154,11 @@ public class DialogManager : MonoBehaviour
                     break;
 
                 case "SETCG":
-                    scriptNodes.Add(new ScriptNode(
-                        ScriptNode.NodeType.SetCG,
-                        GetAttr(node, "CG"),
-                        GetAttr(node, "Position"),
-                        GetAttr(node, "Animation"),
-                        GetAttr(node, "Effect").Trim().ToLower(),
-                        float.TryParse(GetAttr(node, "Value"), out float setCgVal) ? setCgVal : 1.0f,
-                        float.TryParse(GetAttr(node, "Duration"), out float setCgDur) ? setCgDur : 0f
-                    ));
+                    scriptNodes.Add(ScriptNode.CreateSetCG(GetAttr(node, "CG"), GetAttr(node, "Position"), GetAttr(node, "Animation"), GetAttr(node, "Effect").Trim().ToLower(), float.TryParse(GetAttr(node, "Value"), out float setCgVal) ? setCgVal : 1.0f, float.TryParse(GetAttr(node, "Duration"), out float setCgDur) ? setCgDur : 0f));
+                    break;
+
+                case "IMAGE":
+                    scriptNodes.Add(ScriptNode.CreateImage(GetAttr(node, "Key"), float.TryParse(GetAttr(node, "Duration"), out float imgDur) ? imgDur : -1f));
                     break;
 
                 default:
@@ -288,6 +285,10 @@ public class DialogManager : MonoBehaviour
                     ProcessSetCG(node);
                     continue;
 
+                case ScriptNode.NodeType.Image:
+                    imageManager.ShowImage(node.imageKey, node.imageDuration);
+                    continue;
+
                 case ScriptNode.NodeType.Transition:
                     isTransition = true;
                     // normal 트랜지션이면 BGM 유지
@@ -355,8 +356,6 @@ public class DialogManager : MonoBehaviour
 
         // CG 키가 CGGroup인 경우
         // 주의: lastCgKey/lastAnimation은 여기서 절대 건드리지 않음.
-        // SETCG는 대사가 없는 타입이라, 이 값을 갱신하면 SETCG 이후에 나오는
-        // "같은 화자의 CG 생략 TEXT 라인"이 엉뚱한 캐릭터의 EndLoop/립을 재시작하게 됨.
         if (cgGroupDict.ContainsKey(node.setCgKey))
         {
             foreach (var entry in cgGroupDict[node.setCgKey]) cgManager.SetCG(entry.cgKey, entry.cgPos, entry.animation, 0f);
@@ -600,7 +599,7 @@ public class DialogLine
 public class ScriptNode
 {
     //노드를 타입별로 구분
-    public enum NodeType {Line, Audio, SE, Transition, BG, Break, SetCG}  // SetCG 추가
+    public enum NodeType {Line, Audio, SE, Transition, BG, Break, SetCG, Image}  // Image 추가
 
     //type == Line일 때 사용
     public NodeType type;
@@ -632,68 +631,107 @@ public class ScriptNode
     public float setCgValue;
     public float setCgDuration;
 
-    //대사 노드 생성자
-    public ScriptNode(DialogLine line)
+    //type == Image일 때 사용
+    public string imageKey;
+    public float imageDuration;
+
+    //내부 생성자 - 외부에서는 반드시 아래 Create* 팩토리 메서드를 통해서만 생성
+    private ScriptNode() { }
+
+    //대사 노드 생성
+    public static ScriptNode CreateLine(DialogLine line)
     {
-        this.type = NodeType.Line;
-        this.line = line;
+        return new ScriptNode
+        {
+            type = NodeType.Line,
+            line = line
+        };
     }
 
-    //Audio 노드 생성자
-    public ScriptNode(NodeType type, string slot, string track, float volume, string effect = "")
+    //Audio 노드 생성
+    public static ScriptNode CreateAudio(string slot, string track, float volume, string effect = "")
     {
-        this.type = type;
-        this.audioSlot = slot;
-        this.track = track;
-        this.volume = volume;
-        this.audioEffect = effect;
+        return new ScriptNode
+        {
+            type = NodeType.Audio,
+            audioSlot = slot,
+            track = track,
+            volume = volume,
+            audioEffect = effect
+        };
     }
 
-    //SE 노드 생성자
-    public ScriptNode(NodeType type, string track, float volume, float seDuration = 0f)
+    //SE 노드 생성
+    public static ScriptNode CreateSE(string track, float volume, float seDuration = 0f)
     {
-        this.type = type;
-        this.track = track;
-        this.volume = volume;
-        this.seDuration = seDuration;
+        return new ScriptNode
+        {
+            type = NodeType.SE,
+            track = track,
+            volume = volume,
+            seDuration = seDuration
+        };
     }
 
-    //Transition 노드 생성자
-    public ScriptNode(string effect, string se)
+    //Transition 노드 생성
+    public static ScriptNode CreateTransition(string effect, string se)
     {
-        this.type = NodeType.Transition;
-        this.transition_effect = effect;
-        this.transition_se = se;
+        return new ScriptNode
+        {
+            type = NodeType.Transition,
+            transition_effect = effect,
+            transition_se = se
+        };
     }
 
-    //Break 노드 생성자
-    public ScriptNode(NodeType type, float breakDuration = 0f, string breakEffect = "")
+    //Break 노드 생성
+    public static ScriptNode CreateBreak(float breakDuration = 0f, string breakEffect = "")
     {
-        this.type = type;
-        this.breakDuration = breakDuration;
-        this.breakEffect = breakEffect;
+        return new ScriptNode
+        {
+            type = NodeType.Break,
+            breakDuration = breakDuration,
+            breakEffect = breakEffect
+        };
     }
 
-    //BG 노드 생성자
-    public ScriptNode(NodeType type, string bgKey, string bgEffect = "", string zoomPos = "5", float zoomValue = 1.0f)
+    //BG 노드 생성
+    public static ScriptNode CreateBG(string bgKey, string bgEffect = "", string zoomPos = "5", float zoomValue = 1.0f)
     {
-        this.type = type;
-        this.bg = bgKey;
-        this.bgEffect = bgEffect;
-        this.zoomPos = zoomPos;
-        this.zoomValue = zoomValue;
+        return new ScriptNode
+        {
+            type = NodeType.BG,
+            bg = bgKey,
+            bgEffect = bgEffect,
+            zoomPos = zoomPos,
+            zoomValue = zoomValue
+        };
     }
 
-    //SetCG 노드 생성자 (BG 생성자와 파라미터 개수를 다르게 해서 오버로드 모호성 방지 위해 전부 필수 인자로 처리)
-    public ScriptNode(NodeType type, string cgKey, string cgPos, string cgAnimation, string cgEffect, float cgValue, float cgDuration)
+    //SetCG 노드 생성
+    public static ScriptNode CreateSetCG(string cgKey, string cgPos, string cgAnimation, string cgEffect, float cgValue, float cgDuration)
     {
-        this.type = type;
-        this.setCgKey = cgKey;
-        this.setCgPos = cgPos;
-        this.setCgAnimation = cgAnimation;
-        this.setCgEffect = cgEffect;
-        this.setCgValue = cgValue;
-        this.setCgDuration = cgDuration;
+        return new ScriptNode
+        {
+            type = NodeType.SetCG,
+            setCgKey = cgKey,
+            setCgPos = cgPos,
+            setCgAnimation = cgAnimation,
+            setCgEffect = cgEffect,
+            setCgValue = cgValue,
+            setCgDuration = cgDuration
+        };
+    }
+
+    //Image 노드 생성
+    public static ScriptNode CreateImage(string imageKey, float imageDuration)
+    {
+        return new ScriptNode
+        {
+            type = NodeType.Image,
+            imageKey = imageKey,
+            imageDuration = imageDuration
+        };
     }
 }
 
