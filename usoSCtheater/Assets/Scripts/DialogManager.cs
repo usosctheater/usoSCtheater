@@ -8,6 +8,7 @@ using NUnit.Framework;
 // using Unity.GraphToolkit.Editor;
 using UnityEngine.EventSystems;
 using UsoSCTheater.Recording; // [녹화] 에디터/빌드 페이싱 분기용
+using UsoSCTheater.Capture;   // [캡처] TEXT 라인 자동 스크린샷
 // using UnityEditor.Audio;
 
 public class DialogManager : MonoBehaviour
@@ -24,6 +25,9 @@ public class DialogManager : MonoBehaviour
     [SerializeField] private EffectManager effectManager;
     [SerializeField] private UIManager uiManager;
     [SerializeField] private ImageManager imageManager;
+
+    [Header("캡처 설정")]
+    [SerializeField] private Camera captureCamera;   // [캡처] 스크린샷 대상 카메라
 
     [Header("타이핑 설정")]
     [SerializeField] private float typingSpeed = 0.1f;          //글자 당 딜레이 (s)
@@ -52,6 +56,8 @@ public class DialogManager : MonoBehaviour
 
     //CGgroup 구현용 Dict
     private Dictionary<string, List<CGGroupEntry>> cgGroupDict = new Dictionary<string, List<CGGroupEntry>>();
+
+    private string currentSceneName = "";   // [캡처] 캡처 폴더명으로 사용되는 현재 씬 이름
     
     void Update()
     {
@@ -96,6 +102,7 @@ public class DialogManager : MonoBehaviour
     {
         scriptNodes.Clear();
         currentIndex = 0;
+        currentSceneName = xmlAsset.name;   // [캡처] 캡처 폴더명으로 사용
 
         XmlDocument doc = new XmlDocument();
         doc.LoadXml(xmlAsset.text);
@@ -487,6 +494,10 @@ public class DialogManager : MonoBehaviour
 
         //만약 타이핑이 아직 진행 중이면 완료될 때까지 대기
         while (isTyping) yield return null;
+
+        // [캡처] 타이핑/보이스 중 더 늦게 끝난 시점 = 여기. 렌더링 완료 보장 후 캡처.
+        yield return new WaitForEndOfFrame();
+        SceneCaptureUtil.CaptureLine(currentSceneName, currentIndex - 1, captureCamera);
 
         //고정 딜레이 적용
         yield return RecordingTimeUtil.PacingWait(autoPlayDelay);

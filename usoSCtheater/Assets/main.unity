@@ -3527,6 +3527,7 @@ MonoBehaviour:
   effectManager: {fileID: 502208736}
   uiManager: {fileID: 1589418730}
   imageManager: {fileID: 764495375}
+  captureCamera: {fileID: 1841257665}
   typingSpeed: 0.1
   autoPlayTextCoeff: 0.05
   autoPlayDelay: 0.8
