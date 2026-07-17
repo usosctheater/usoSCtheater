@@ -30,6 +30,8 @@ public class SpineDebugManager : MonoBehaviour
     [SerializeField] private Button playPauseButton;
     [SerializeField] private TextMeshProUGUI playPauseText;
     [SerializeField] private Slider timeSlider;
+    [SerializeField] private Button resetAllButton;              // 추가: 전체 트랙 초기화 버튼 (인스펙터에서 연결, 미할당 시 버튼 기능은 스킵)
+    [SerializeField] private KeyCode resetAllKey = KeyCode.R;     // 추가: 전체 트랙 초기화 단축키 (인스펙터에서 변경 가능)
 
     private GameObject currentSpineObj;
     private SkeletonAnimation currentSkAnim;
@@ -61,6 +63,10 @@ public class SpineDebugManager : MonoBehaviour
         //슬라이더
         timeSlider.onValueChanged.AddListener(OnSliderChanged);
 
+        // 추가: 전체 트랙 초기화 버튼 (연결되어 있을 때만)
+        if (resetAllButton != null)
+            resetAllButton.onClick.AddListener(ResetAllTracks);
+
         // 첫번째 Spine 선택
         if (spineObjects.Count > 0) OnSpineSelected(0);
     }
@@ -68,6 +74,9 @@ public class SpineDebugManager : MonoBehaviour
     void Update()
     {
         if (currentSkAnim == null) return;
+
+        // 추가: 키보드 입력으로 전체 트랙 초기화
+        if (Input.GetKeyDown(resetAllKey)) ResetAllTracks();
 
         UpdateTrackInfo();
         UpdateTimeInfo();
@@ -203,6 +212,18 @@ public class SpineDebugManager : MonoBehaviour
                 };
             }
         }
+    }
+
+    // 추가: 버튼 클릭 또는 키보드 입력 시 호출되는 전체 트랙 초기화 함수
+    private void ResetAllTracks()
+    {
+        if (currentSkAnim == null) return;
+
+        currentSkAnim.AnimationState.ClearTracks();
+        currentSkAnim.skeleton.SetToSetupPose();
+
+        // 트랙 드롭다운도 0번으로 초기화 (OnSpineSelected와 동일한 관례 유지)
+        trackSelector.SetValueWithoutNotify(0);
     }
 
     private void UpdateTrackInfo()
