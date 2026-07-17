@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.WebSockets;
 using NUnit.Framework;
 using Spine;
@@ -38,6 +39,15 @@ public class SpineDebugManager : MonoBehaviour
     private bool isPaused = false;
     private bool isSliderDragging = false;
 
+    // 변경: 트랙별 우선 노출 접두사 매핑 (트랙 3처럼 접두사가 여러 개면 배열 순서가 곧 우선순위)
+    private static readonly string[] knownPrefixes = { "face_", "lip_", "arm_", "eye_" };   // 변경: eye_ 추가
+    private static readonly Dictionary<int, string[]> trackPriorityPrefixes = new Dictionary<int, string[]>
+    {
+        { 1, new[] { "face_" } },
+        { 2, new[] { "lip_" } },
+        { 3, new[] { "arm_", "eye_" } }   // 변경: arm_ 다음으로 eye_ 우선순위
+    };
+
     // === 추가: 외부(SpineSnapshotExporter 등)에서 현재 선택된 스파인을 읽을 수 있도록 public 프로퍼티 노출 ===
     public SkeletonAnimation CurrentSkeletonAnimation => currentSkAnim;
 
@@ -56,6 +66,9 @@ public class SpineDebugManager : MonoBehaviour
         //트랙 드롭다운 초기화
         trackSelector.ClearOptions();
         trackSelector.AddOptions(new List<string> { "Track 0", "Track 1", "Track 2", "Track 3" });
+
+        // 추가: 트랙 변경 시 우선순위 그룹이 바뀌므로 리스트 재정렬
+        trackSelector.onValueChanged.AddListener(_ => RefreshAnimList());
 
         //재생 및 일시정지 버튼
         playPauseButton.onClick.AddListener(OnPlayPauseClicked);
@@ -80,7 +93,8 @@ public class SpineDebugManager : MonoBehaviour
 
         UpdateTrackInfo();
         UpdateTimeInfo();
-        UpdateBoneList();
+        // 변경: 본 리스트는 매 프레임 갱신 시 Instantiate/Destroy 부하가 커서 제거함.
+        // 대신 onAnimitemClicked에서 애니메이션 선택/해제 시점에 1회만 갱신함.
 
         //슬라이더 드래그 중이 아닐 때만 슬라이더 값 갱신
         if (!isSliderDragging && !isPaused)
@@ -159,20 +173,77 @@ public class SpineDebugManager : MonoBehaviour
         noneLabel.text = "None";
         noneBtn.onClick.AddListener(() => onAnimitemClicked(null));
 
+        // 변경: 현재 선택된 트랙 기준으로 우선 노출 그룹 / 나머지 그룹으로 분리
+        int currentTrack = trackSelector.value;
+        List<Spine.Animation> priorityAnims = new List<Spine.Animation>();
+        List<Spine.Animation> restAnims = new List<Spine.Animation>();
+
         foreach (var anim in currentSkAnim.skeleton.Data.Animations)
         {
-            GameObject item = Instantiate(animListItemPrefab, animListContent);
-            TextMeshProUGUI label = item.GetComponentInChildren<TextMeshProUGUI>();
-            Button btn = item.GetComponent<Button>();
-
-            string animName = anim.Name;
-            float duration = anim.Duration;
-
-            label.text = $"{animName} ({duration:F2}s)";
-
-            //클릭 시 해당 애니메이션을 선택된 트랙에 적용
-            btn.onClick.AddListener(() => onAnimitemClicked(animName));
+            if (IsPriorityAnim(anim.Name, currentTrack))
+                priorityAnims.Add(anim);
+            else
+                restAnims.Add(anim);
         }
+
+        //우선 그룹 먼저, 이후 나머지 그룹 순서로 아이템 생성
+        // 변경: 우선 그룹 내부를 접두사 우선순위(GetPriorityOrder) 기준으로 재정렬 (arm_ 다음 eye_ 순서 보장)
+        priorityAnims = priorityAnims.OrderBy(a => GetPriorityOrder(a.Name, currentTrack)).ToList();
+
+        foreach (var anim in priorityAnims) CreateAnimListItem(anim);
+        foreach (var anim in restAnims) CreateAnimListItem(anim);
+    }
+
+    // 변경: 트랙별 우선 노출 대상인지 판별 (targetPrefix 단일 → targetPrefixes 배열 순회로 변경)
+    private bool IsPriorityAnim(string animName, int track)
+    {
+        if (track == 0)
+        {
+            //Track 0은 알려진 접두사(face_/lip_/arm_/eye_)가 없는 애니메이션이 우선 노출 대상
+            foreach (var prefix in knownPrefixes)
+            {
+                if (animName.StartsWith(prefix)) return false;
+            }
+            return true;
+        }
+
+        if (trackPriorityPrefixes.TryGetValue(track, out string[] targetPrefixes))
+        {
+            foreach (var prefix in targetPrefixes)
+            {
+                if (animName.StartsWith(prefix)) return true;
+            }
+        }
+
+        return false;
+    }
+
+    // 추가: 우선 그룹 내부에서의 정렬 순서 (targetPrefixes 배열의 인덱스 = 우선순위, 예: arm_ 이 eye_ 보다 먼저)
+    private int GetPriorityOrder(string animName, int track)
+    {
+        if (trackPriorityPrefixes.TryGetValue(track, out string[] targetPrefixes))
+        {
+            for (int i = 0; i < targetPrefixes.Length; i++)
+            {
+                if (animName.StartsWith(targetPrefixes[i])) return i;
+            }
+        }
+        return 0;
+    }
+
+    // 추가: 애니메이션 리스트 아이템 생성 (기존 foreach 내부 로직을 분리하여 우선/나머지 그룹 양쪽에서 재사용)
+    private void CreateAnimListItem(Spine.Animation anim)
+    {
+        GameObject item = Instantiate(animListItemPrefab, animListContent);
+        TextMeshProUGUI label = item.GetComponentInChildren<TextMeshProUGUI>();
+        Button btn = item.GetComponent<Button>();
+
+        string animName = anim.Name;
+        float duration = anim.Duration;
+
+        label.text = $"{animName} ({duration:F2}s)";
+
+        btn.onClick.AddListener(() => onAnimitemClicked(animName));
     }
 
     //애니메이션 리스트 아이템 클릭 시
@@ -194,11 +265,16 @@ public class SpineDebugManager : MonoBehaviour
             {
                 currentSkAnim.AnimationState.ClearTrack(track);    
             }
-            
+
+            // 추가: 트랙 해제 시점에 본 리스트 1회 갱신
+            UpdateBoneList();
             return;
         }
 
         currentSkAnim.AnimationState.SetAnimation(track, animName, track == 0);
+
+        // 추가: 애니메이션 선택 시점에 본 리스트 1회 갱신
+        UpdateBoneList();
 
         //트랙이 0이 아니면 Complete시 마지막 프레임 고정
         if (track != 0)
@@ -224,6 +300,9 @@ public class SpineDebugManager : MonoBehaviour
 
         // 트랙 드롭다운도 0번으로 초기화 (OnSpineSelected와 동일한 관례 유지)
         trackSelector.SetValueWithoutNotify(0);
+
+        // 추가: 전체 초기화 시점에 본 리스트 1회 갱신
+        UpdateBoneList();
     }
 
     private void UpdateTrackInfo()

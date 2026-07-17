@@ -5651,7 +5651,7 @@ MonoBehaviour:
   playPauseButton: {fileID: 1760773936}
   playPauseText: {fileID: 568119216}
   timeSlider: {fileID: 1521029957}
-  resetAllButton: {fileID: 0}
+  resetAllButton: {fileID: 1506466342}
   resetAllKey: 114
 --- !u!4 &1448217547
 Transform:
