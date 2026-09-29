@@ -567,7 +567,7 @@ GameObject:
   - component: {fileID: 571506873}
   - component: {fileID: 571506872}
   m_Layer: 0
-  m_Name: sd_fuyuko_idol_3
+  m_Name: SD
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -585,7 +585,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d247ba06193faa74d9335f5481b2b56c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Spine.Unity.SkeletonAnimation
-  skeletonDataAsset: {fileID: 11400000, guid: 21c3cee112139be49b7e4351a581be42, type: 2}
+  skeletonDataAsset: {fileID: 11400000, guid: 3d9e485af70f3af478e6171fc5049fdf, type: 2}
   initialSkinName: normal
   initialFlipX: 0
   initialFlipY: 0
@@ -629,7 +629,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 6d4a4866b64b6e6438559395ec3ad4f0, type: 2}
+  - {fileID: 2100000, guid: 76c2444aedd04d24fad8ba5f30d1338c, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -671,7 +671,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: -283, y: -290, z: 0}
-  m_LocalScale: {x: 200, y: 200, z: 200}
+  m_LocalScale: {x: 80, y: 80, z: 80}
   m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 936870158}

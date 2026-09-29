@@ -20,4 +20,7 @@
         <Sad Moving="lip_sad" Still="lip_sad_s" />
         <Bitter_Smile Moving="lip_bitter_smile" Still="lip_bitter_smile_s" />
     </Fuyuko>
+    <Hazuki>
+        <Default Moving="lip_sad" Still="lip_sad_s" />
+    </Hazuki>
 </DefaultLipData>

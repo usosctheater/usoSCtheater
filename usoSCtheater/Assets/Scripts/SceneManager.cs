@@ -12,7 +12,7 @@ public class SceneManager : MonoBehaviour
     [SerializeField] CGManager cgManager;
 
     [Header("씬 파일 경로")]
-    [SerializeField] private string scenePath = "Scene";
+    [SerializeField] private string scenePath = "Scene/main";
 
     private List<TextAsset> sceneFiles = new List<TextAsset>();
     private int currentSceneIndex = 0;

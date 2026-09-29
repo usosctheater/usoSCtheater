@@ -213,6 +213,16 @@ public class UIManager : MonoBehaviour
         dialogManager.SetAutoPlay(isAutoPlay);
     }
 
+    // [녹화] 녹화 모드 진입 시 자동재생을 강제로 켜기 위한 메서드 (토글이 아닌 단방향 On)
+    public void EnableAutoPlay()
+    {
+        if (isAutoPlay) return;   // 이미 켜져 있으면 아무 것도 하지 않음 (중복 호출 방지)
+
+        isAutoPlay = true;
+        autoButtonImage.sprite = spriteAutoOn;
+        dialogManager.SetAutoPlay(true);
+    }
+
     private void OnHideButtonClicked()
     {
         ToggleHide(true);

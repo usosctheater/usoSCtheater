@@ -66,6 +66,17 @@ namespace UsoSCTheater.EditorTools
 
         private static void StartRecording()
         {
+            // [녹화] 녹화 모드로 Play 진입 시 자동재생을 강제로 켜준다
+            var uiManager = UnityEngine.Object.FindFirstObjectByType<UIManager>();
+            if (uiManager != null)
+            {
+                uiManager.EnableAutoPlay();
+            }
+            else
+            {
+                Debug.LogWarning("[VNRecorderTool] UIManager를 찾을 수 없어 자동재생을 켜지 못했습니다.");
+            }
+
             var controllerSettings = ScriptableObject.CreateInstance<RecorderControllerSettings>();
 
             var movieSettings = ScriptableObject.CreateInstance<MovieRecorderSettings>();
