@@ -49,10 +49,9 @@ public class DialogManager : MonoBehaviour
     private bool isTransition = false;
     private bool isAutoPlay = false;
     
-    //Lip 재사용 기능
-    private string lastCgKey = null;
-    private string lastAnimation = null;
-    private string lastSpeakerName = null;
+    //Lip 재사용 기능 (CGGroup 대응으로 단일 값 → List)
+    private List<CGGroupEntry> lastLipTargets = new List<CGGroupEntry>();   //립싱크 재사용 대상 (cgKey / animation / speakerName)
+    private string lastLineSpeakerName = null;                              //직전 CG 지정 라인의 Name (그룹이면 그룹 대사 Name → 전원 립싱크)
 
     //CGgroup 구현용 Dict
     private Dictionary<string, List<CGGroupEntry>> cgGroupDict = new Dictionary<string, List<CGGroupEntry>>();
@@ -146,7 +145,7 @@ public class DialogManager : MonoBehaviour
                     break;
 
                 case "BG":
-                    scriptNodes.Add(ScriptNode.CreateBG(GetAttr(node, "Key"), GetAttr(node, "Effect"), GetAttr(node, "Position"), float.TryParse(GetAttr(node, "Value"), out float bgVal) ? bgVal : 1.0f));
+                    scriptNodes.Add(ScriptNode.CreateBG(GetResourceKey(node), GetAttr(node, "Effect"), GetAttr(node, "Position"), float.TryParse(GetAttr(node, "Value"), out float bgVal) ? bgVal : 1.0f));
                     break;
 
                 case "BREAK":
@@ -154,10 +153,14 @@ public class DialogManager : MonoBehaviour
                     break;
 
                 case "CGGROUP":
-                    string groupName = GetAttr(node, "Name");
+                    // Name = "그룹명, 화자명" (첫 번째 쉼표만 구분자, 화자명 생략 가능 → Lip 재사용은 그룹 대사 Name으로만)
+                    // 화자명은 TEXT의 Name과 글자 그대로 일치해야 Lip 재사용 대상이 됨
+                    string[] groupNameParts = GetAttr(node, "Name").Split(new[] { ',' }, 2);
+                    string groupName = groupNameParts[0].Trim();
+                    string groupSpeaker = groupNameParts.Length > 1 ? groupNameParts[1].Trim() : "";
                     if (!cgGroupDict.ContainsKey(groupName)) cgGroupDict[groupName] = new List<CGGroupEntry>();
 
-                    cgGroupDict[groupName].Add(new CGGroupEntry(GetAttr(node, "CG"), GetAttr(node, "Position"), GetAttr(node, "Animation")));
+                    cgGroupDict[groupName].Add(new CGGroupEntry(GetAttr(node, "CG"), GetAttr(node, "Position"), GetAttr(node, "Animation"), groupSpeaker));
                     break;
 
                 case "SETCG":
@@ -165,7 +168,7 @@ public class DialogManager : MonoBehaviour
                     break;
 
                 case "IMAGE":
-                    scriptNodes.Add(ScriptNode.CreateImage(GetAttr(node, "Key"), float.TryParse(GetAttr(node, "Duration"), out float imgDur) ? imgDur : -1f));
+                    scriptNodes.Add(ScriptNode.CreateImage(GetResourceKey(node), float.TryParse(GetAttr(node, "Duration"), out float imgDur) ? imgDur : -1f));
                     break;
 
                 default:
@@ -206,9 +209,7 @@ public class DialogManager : MonoBehaviour
         {
             Debug.LogWarning($"[DialogManager] TEXT 타입에서 CG=none 사용 감지 (Name: {line.name}) - SETCG 타입 사용을 권장합니다.");
             cgManager.ClearAllCGState();
-            lastCgKey = null;
-            lastAnimation = null;
-            lastSpeakerName = null;
+            ResetLipTracking();
         }
         // CG - 키가 있을 때만
         else if (!string.IsNullOrEmpty(line.cgKey))
@@ -218,9 +219,9 @@ public class DialogManager : MonoBehaviour
             {
                 foreach (var entry in cgGroupDict[line.cgKey]) cgManager.SetCG(entry.cgKey, entry.cgPos, entry.animation, GetVoiceDuration(line.voiceKey));
 
-                lastCgKey = line.cgKey;
-                lastAnimation = null;               //그룹은 단일 Animation 지정 없음
-                lastSpeakerName = line.name;
+                //Lip 재사용 정보 저장: 그룹 멤버 전원 (원본 참조가 아닌 복사본으로 저장)
+                lastLipTargets = new List<CGGroupEntry>(cgGroupDict[line.cgKey]);
+                lastLineSpeakerName = line.name;
             }
             //그 외에는 기존 단일 CG 처리
             else
@@ -228,27 +229,24 @@ public class DialogManager : MonoBehaviour
                 cgManager.SetCG(line.cgKey, line.cgPos, line.animation, GetVoiceDuration(line.voiceKey));
             
                 //Lip 재사용 기능을 위한 정보 저장
-                lastCgKey = line.cgKey;
-                lastAnimation = line.animation;
-                lastSpeakerName = line.name;
+                lastLipTargets = new List<CGGroupEntry> { new CGGroupEntry(line.cgKey, line.cgPos, line.animation, line.name) };
+                lastLineSpeakerName = line.name;
             }
         }
-        //CG 키가 없지만 이전 CG가 있고, 화자가 같다면 Lip 재사용
-        else if (!string.IsNullOrEmpty(lastCgKey) && line.name == lastSpeakerName)
+        //CG 키가 없을 때: 직전 립싱크 대상 중 화자가 일치하는 CG가 있으면 Lip 재사용, 없으면 초기화
+        else if (!RestartLipByName(line.name, GetVoiceDuration(line.voiceKey)))
         {
-            cgManager.RestartLipSync(lastCgKey, lastAnimation, GetVoiceDuration(line.voiceKey));
-        }
-        else
-        {
-            //둘 다 아니라면, 초기화
-            lastCgKey = null;
-            lastAnimation = null;
-            lastSpeakerName = null;
+            ResetLipTracking();
         }
         
         //이펙트 처리
         // Effect = zoom일 경우
-        if (line.effect == "zoom" && !string.IsNullOrEmpty(line.cgKey)) cgManager.SetZoom(line.cgKey, line.cgPos, line.value, line.duration);
+        // [TODO] CGGroup Zoom은 그룹 전체 Zoom으로 별도 기능 구현 필요
+        if (line.effect == "zoom" && !string.IsNullOrEmpty(line.cgKey))
+        {
+            if (cgGroupDict.ContainsKey(line.cgKey)) Debug.LogWarning($"[DialogManager] CGGroup({line.cgKey})에 Zoom하는 기능은 별도 구현이 필요합니다.");
+            else cgManager.SetZoom(line.cgKey, line.cgPos, line.value, line.duration);
+        }
 
         //보이스 재생
         audioManager.PlayVoice(line.voiceKey);
@@ -329,6 +327,33 @@ public class DialogManager : MonoBehaviour
         sceneManager.OnSceneEnd();
     }
 
+    // 화자 Name으로 Lip 재사용 대상 탐색 후 립싱크 재시작. 하나라도 재생했으면 true
+    // - 직전 CG 지정 라인과 Name이 같으면 대상 전원 (단일 CG / 그룹 전원 대사)
+    // - 아니면 CGGROUP 화자명이 일치하는 멤버만 (화자명 미지정 멤버는 제외 → 빈 Name 나레이션과 오매칭 방지)
+    private bool RestartLipByName(string speakerName, float voiceDuration)
+    {
+        if (lastLipTargets.Count == 0) return false;
+
+        bool matchAll = speakerName == lastLineSpeakerName;
+        bool restarted = false;
+
+        foreach (var target in lastLipTargets)
+        {
+            if (!matchAll && (string.IsNullOrEmpty(target.speakerName) || target.speakerName != speakerName)) continue;
+
+            cgManager.RestartLipSync(target.cgKey, target.animation, voiceDuration);
+            restarted = true;
+        }
+        return restarted;
+    }
+
+    // Lip 재사용 정보 초기화
+    private void ResetLipTracking()
+    {
+        lastLipTargets.Clear();
+        lastLineSpeakerName = null;
+    }
+
     // SETCG 노드 처리: TEXT의 CG 세팅 로직을 재사용하되, 클릭 없이 즉시 다음 라인으로 진행
     private void ProcessSetCG(ScriptNode node)
     {
@@ -355,14 +380,12 @@ public class DialogManager : MonoBehaviour
         if (node.setCgKey.ToLower() == "none")
         {
             cgManager.ClearAllCGState();
-            lastCgKey = null;
-            lastAnimation = null;
-            lastSpeakerName = null;
+            ResetLipTracking();
             return;
         }
 
         // CG 키가 CGGroup인 경우
-        // 주의: lastCgKey/lastAnimation은 여기서 절대 건드리지 않음.
+        // 주의: Lip 재사용 정보(lastLipTargets/lastLineSpeakerName)는 여기서 절대 건드리지 않음.
         if (cgGroupDict.ContainsKey(node.setCgKey))
         {
             foreach (var entry in cgGroupDict[node.setCgKey]) cgManager.SetCG(entry.cgKey, entry.cgPos, entry.animation, 0f);
@@ -374,7 +397,12 @@ public class DialogManager : MonoBehaviour
         }
 
         // Effect = zoom
-        if (node.setCgEffect == "zoom") cgManager.SetZoom(node.setCgKey, node.setCgPos, node.setCgValue, node.setCgDuration);
+        // [TODO] CGGroup Zoom은 그룹 전체 Zoom으로 별도 기능 구현 필요
+        if (node.setCgEffect == "zoom")
+        {
+            if (cgGroupDict.ContainsKey(node.setCgKey)) Debug.LogWarning($"[DialogManager] CGGroup({node.setCgKey})에 Zoom하는 기능은 별도 구현이 필요합니다.");
+            else cgManager.SetZoom(node.setCgKey, node.setCgPos, node.setCgValue, node.setCgDuration);
+        }
     }
 
     // stopBGM: false이면 BGM을 정지하지 않음 (normal 트랜지션 등에서 BGM 유지 시 사용)
@@ -394,6 +422,7 @@ public class DialogManager : MonoBehaviour
 
         //리소스 초기화
         cgManager.ClearAllCGState();
+        ResetLipTracking();     //CG가 모두 사라지므로 Lip 재사용 정보도 초기화 (숨겨진 CG에 립싱크 방지)
         bgManager.HideBG();
         bgManager.HideFlashback();
         bgManager.hideZoom();
@@ -410,6 +439,19 @@ public class DialogManager : MonoBehaviour
     {
         XmlAttribute attr = node.Attributes[key];
         return (attr != null) ? attr.Value : "";
+    }
+
+    // =====================================================================
+    // [주의] 리소스 키 속성 하위 호환 처리 (2026-09-29)
+    // BG / IMAGE의 리소스 키 속성명은 "ResourceKey"가 기본(신규 작성 시 사용).
+    // 기존에 작성된 XML은 "Key"를 사용하므로, ResourceKey가 없으면 Key를 읽는다.
+    // → 기존 XML(Key)과 신규 XML(ResourceKey) 양쪽 모두 동작함.
+    // → 모든 XML이 ResourceKey로 전환되기 전까지 Key 폴백을 절대 제거하지 말 것.
+    // =====================================================================
+    private string GetResourceKey(XmlNode node)
+    {
+        string resourceKey = GetAttr(node, "ResourceKey");
+        return !string.IsNullOrEmpty(resourceKey) ? resourceKey : GetAttr(node, "Key");
     }
 
     private IEnumerator TypeText(DialogLine line)
@@ -525,20 +567,8 @@ public class DialogManager : MonoBehaviour
 
     private float GetVoiceDuration(string voiceKey)
     {
-        if (string.IsNullOrEmpty(voiceKey)) return 0f;
-
-        //구분자로 다중 파싱 시에는 가장 긴 길이를 반환
-        float maxDuration = 0f;
-
-        foreach(string key in voiceKey.Split(new char[] { ' ', ','}, System.StringSplitOptions.RemoveEmptyEntries))
-        {
-            string trimmed = key.Trim();
-            AudioClip clip = Resources.Load<AudioClip>($"Audio/Voice/{trimmed}");
-            
-            if (clip != null) maxDuration = Mathf.Max(maxDuration, clip.length);
-        }
-
-        return maxDuration;
+        //보이스 경로 규칙(시나리오 폴더 우선 → 루트 폴백)은 AudioManager에서 일괄 관리
+        return audioManager.GetVoiceDuration(voiceKey);
     }
 
     //디버그용 기능
@@ -567,7 +597,7 @@ public class DialogManager : MonoBehaviour
     {
         int searchFrom = currentIndex -2;
 
-        for (int i = searchFrom; i >= 0; i++)
+        for (int i = searchFrom; i >= 0; i--)
         {
             //Line 노드만 탐색해서
             if (scriptNodes[i].type != ScriptNode.NodeType.Line) continue;
@@ -752,11 +782,13 @@ public class CGGroupEntry
     public string cgKey;
     public string cgPos;
     public string animation;
+    public string speakerName;   //Lip 재사용 비교용 화자명 (CGGROUP: Name의 쉼표 뒤, 단일 CG: TEXT의 Name)
 
-    public CGGroupEntry(string cgKey, string cgPos, string animation)
+    public CGGroupEntry(string cgKey, string cgPos, string animation, string speakerName = "")
     {
         this.cgKey = cgKey;
         this.cgPos = cgPos;
         this.animation = animation;
+        this.speakerName = speakerName;
     }
 }

@@ -2937,7 +2937,8 @@ MonoBehaviour:
   uiManager: {fileID: 1589418730}
   bgManager: {fileID: 1097194829}
   cgManager: {fileID: 209125015}
-  scenePath: Scene/main
+  audioManager: {fileID: 1400404542}
+  scenePath: Scene/NKS
 --- !u!1 &764495373
 GameObject:
   m_ObjectHideFlags: 0

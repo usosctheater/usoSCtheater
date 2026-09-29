@@ -17,6 +17,8 @@ public class AudioManager : MonoBehaviour
 
     private Dictionary<string, AudioSource> audioSlots = new Dictionary<string, AudioSource>();
 
+    //[시나리오] 현재 시나리오의 보이스 하위 폴더명 (예: "IL"). 비어 있으면 voicePath 루트만 검색
+    private string scenarioVoiceFolder = "";
 
 
     void Awake()
@@ -47,11 +49,11 @@ public class AudioManager : MonoBehaviour
         for (int i = 0; i < keys.Length; i++)
         {
             string trimmed = keys[i].Trim();
-            AudioClip clip = Resources.Load<AudioClip>($"{voicePath}/{trimmed}");
+            AudioClip clip = LoadVoiceClip(trimmed);   //[시나리오] 시나리오 폴더 우선 → 루트 폴백
 
             if (clip == null)
             {
-                UnityEngine.Debug.LogWarning($"[AudioManager] 보이스 파일 없음: {trimmed}");
+                UnityEngine.Debug.LogWarning($"[AudioManager] 보이스 파일 없음: {trimmed} (시나리오 폴더: '{scenarioVoiceFolder}', 루트 폴백 포함)");
                 continue;
             }
 
@@ -59,6 +61,38 @@ public class AudioManager : MonoBehaviour
             voiceSources[i].clip = clip;
             voiceSources[i].Play();
         }
+    }
+
+    //[시나리오] SceneManager가 시나리오 로드 시 호출 (시나리오 폴더명 = 보이스 폴더명)
+    public void SetScenarioVoiceFolder(string folderName)
+    {
+        scenarioVoiceFolder = string.IsNullOrEmpty(folderName) ? "" : folderName.Trim().Trim('/');
+    }
+
+    //[시나리오] 보이스 검색: Voice/{시나리오}/{키} 우선 → Voice/{키} 폴백
+    //폴더 간 파일명 중복 허용. 루트 폴백으로 Voice="OT/OT001" 같은 다른 폴더 참조도 동작
+    private AudioClip LoadVoiceClip(string key)
+    {
+        if (!string.IsNullOrEmpty(scenarioVoiceFolder))
+        {
+            AudioClip clip = Resources.Load<AudioClip>($"{voicePath}/{scenarioVoiceFolder}/{key}");
+            if (clip != null) return clip;
+        }
+        return Resources.Load<AudioClip>($"{voicePath}/{key}");
+    }
+
+    //보이스 길이 조회 (PlayVoice와 동일한 경로 규칙 사용). 다중 키는 가장 긴 길이 반환
+    public float GetVoiceDuration(string voiceKey)
+    {
+        if (string.IsNullOrEmpty(voiceKey)) return 0f;
+
+        float maxDuration = 0f;
+        foreach (string key in voiceKey.Split(new char[] { ' ', ','}, System.StringSplitOptions.RemoveEmptyEntries))
+        {
+            AudioClip clip = LoadVoiceClip(key.Trim());
+            if (clip != null) maxDuration = Mathf.Max(maxDuration, clip.length);
+        }
+        return maxDuration;
     }
 
     public void StopVoice()

@@ -30,6 +30,8 @@ namespace UsoSCTheater.Capture
         }
 
         // [고속 모드] Recorder 없이도 Time.captureFramerate를 직접 걸어 가속 재생
+        // [보류] 구현 취소로 무기한 보류 (2026-09-29) - 녹화는 VNRecorderTool의 Cap 해제 가속으로 대체.
+        //        프로퍼티만 존재하며 어디서도 참조하지 않음
         public static bool TurboEnabled
         {
 #if UNITY_EDITOR
@@ -43,6 +45,7 @@ namespace UsoSCTheater.Capture
 
         // 고속 모드 시 사용할 고정 프레임레이트. 낮을수록(적을수록) 가속 배율이 커짐
         // (실제 프레임을 낼 수 있는 만큼 빠르게 진행 + 매 프레임 시뮬레이션 시간만 1/N로 고정되기 때문)
+        // [보류] TurboEnabled와 함께 무기한 보류
         public static int TurboFramerate
         {
 #if UNITY_EDITOR

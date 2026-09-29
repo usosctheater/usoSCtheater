@@ -85,7 +85,8 @@ namespace UsoSCTheater.EditorTools
             movieSettings.OutputFormat = MovieRecorderSettings.VideoRecorderOutputFormat.MP4;
 
             string timestamp = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss");
-            string outputFolder = Path.Combine(Application.dataPath, "..", "Recordings");
+            string scenarioName = GetScenarioName();
+            string outputFolder = Path.Combine(Application.dataPath, "..", "Recordings", scenarioName);
             if (!Directory.Exists(outputFolder))
             {
                 Directory.CreateDirectory(outputFolder);
@@ -119,6 +120,28 @@ namespace UsoSCTheater.EditorTools
                 Debug.Log("[VNRecorderTool] 녹화 종료 → mp4 저장 완료");
             }
             _recorderController = null;
+        }
+
+        // [녹화] 파일명용 시나리오 이름: SceneManager.scenePath("Scene/NKS")의 마지막 조각("NKS")
+        // scenePath는 private SerializeField라 SerializedObject로 인스펙터 값을 직접 읽는다
+        private static string GetScenarioName()
+        {
+            const string Fallback = "Unknown";
+
+            var sceneManager = UnityEngine.Object.FindFirstObjectByType<global::SceneManager>();
+            if (sceneManager == null)
+            {
+                Debug.LogWarning("[VNRecorderTool] SceneManager를 찾을 수 없어 시나리오 이름을 Unknown으로 저장합니다.");
+                return Fallback;
+            }
+
+            var prop = new SerializedObject(sceneManager).FindProperty("scenePath");
+            string scenePath = prop != null ? prop.stringValue : null;
+            if (string.IsNullOrEmpty(scenePath)) return Fallback;
+
+            string name = scenePath.TrimEnd('/').Split('/')[^1];
+            foreach (char c in Path.GetInvalidFileNameChars()) name = name.Replace(c, '_');
+            return string.IsNullOrEmpty(name) ? Fallback : name;
         }
     }
 }

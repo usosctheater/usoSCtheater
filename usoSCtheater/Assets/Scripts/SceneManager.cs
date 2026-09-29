@@ -10,9 +10,10 @@ public class SceneManager : MonoBehaviour
     [SerializeField] UIManager uiManager;
     [SerializeField] BGManager bgManager;
     [SerializeField] CGManager cgManager;
+    [SerializeField] AudioManager audioManager;   //[시나리오] 시나리오별 보이스 폴더 지정용
 
     [Header("씬 파일 경로")]
-    [SerializeField] private string scenePath = "Scene/main";
+    [SerializeField] private string scenePath = "Scene/NKS";   //[시나리오] 기본값 main → NKS (실제 값은 인스펙터)
 
     private List<TextAsset> sceneFiles = new List<TextAsset>();
     private int currentSceneIndex = 0;
@@ -20,7 +21,19 @@ public class SceneManager : MonoBehaviour
     void Start()
     {
         LoadSceneFiles();
+
+        //[시나리오] 시나리오 폴더명(scenePath 마지막 조각)을 보이스 폴더로 지정
+        if (audioManager != null) audioManager.SetScenarioVoiceFolder(GetScenarioFolderName());
+        else Debug.LogWarning("[SceneManager] AudioManager 미연결 — 보이스는 Voice 루트에서만 검색합니다.");
+
         PlayNextScene();
+    }
+
+    //[시나리오] "Scene/IL" → "IL"
+    private string GetScenarioFolderName()
+    {
+        if (string.IsNullOrEmpty(scenePath)) return "";
+        return scenePath.TrimEnd('/').Split('/')[^1];
     }
 
     void Update()
