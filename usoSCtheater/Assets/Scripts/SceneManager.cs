@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Xml;
 using UnityEngine;
+using UsoSCTheater.Scenario;   //[시나리오] 선택값(ScenarioSelection)
 
 public class SceneManager : MonoBehaviour
 {
@@ -13,27 +14,64 @@ public class SceneManager : MonoBehaviour
     [SerializeField] AudioManager audioManager;   //[시나리오] 시나리오별 보이스 폴더 지정용
 
     [Header("씬 파일 경로")]
-    [SerializeField] private string scenePath = "Scene/NKS";   //[시나리오] 기본값 main → NKS (실제 값은 인스펙터)
+    //[시나리오] 목록 씬을 거치지 않고 main.unity를 직접 Play할 때만 사용 (선택값이 있으면 무시)
+    [SerializeField] private string scenePath = "Scene/NKS";
 
     private List<TextAsset> sceneFiles = new List<TextAsset>();
     private int currentSceneIndex = 0;
+    private string activeScenePath;   //[시나리오] 실제 로드 경로 (선택값 우선 → 인스펙터 scenePath). 인스펙터 값은 덮어쓰지 않음
 
     void Start()
     {
+        ResolveScenePath();   //[시나리오]
         LoadSceneFiles();
 
-        //[시나리오] 시나리오 폴더명(scenePath 마지막 조각)을 보이스 폴더로 지정
+        if (sceneFiles.Count == 0) return;   //[시나리오] 씬 없으면 PlayNextScene 인덱스 오류 방지
+
+        ApplyStartScene();   //[시나리오]
+
+        //[시나리오] 시나리오 폴더명(activeScenePath 마지막 조각)을 보이스 폴더로 지정
         if (audioManager != null) audioManager.SetScenarioVoiceFolder(GetScenarioFolderName());
         else Debug.LogWarning("[SceneManager] AudioManager 미연결 — 보이스는 Voice 루트에서만 검색합니다.");
 
         PlayNextScene();
     }
 
+    //[시나리오] 로드 경로 결정: 목록 씬 선택값 우선, 없으면 인스펙터 scenePath
+    private void ResolveScenePath()
+    {
+        if (ScenarioSelection.HasSelection)
+        {
+            activeScenePath = ScenarioSelection.GetScenePath(ScenarioSelection.ScenarioFolder);
+            Debug.Log($"[SceneManager] 선택된 시나리오: {ScenarioSelection.ScenarioFolder} (시작 씬: {ScenarioSelection.StartSceneName ?? "처음부터"})");
+        }
+        else
+        {
+            activeScenePath = scenePath;
+            Debug.Log($"[SceneManager] 선택값 없음 → 인스펙터 scenePath 사용: {scenePath}");
+        }
+    }
+
+    //[시나리오] 시작 씬 지정 (파일명 기준, 못 찾으면 첫 씬)
+    private void ApplyStartScene()
+    {
+        string start = ScenarioSelection.StartSceneName;
+        if (string.IsNullOrEmpty(start)) return;
+
+        int index = sceneFiles.FindIndex(f => f.name == start);
+        if (index < 0)
+        {
+            Debug.LogWarning($"[SceneManager] 시작 씬 '{start}'을(를) {activeScenePath}에서 찾지 못해 첫 씬부터 재생합니다.");
+            return;
+        }
+        currentSceneIndex = index;
+    }
+
     //[시나리오] "Scene/IL" → "IL"
     private string GetScenarioFolderName()
     {
-        if (string.IsNullOrEmpty(scenePath)) return "";
-        return scenePath.TrimEnd('/').Split('/')[^1];
+        if (string.IsNullOrEmpty(activeScenePath)) return "";   //[시나리오] scenePath → activeScenePath
+        return activeScenePath.TrimEnd('/').Split('/')[^1];
     }
 
     void Update()
@@ -48,11 +86,12 @@ public class SceneManager : MonoBehaviour
     {
         sceneFiles.Clear();
 
-        TextAsset[] files = Resources.LoadAll<TextAsset>(scenePath);
+        //[시나리오] scenePath → activeScenePath (아래 로그 포함)
+        TextAsset[] files = Resources.LoadAll<TextAsset>(activeScenePath);
 
         if (files.Length == 0)
         {
-            Debug.LogError($"[SceneManager] {scenePath} 경로에 씬 파일이 없습니다.");
+            Debug.LogError($"[SceneManager] {activeScenePath} 경로에 씬 파일이 없습니다.");
             return;
         }
         

@@ -2,33 +2,7 @@
 
 > 작업할 때마다 Claude가 자동 갱신. 최신 항목이 위.
 > 항목 형식: **내용** / **변경 위치** (파일 · 함수) / **원인** / **고려 사항**
-> 목록 형식: 항목마다 `<details>
-<summary><b>2026-09-29</b> · [버그 수정] 보이스 폴더 이동 후 립싱크 전체 미동작 — 보이스 길이 조회를 AudioManager로 일원화 — <i>테스트 전</i></summary>
-
-### 2026-09-29 — [버그 수정] 립싱크 미동작 (보이스 길이 0)
-
-- 커밋: 미커밋 (Sourcetree로 커밋 예정)
-- 변경 파일: `Assets/Scripts/AudioManager.cs`, `Assets/Scripts/DialogManager.cs`
-- 상태: **Unity 플레이 테스트 전**
-
-### 구현 / 수정 내역
-
-#### 1. 보이스 길이 조회를 AudioManager로 일원화
-- **변경 위치**: `AudioManager.GetVoiceDuration()` 추가(public), `DialogManager.GetVoiceDuration()` 본문을 `audioManager.GetVoiceDuration()` 위임으로 교체
-- **원인**: 보이스가 시나리오별 하위 폴더(`Audio/Voice/{시나리오}/`)로 이동한 뒤, `AudioManager.PlayVoice`는 `LoadVoiceClip`(시나리오 폴더 → 루트 폴백)으로 찾지만 `DialogManager.GetVoiceDuration`은 루트(`Audio/Voice/{키}`)만 조회 → 길이 0 → `CGManager.SetCG` / `RestartLipSync`가 립 코루틴을 시작하지 않음 → **보이스는 재생되지만 립싱크 전체 미동작**. 같은 이유로 `AutoPlayCoroutine` 대기 시간이 타이핑 길이만 반영되어 자동재생/녹화에서 보이스가 끊길 수 있었음.
-- **고려 사항**:
-  - 보이스 경로 규칙을 `AudioManager.LoadVoiceClip` 한 곳에서만 관리 → 재생과 길이 계산이 다시 어긋나지 않도록 함.
-  - 다중 키(공백/쉼표 구분)는 기존과 동일하게 가장 긴 길이 반환.
-  - DialogManager의 기존 `audioManager` 참조 사용 → 인스펙터 추가 연결 불필요.
-  - 원인 조사 중 CGGroup Lip 재사용 변경분을 git diff로 재점검 → 단일 CG 동작은 기존과 동일(원인 아님).
-
-### 테스트 필요
-- [ ] CG 지정 대사 / CG 생략 이어지는 대사 모두 입 움직임
-- [ ] 자동재생 시 보이스가 끝난 뒤 다음 라인으로 진행 (녹화 포함)
-
-</details>
-
-<details>`로 접고, `<summary>`에 `날짜 · [분류] 한 줄 요약 — 상태` 기재 (펼치면 상세)
+> 목록 형식: 항목마다 `<details>`로 접고, `<summary>`에 `날짜 · [분류] 한 줄 요약 — 상태` 기재 (펼치면 상세)
 > 원본 위치: `D:\usosctheater\usoSCtheater_회의록.md` + claude.ai 프로젝트 `claude/usoSCtheater_회의록.md` (동일 내용)
 > 보기용 페이지(접기/펼치기·검색): https://claude.ai/artifact/G24K2D8xS7C9E6EQuP319r — md 갱신 후 `notes.md`로 재게시 (절차는 핸드오프 문서 '회의록 갱신 절차')
 
@@ -266,7 +240,7 @@
 | 눈 깜빡임 트랜지션 | 이전 핸드오프에서 구현 취소 | 추후 결정 |
 
 ### 발견된 이슈 (미논의)
-- `BacklogManager` 백로그 생성 시 `line.cgKey`를 직접 대입(`null` / 직전 cgKey)함 → `GetReadNodes()`는 `scriptNodes.GetRange()`(얕은 복사)라 원본 DialogLine이 변형됨을 확인. 영향 범위는 `DebugPrevLine` 재생 등 제한적일 것으로 보임.
+- `BacklogManager` 백로그 생성 시 `line.cgKey`를 직접 대입(`null` / 직전 cgKey)함 → `GetReadNodes()`가 원본 DialogLine을 참조로 반환한다면 스크립트 데이터가 변형됨. 영향 범위는 `DebugPrevLine` 재생 등 제한적일 것으로 보이나 확인 필요.
 
 ### 테스트 필요
 - [ ] Unity 컴파일 에러 없음 확인
