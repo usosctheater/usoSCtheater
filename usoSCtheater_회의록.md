@@ -9,6 +9,80 @@
 ---
 
 <details>
+<summary><b>2026-09-30</b> · [시나리오] 3단계: SceneTransitionManager(씬 전환 단일 창구) + 목록 씬 컨트롤러(임시 디버그 GUI) — <i>테스트 전</i></summary>
+
+### 2026-09-30 — [시나리오] 3단계: 씬 전환 매니저 + ScenarioSelectController
+
+- 커밋: 미커밋 (2단계 커밋 이후 작업)
+- 변경 파일: 신규 `Assets/Scripts/SceneFlow/SceneTransitionManager.cs`, 신규 `Assets/Scripts/Scenario/ScenarioSelectController.cs` / 수정 `Assets/Scripts/ScenarioPlayer.cs`
+- 사용자 직접 작업(Unity): `ScenarioSelectScene`에 GameObject + `ScenarioSelectController` 배치
+- 상태: **Unity 컴파일 및 플레이 테스트 전**
+
+### 결정 사항
+| # | 결정 | 이유 |
+|---|---|---|
+| 1 | 전환 함수 이름은 도착 씬 이름 + `Scene`: `GoToScenarioSelectScene()` / `GoToCommunicationScene(folder, startAct)` / `GoToEndingScene()` | 도착지가 Unity 씬임을 이름으로 명확히 |
+| 2 | 매니저는 static (MonoBehaviour/DontDestroyOnLoad 아님) | 특정 씬 배치에 의존하지 않아 어느 씬에서 Play해도 동작. 페이드/비동기 로드는 추후 내부 확장으로 대응(호출부 불변) |
+| 3 | 목록 씬 정식 GUI 전까지 OnGUI 임시 디버그 GUI 사용 (`showDebugGUI`로 끔) | GUI 제작 전에 시나리오 전환부터 검증 |
+
+### 구현 / 수정 내역
+
+#### 1. SceneTransitionManager (신규, `UsoSCTheater.SceneFlow`)
+- `SceneId { ScenarioSelect, Communication, Ending }` + `GetSceneName()` — Unity 씬 이름은 이곳에서만 관리
+- `Load(SceneId)` 공통 처리: 연타 방지(`IsLoading`, `sceneLoaded`에서 해제), 이름 미등록/Build Settings 누락 시 에러 로그 후 취소, `Time.timeScale = 1` 복구(빌드 백로그 일시정지 대응), `OnBeforeLoad` 이벤트(녹화 등 공통 훅)
+- `GoToCommunicationScene`: 전환 가능 여부를 먼저 검사한 뒤 `ScenarioSelection.Select` → 실패 시 선택값 불변
+- Domain Reload 비활성 대응: `SubsystemRegistration`에서 상태/이벤트 초기화 + `sceneLoaded` 중복 구독 방지
+- **규칙**: `UnityEngine.SceneManagement.SceneManager.LoadScene`은 이 클래스 밖에서 호출 금지 (반영 후 검사: 매니저 1곳만 존재)
+
+#### 2. ScenarioSelectController (신규, `UsoSCTheater.Scenario`)
+- 카탈로그 로드 → 표시 목록(hidden은 에디터에서만 표시, 막 0개 시나리오 제외) → 직전 선택 복원
+- GUI 연결용 public API: `Scenarios`, `SelectedScenario`, `SelectedScenarioIndex`, `SelectedActIndex`(-1 = 처음부터), `SelectScenario(int)`, `SelectScenarioByFolder(string)`, `SelectAct(int)`, `StartSelected()`, `StartFromBeginning()`, 이벤트 `OnSelectionChanged`
+- 시작은 `SceneTransitionManager.GoToCommunicationScene(folder, 막 파일명)` — 시작 막은 인덱스가 아닌 파일명 전달
+- 임시 디버그 GUI: 1080p 기준 스케일, 시나리오/시작 막 선택 + 시작 버튼
+
+#### 3. ScenarioPlayer
+- **변경 위치**: `OnActEnd()` 마지막 막 이후 `LoadScene("EndingScene")` → `SceneTransitionManager.GoToEndingScene()`
+
+### 고려 사항
+- 엔딩 종료 → 목록 복귀(`EndingSceneController.FinishEnding` → `GoToScenarioSelectScene`)는 다음 단계. 현재는 엔딩 후 정지 상태 유지
+- 녹화 모드로 목록 씬에서 Play 시 목록 화면부터 녹화 → 녹화 도구 대응 전까지는 CommunicationScene 직접 Play로 녹화
+- 중간 막부터 시작 시 이전 막의 BGM/CG 상태 없음 (PageUp 디버그와 동일)
+
+### 테스트 필요
+- [ ] Unity 컴파일 에러 없음
+- [ ] ScenarioSelectScene Play → 임시 GUI에 IL(4막) / NKS(1막) / SC(1막) 표시
+- [ ] IL → 처음부터 → 시작: `[SceneTransitionManager] ScenarioSelectScene → CommunicationScene`, "선택된 시나리오: IL (시작 막: 처음부터)", IL01부터 재생
+- [ ] IL → IL03 → 시작: IL03부터 재생
+- [ ] 마지막 막 종료 → `CommunicationScene → EndingScene` 로그와 함께 엔딩 전환
+- [ ] 시작 버튼 연타 시 "전환 중이라 … 무시" 경고만, 씬 1회 로드
+- [ ] Play 종료 후 CommunicationScene 직접 Play → "선택값 없음" 로그 (static 초기화)
+
+</details>
+
+<details>
+<summary><b>2026-09-30</b> · [용어 정리] 2단계: 데이터 폴더 Resources/Scene → Resources/Scenario, 경로 상수 2곳 수정 — <i>테스트 전</i></summary>
+
+### 2026-09-30 — [용어 정리] 2단계: 시나리오 데이터 폴더 이름 변경
+
+- 커밋: 미커밋 (1단계 커밋 이후 작업)
+- 사용자 직접 변경(Unity): `Assets/Resources/Scene` → `Assets/Resources/Scenario` (하위 IL / NKS / SC, GUID 유지)
+- 변경 파일: `Scenario/ScenarioCatalog.cs`, `Editor/ScenarioCatalogSync.cs` / 주석만: `Scenario/ScenarioSelection.cs`, `ScenarioPlayer.cs`
+- 상태: **Unity 컴파일 및 플레이 테스트 전**
+
+### 구현 / 수정 내역
+- **변경 위치**: `ScenarioCatalog.ScenarioRoot` `"Scene"` → `"Scenario"`, `ScenarioCatalogSync.ScenarioRootFolder` `"Assets/Resources/Scene"` → `"Assets/Resources/Scenario"`
+- 경로 예시 주석 `Scene/IL` → `Scenario/IL` (ScenarioSelection.GetScenarioPath, ScenarioPlayer.activeScenarioPath, ScenarioCatalogSync 클래스 설명)
+- **고려 사항**: 두 상수는 항상 일치해야 함(런타임 로드 경로 / 에디터 동기화 경로). 인스펙터 `defaultScenarioFolder` 값이 `Scene/NKS`로 남아 있어도 마지막 조각(`NKS`)만 사용하므로 동작에 영향 없음 — 정리 시 `NKS`로 변경 권장.
+
+### 테스트 필요
+- [ ] Unity 컴파일 에러 없음
+- [ ] `Tools > Scenario > Sync Catalog` 로그: IL[4], NKS[1], SC[1] (displayName/hidden 유지)
+- [ ] CommunicationScene 직접 Play → "경로에 막 파일이 없습니다" 에러 없이 NKS 재생, 보이스 정상
+- [ ] 인스펙터 `defaultScenarioFolder`를 `IL` / `SC`로 바꿔 각각 재생 확인
+
+</details>
+
+<details>
 <summary><b>2026-09-30</b> · [용어 정리] Scene/Scenario/Act 용어 확정 + 1단계 식별자 이름 변경(SceneManager → ScenarioPlayer 등) — <i>테스트 전</i></summary>
 
 ### 2026-09-30 — [용어 정리] 용어 규칙 확정 및 1단계 이름 변경 (동작 변화 없음)
@@ -218,7 +292,7 @@
 </details>
 
 <details>
-<summary><b>2026-09-29</b> · [설계 검토] 시나리오별 보이스 폴더 분리(루트 폴백) + 시나리오 선택 기능 방향 확정 — <i>1·2단계 반영 완료, 용어 정리 후 3단계 진행 중</i></summary>
+<summary><b>2026-09-29</b> · [설계 검토] 시나리오별 보이스 폴더 분리(루트 폴백) + 시나리오 선택 기능 방향 확정 — <i>3단계까지 반영, 엔딩 복귀·녹화 대응 남음</i></summary>
 
 ### 2026-09-29 — [설계 검토] 시나리오별 보이스 분리 / 시나리오 선택 기능
 

@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Xml;
 using UnityEngine;
 using UsoSCTheater.Scenario;   //[시나리오] 선택값(ScenarioSelection), 막 XML(ActXml)
+using UsoSCTheater.SceneFlow;  //[씬 전환] SceneTransitionManager
 
 //[용어 정리] SceneManager → ScenarioPlayer
 //시나리오(폴더 1개) 안의 막(Act XML)을 순서대로 재생한다. Unity 씬 전환은 이 클래스의 역할이 아님
@@ -116,7 +117,7 @@ public class ScenarioPlayer : MonoBehaviour
         currentActIndex++;
 
         if (currentActIndex < actFiles.Count) PlayCurrentAct();
-        else UnityEngine.SceneManagement.SceneManager.LoadScene("EndingScene");
+        else SceneTransitionManager.GoToEndingScene();   //[씬 전환] UnityEngine LoadScene("EndingScene") → 공통 매니저 경유
     }
 
     private void PlayCurrentAct()
