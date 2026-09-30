@@ -26,7 +26,7 @@ namespace UsoSCTheater.Scenario
     public class ScenarioCatalog : ScriptableObject
     {
         public const string ResourcePath = "Data/ScenarioCatalog";   // Resources.Load 경로
-        public const string ScenarioRoot = "Scene";                  // 시나리오 루트 폴더 (Resources/Scene) //[용어 정리] SceneRoot → ScenarioRoot. 폴더 이름 변경(2단계) 시 "Scenario"로 수정
+        public const string ScenarioRoot = "Scenario";               // 시나리오 루트 폴더 (Resources/Scenario) //[용어 정리] SceneRoot → ScenarioRoot, 경로 "Scene" → "Scenario"
 
         public List<ScenarioEntry> scenarios = new List<ScenarioEntry>();
 

@@ -30,7 +30,7 @@ namespace UsoSCTheater.Scenario
             StartActName = null;
         }
 
-        //"IL" → "Scene/IL" (시나리오 루트 + 폴더명)
+        //"IL" → "Scenario/IL" (시나리오 루트 + 폴더명)
         public static string GetScenarioPath(string scenarioFolder) => $"{ScenarioCatalog.ScenarioRoot}/{scenarioFolder}";
     }
 }

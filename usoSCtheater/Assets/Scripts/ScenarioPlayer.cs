@@ -25,7 +25,7 @@ public class ScenarioPlayer : MonoBehaviour
     private List<TextAsset> actFiles = new List<TextAsset>();
     private int currentActIndex = 0;
     private string activeScenarioFolder;   //[시나리오] 실제 재생 시나리오 폴더명 (선택값 우선 → 인스펙터 기본값). 인스펙터 값은 덮어쓰지 않음
-    private string activeScenarioPath;     //[시나리오] Resources 로드 경로 (예: "Scene/IL")
+    private string activeScenarioPath;     //[시나리오] Resources 로드 경로 (예: "Scenario/IL")
 
     void Start()
     {

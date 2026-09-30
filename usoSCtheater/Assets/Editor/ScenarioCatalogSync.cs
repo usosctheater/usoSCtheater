@@ -9,7 +9,7 @@ using UnityEngine;
 using UsoSCTheater.Scenario;
 
 /// <summary>
-/// 시나리오 루트(Resources/Scene) 하위 폴더를 스캔해 ScenarioCatalog를 자동 동기화한다. (에디터 전용)
+/// 시나리오 루트(Resources/Scenario) 하위 폴더를 스캔해 ScenarioCatalog를 자동 동기화한다. (에디터 전용)
 /// - 시나리오 루트 아래 에셋이 추가/삭제/이동되면 자동 실행
 /// - 수동: Tools > Scenario > Sync Catalog
 /// - 빌드 직전 1회 실행, 카탈로그가 없으면 에디터 로드 시 생성
@@ -20,7 +20,7 @@ using UsoSCTheater.Scenario;
 /// </summary>
 public class ScenarioCatalogSync : AssetPostprocessor
 {
-    private const string ScenarioRootFolder = "Assets/Resources/Scene";   //폴더 이름 변경(2단계) 시 "Assets/Resources/Scenario"로 수정
+    private const string ScenarioRootFolder = "Assets/Resources/Scenario";   //[용어 정리] "Assets/Resources/Scene" → "Assets/Resources/Scenario" (ScenarioCatalog.ScenarioRoot와 일치해야 함)
     private const string CatalogAssetPath = "Assets/Resources/Data/ScenarioCatalog.asset";
 
     private static bool syncPending = false;

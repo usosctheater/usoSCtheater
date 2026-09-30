@@ -12,4 +12,22 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: baa30e402c0fbd242ad57707a55aa3e8, type: 3}
   m_Name: ScenarioCatalog
   m_EditorClassIdentifier: Assembly-CSharp::UsoSCTheater.Scenario.ScenarioCatalog
-  scenarios: []
+  scenarios:
+  - folderName: IL
+    displayName: IL
+    hidden: 0
+    actNames:
+    - IL01
+    - IL02
+    - IL03
+    - IL04
+  - folderName: NKS
+    displayName: NKS
+    hidden: 0
+    actNames:
+    - NKS01
+  - folderName: SC
+    displayName: SC
+    hidden: 0
+    actNames:
+    - SC01
