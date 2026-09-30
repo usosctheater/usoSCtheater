@@ -11,9 +11,13 @@ namespace UsoSCTheater.Scenario
     public static class ScenarioSelection
     {
         public static string ScenarioFolder { get; private set; }   // 예: "IL"
-        public static string StartActName { get; private set; }     // 예: "IL03" (null이면 첫 막)
+        public static string StartActName { get; private set; }     // 예: "IL03" (null이면 모두 재생)
 
         public static bool HasSelection => !string.IsNullOrEmpty(ScenarioFolder);
+
+        //[재생 범위] 모두 재생(첫 막 → 마지막 막 → 엔딩 씬) 여부. false면 단일 막 재생(그 막만 → 목록 씬)
+        //선택값이 없을 때(CommunicationScene 직접 Play)도 모두 재생으로 취급
+        public static bool IsPlayAll => string.IsNullOrEmpty(StartActName);
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetOnPlay() => Clear();

@@ -7,8 +7,9 @@ namespace UsoSCTheater.Scenario
 {
     /// <summary>
     /// 목록 씬(ScenarioSelectScene) 컨트롤러.
-    /// 카탈로그에서 시나리오 목록을 읽고, 시나리오/시작 막 선택 → SceneTransitionManager로 CommunicationScene 이동.
-    /// 정식 GUI는 public 함수(SelectScenario / SelectAct / StartSelected / StartFromBeginning)와
+    /// 카탈로그에서 시나리오 목록을 읽고, 시나리오/재생 범위 선택 → SceneTransitionManager로 CommunicationScene 이동.
+    /// [재생 범위] 모두 재생(SelectedActIndex = -1): 전체 막 → 엔딩 씬 / 특정 막 선택: 그 막만 → 목록 씬
+    /// 정식 GUI는 public 함수(SelectScenario / SelectAct / StartSelected / StartPlayAll)와
     /// OnSelectionChanged 이벤트에 연결한다. 정식 GUI 전까지는 임시 디버그 GUI(OnGUI)로 테스트.
     /// </summary>
     public class ScenarioSelectController : MonoBehaviour
@@ -25,7 +26,7 @@ namespace UsoSCTheater.Scenario
         public IReadOnlyList<ScenarioEntry> Scenarios => scenarios;
 
         public int SelectedScenarioIndex { get; private set; } = -1;
-        public int SelectedActIndex { get; private set; } = -1;   // -1 = 처음부터
+        public int SelectedActIndex { get; private set; } = -1;   // -1 = 모두 재생
 
         public ScenarioEntry SelectedScenario =>
             (SelectedScenarioIndex >= 0 && SelectedScenarioIndex < scenarios.Count) ? scenarios[SelectedScenarioIndex] : null;
@@ -75,7 +76,7 @@ namespace UsoSCTheater.Scenario
         {
             bool valid = index >= 0 && index < scenarios.Count;
             SelectedScenarioIndex = valid ? index : -1;
-            SelectedActIndex = -1;   //시나리오를 바꾸면 시작 막은 처음부터로 초기화
+            SelectedActIndex = -1;   //시나리오를 바꾸면 재생 범위는 모두 재생으로 초기화
             OnSelectionChanged?.Invoke();
         }
 
@@ -86,7 +87,7 @@ namespace UsoSCTheater.Scenario
             SelectScenario(index);
         }
 
-        //-1 = 처음부터
+        //-1 = 모두 재생, 0 이상 = 해당 막만 단일 재생
         public void SelectAct(int actIndex)
         {
             var scenario = SelectedScenario;
@@ -97,7 +98,8 @@ namespace UsoSCTheater.Scenario
         }
 
         // ── 시작 (GUI 연결용) ────────────────────────────────────────────
-        public void StartFromBeginning()
+        //[재생 범위] StartFromBeginning → StartPlayAll (모두 재생 → 엔딩까지)
+        public void StartPlayAll()
         {
             SelectAct(-1);
             StartSelected();
@@ -113,7 +115,7 @@ namespace UsoSCTheater.Scenario
             }
 
             string startAct = SelectedActIndex >= 0 ? scenario.actNames[SelectedActIndex] : null;
-            Debug.Log($"[ScenarioSelect] 시작 요청: {scenario.folderName} / {startAct ?? "처음부터"}");
+            Debug.Log($"[ScenarioSelect] 시작 요청: {scenario.folderName} / {startAct ?? "모두 재생"}");
 
             //선택값 저장 + 씬 이름/Build Settings 검사 + timeScale 복구 + 연타 방지는 매니저가 처리
             SceneTransitionManager.GoToCommunicationScene(scenario.folderName, startAct);
@@ -153,9 +155,9 @@ namespace UsoSCTheater.Scenario
             if (selected != null)
             {
                 GUILayout.Space(24);
-                GUILayout.Label("시작 막", label);
+                GUILayout.Label("재생 범위 (모두 재생 = 엔딩까지 / 막 선택 = 그 막만)", label);
 
-                if (GUILayout.Button($"{(SelectedActIndex < 0 ? "▶ " : "   ")}처음부터", button, height))
+                if (GUILayout.Button($"{(SelectedActIndex < 0 ? "▶ " : "   ")}모두 재생", button, height))
                     SelectAct(-1);
 
                 for (int j = 0; j < selected.actNames.Count; j++)

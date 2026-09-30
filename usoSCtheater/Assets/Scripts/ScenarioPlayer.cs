@@ -3,6 +3,7 @@ using System.Xml;
 using UnityEngine;
 using UsoSCTheater.Scenario;   //[시나리오] 선택값(ScenarioSelection), 막 XML(ActXml)
 using UsoSCTheater.SceneFlow;  //[씬 전환] SceneTransitionManager
+using UsoSCTheater.Recording;  //[녹화] 재생 시작/종료 신호
 
 //[용어 정리] SceneManager → ScenarioPlayer
 //시나리오(폴더 1개) 안의 막(Act XML)을 순서대로 재생한다. Unity 씬 전환은 이 클래스의 역할이 아님
@@ -27,6 +28,7 @@ public class ScenarioPlayer : MonoBehaviour
     private int currentActIndex = 0;
     private string activeScenarioFolder;   //[시나리오] 실제 재생 시나리오 폴더명 (선택값 우선 → 인스펙터 기본값). 인스펙터 값은 덮어쓰지 않음
     private string activeScenarioPath;     //[시나리오] Resources 로드 경로 (예: "Scenario/IL")
+    private bool isExiting = false;        //[강제 종료] ESC 중복 입력 방지
 
     void Start()
     {
@@ -41,6 +43,9 @@ public class ScenarioPlayer : MonoBehaviour
         if (audioManager != null) audioManager.SetScenarioVoiceFolder(activeScenarioFolder);
         else Debug.LogWarning("[ScenarioPlayer] AudioManager 미연결 — 보이스는 Voice 루트에서만 검색합니다.");
 
+        //[녹화] 재생 시작 신호 (녹화 모드일 때만 녹화 도구가 녹화 시작 + 자동재생 On). 모두 재생이면 막 이름 null
+        RecordingSignal.RequestStart(activeScenarioFolder, ScenarioSelection.IsPlayAll ? null : actFiles[currentActIndex].name);
+
         PlayCurrentAct();
     }
 
@@ -50,7 +55,7 @@ public class ScenarioPlayer : MonoBehaviour
         if (ScenarioSelection.HasSelection)
         {
             activeScenarioFolder = ScenarioSelection.ScenarioFolder;
-            Debug.Log($"[ScenarioPlayer] 선택된 시나리오: {activeScenarioFolder} (시작 막: {ScenarioSelection.StartActName ?? "처음부터"})");
+            Debug.Log($"[ScenarioPlayer] 선택된 시나리오: {activeScenarioFolder} (재생 범위: {ScenarioSelection.StartActName ?? "모두 재생"})");
         }
         else
         {
@@ -84,6 +89,9 @@ public class ScenarioPlayer : MonoBehaviour
 
     void Update()
     {
+        //[강제 종료] ESC: 재생 중단 → 녹화 종료 신호 → 목록 씬
+        if (Input.GetKeyDown(KeyCode.Escape)) { ForceReturnToScenarioSelect(); return; }
+
         //디버그용 막 직행 기능 (PageUp: 다음 막, PageDown: 이전 막)
         if (Input.GetKeyDown(KeyCode.PageUp)) DebugNextAct();
         else if (Input.GetKeyDown(KeyCode.PageDown)) DebugPreviousAct();
@@ -114,10 +122,39 @@ public class ScenarioPlayer : MonoBehaviour
     //DialogManager에서 막 종료 시 호출
     public void OnActEnd()
     {
+        //[재생 범위] 단일 막 재생: 해당 막 종료 → 녹화 종료 신호 → 목록 씬 (PageUp/Down으로 막을 옮긴 경우도 동일)
+        if (!ScenarioSelection.IsPlayAll)
+        {
+            Debug.Log($"[ScenarioPlayer] 단일 막 재생 종료 ({actFiles[currentActIndex].name}) → 목록 씬");
+            isExiting = true;
+            RecordingSignal.RequestStop();
+            SceneTransitionManager.GoToScenarioSelectScene();
+            return;
+        }
+
+        //[재생 범위] 모두 재생: 다음 막, 마지막 막이면 엔딩 씬 (녹화 종료는 엔딩 종료 시점)
         currentActIndex++;
 
         if (currentActIndex < actFiles.Count) PlayCurrentAct();
         else SceneTransitionManager.GoToEndingScene();   //[씬 전환] UnityEngine LoadScene("EndingScene") → 공통 매니저 경유
+    }
+
+    //[강제 종료] ESC: 진행 중인 타이핑/자동재생/트랜지션/오디오 정리 → 녹화 종료 신호 → 목록 씬
+    private void ForceReturnToScenarioSelect()
+    {
+        if (isExiting) return;
+        isExiting = true;
+
+        Debug.Log("[ScenarioPlayer] ESC 강제 종료 → 목록 씬");
+        dialogManager.DebugResetState();
+        if (audioManager != null)
+        {
+            audioManager.StopVoice();
+            audioManager.StopAllAudio();
+        }
+
+        RecordingSignal.RequestStop();
+        SceneTransitionManager.GoToScenarioSelectScene();
     }
 
     private void PlayCurrentAct()

@@ -10,8 +10,10 @@ namespace UsoSCTheater.EditorTools
 {
     /// <summary>
     /// Tools > Recording > Enable Recording Mode 체크박스로 녹화 모드를 켜두면,
-    /// Play 진입 시 자동으로 Game View를 mp4로 녹화 시작하고,
-    /// RecordingSignal(엔딩 FinishEnding 등)로부터 종료 신호를 받으면 자동으로 정지/저장한다.
+    /// ScenarioPlayer의 재생 시작 신호(RecordingSignal.RequestStart)를 받는 시점에 Game View를 mp4로 녹화 시작하고,
+    /// 종료 신호(엔딩 종료 / 단일 막 종료 / ESC 강제 종료)를 받으면 자동으로 정지/저장한다.
+    /// [녹화 대응] Play 진입 시 자동 시작 → 재생 시작 신호로 변경 (목록 씬은 녹화하지 않음). 한 Play에서 재생할 때마다 파일 1개.
+    /// 저장: Recordings/{시나리오}/ALL_{타임스탬프}.mp4 (모두 재생), Recordings/{시나리오}/{막}_{타임스탬프}.mp4 (단일 막)
     /// Recorder 관련 코드는 전부 UnityEditor 참조이므로 빌드에는 포함되지 않는다.
     /// </summary>
     [InitializeOnLoad]
@@ -23,12 +25,14 @@ namespace UsoSCTheater.EditorTools
         private const int OutputWidth = 1920;
         private const int OutputHeight = 1080;
         private const float FrameRate = 30f;
+        private const string PlayAllPrefix = "ALL";   // [녹화 대응] 모두 재생 파일 접두어
 
         private static RecorderController _recorderController;
 
         static VNRecorderTool()
         {
             EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
+            RecordingSignal.OnRecordingStartRequested += OnRecordingStartRequested;   // [녹화 대응] 재생 시작 신호로 녹화 시작
             RecordingSignal.OnRecordingStopRequested += StopRecording;
         }
 
@@ -53,20 +57,27 @@ namespace UsoSCTheater.EditorTools
 
         private static void OnPlayModeStateChanged(PlayModeStateChange state)
         {
-            if (state == PlayModeStateChange.EnteredPlayMode && IsRecordingModeEnabled())
-            {
-                StartRecording();
-            }
-            else if (state == PlayModeStateChange.ExitingPlayMode)
+            // [녹화 대응] EnteredPlayMode 자동 시작 제거 → 녹화 시작은 OnRecordingStartRequested에서만
+            if (state == PlayModeStateChange.ExitingPlayMode)
             {
                 // Play를 중간에 강제 종료한 경우에도 미완성 파일이 남지 않도록 정리
                 StopRecording();
             }
         }
 
-        private static void StartRecording()
+        // [녹화 대응] ScenarioPlayer 재생 시작 신호. actName null = 모두 재생
+        private static void OnRecordingStartRequested(string scenarioFolder, string actName)
         {
-            // [녹화] 녹화 모드로 Play 진입 시 자동재생을 강제로 켜준다
+            if (!IsRecordingModeEnabled()) return;
+
+            // 이전 녹화가 남아 있으면 먼저 저장 (정상 흐름에서는 종료 신호로 이미 정리됨)
+            StopRecording();
+            StartRecording(scenarioFolder, actName);
+        }
+
+        private static void StartRecording(string scenarioFolder, string actName)
+        {
+            // [녹화] 녹화 시작 시 자동재생을 강제로 켜준다 (재생 시작 시점이라 UIManager가 항상 존재)
             var uiManager = UnityEngine.Object.FindFirstObjectByType<UIManager>();
             if (uiManager != null)
             {
@@ -84,14 +95,16 @@ namespace UsoSCTheater.EditorTools
             movieSettings.Enabled = true;
             movieSettings.OutputFormat = MovieRecorderSettings.VideoRecorderOutputFormat.MP4;
 
+            // [녹화 대응] 파일명: {ALL 또는 막 이름}_{타임스탬프}, 폴더: 시나리오 (런타임 선택값 기준)
             string timestamp = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss");
-            string scenarioName = GetScenarioName();
+            string scenarioName = SanitizeFileName(scenarioFolder, "Unknown");
+            string prefix = SanitizeFileName(actName, PlayAllPrefix);
             string outputFolder = Path.Combine(Application.dataPath, "..", "Recordings", scenarioName);
             if (!Directory.Exists(outputFolder))
             {
                 Directory.CreateDirectory(outputFolder);
             }
-            movieSettings.OutputFile = Path.Combine(outputFolder, timestamp);
+            movieSettings.OutputFile = Path.Combine(outputFolder, $"{prefix}_{timestamp}");
 
             movieSettings.ImageInputSettings = new GameViewInputSettings
             {
@@ -122,27 +135,15 @@ namespace UsoSCTheater.EditorTools
             _recorderController = null;
         }
 
-        // [녹화] 파일명용 시나리오 이름: ScenarioPlayer.defaultScenarioFolder("NKS", 기존 값 "Scene/NKS"도 마지막 조각 사용)
-        // defaultScenarioFolder는 private SerializeField라 SerializedObject로 인스펙터 값을 직접 읽는다
-        // [용어 정리] SceneManager.scenePath → ScenarioPlayer.defaultScenarioFolder (4단계에서 런타임 선택값 기준으로 변경 예정)
-        private static string GetScenarioName()
+        // [녹화 대응] 인스펙터 값(SerializedObject)으로 시나리오 이름을 읽던 GetScenarioName() 삭제 → 재생 시작 신호의 런타임 선택값 사용
+        // 파일/폴더명 불가 문자는 '_'로 치환, 비어 있으면 fallback
+        private static string SanitizeFileName(string value, string fallback)
         {
-            const string Fallback = "Unknown";
+            if (string.IsNullOrEmpty(value)) return fallback;
 
-            var scenarioPlayer = UnityEngine.Object.FindFirstObjectByType<global::ScenarioPlayer>();
-            if (scenarioPlayer == null)
-            {
-                Debug.LogWarning("[VNRecorderTool] ScenarioPlayer를 찾을 수 없어 시나리오 이름을 Unknown으로 저장합니다.");
-                return Fallback;
-            }
-
-            var prop = new SerializedObject(scenarioPlayer).FindProperty("defaultScenarioFolder");
-            string scenarioFolder = prop != null ? prop.stringValue : null;
-            if (string.IsNullOrEmpty(scenarioFolder)) return Fallback;
-
-            string name = scenarioFolder.TrimEnd('/').Split('/')[^1];
+            string name = value;
             foreach (char c in Path.GetInvalidFileNameChars()) name = name.Replace(c, '_');
-            return string.IsNullOrEmpty(name) ? Fallback : name;
+            return string.IsNullOrEmpty(name) ? fallback : name;
         }
     }
 }
