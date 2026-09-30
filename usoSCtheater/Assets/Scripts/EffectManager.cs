@@ -22,7 +22,8 @@ public class EffectManager : MonoBehaviour
     [Header("Wipe Left 설정")]
     [SerializeField] private RectTransform wipeBarRect;                         //WipeBar 이동용 Rect
     [SerializeField] private RectTransform wipeMaskRect;                        //TransitionMask 조절용 Rect
-    [SerializeField] private RectTransform wipeTransitionScene;                 //트랜지션 씬 전체 컨트롤용
+    [UnityEngine.Serialization.FormerlySerializedAs("wipeTransitionScene")]    //[용어 정리] 인스펙터 연결 보존
+    [SerializeField] private RectTransform wipeTransitionPanel;                 //트랜지션 패널(화면 전체를 가리는 오브젝트) 컨트롤용 //[용어 정리] wipeTransitionScene → wipeTransitionPanel
     [SerializeField] private RectTransform gearRect;                            //Gear 회전용 Rect
     [SerializeField] private float wipeBarDuration = 3f;                        //WipeBar 이동 시간
     [SerializeField] private float gearRotateSpeed = 45f;                       //Gear 회전 속도
@@ -66,7 +67,7 @@ public class EffectManager : MonoBehaviour
 
         //Wipe 트랜지션 세팅
         wipeMaskRect.gameObject.SetActive(false);
-        wipeTransitionScene.gameObject.SetActive(false);
+        wipeTransitionPanel.gameObject.SetActive(false);
         wipeBarRect.gameObject.SetActive(false);
 
         //Eyeblink 트랜지션 세팅
@@ -166,12 +167,12 @@ public class EffectManager : MonoBehaviour
 
         wipeMaskRect.gameObject.SetActive(true);
         wipeBarRect.gameObject.SetActive(true);
-        wipeTransitionScene.gameObject.SetActive(true);
+        wipeTransitionPanel.gameObject.SetActive(true);
         wipeBarRect.localRotation = UnityEngine.Quaternion.identity;
 
         //시작 위치 세팅
         wipeMaskRect.anchoredPosition = new UnityEngine.Vector2(startX, 0f);
-        wipeTransitionScene.anchoredPosition = new UnityEngine.Vector2(-startX, 0f);
+        wipeTransitionPanel.anchoredPosition = new UnityEngine.Vector2(-startX, 0f);
 
         //WipeBar와 평행사변형 사이의 Padding값
         float wipeBarOffset = wipeMaskWidth * 0.4f;
@@ -188,8 +189,8 @@ public class EffectManager : MonoBehaviour
             //WipeMask 이동
             wipeMaskRect.anchoredPosition = new UnityEngine.Vector2(posX, 0f);
 
-            //TransitionScene 역방향 이동 (중앙 고정처럼 보이게)
-            wipeTransitionScene.anchoredPosition = new UnityEngine.Vector2(-posX, 0f);
+            //TransitionPanel 역방향 이동 (중앙 고정처럼 보이게)
+            wipeTransitionPanel.anchoredPosition = new UnityEngine.Vector2(-posX, 0f);
 
             //WipeBar는 Offset 유지하면서 이동
             float wipeBarX = posX + wipeBarOffset;
@@ -218,7 +219,7 @@ public class EffectManager : MonoBehaviour
         //전부 비활성화
         wipeBarRect.gameObject.SetActive(false);
         wipeMaskRect.gameObject.SetActive(false);
-        wipeTransitionScene.gameObject.SetActive(false);
+        wipeTransitionPanel.gameObject.SetActive(false);
 
     }
 

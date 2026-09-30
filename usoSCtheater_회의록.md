@@ -9,6 +9,137 @@
 ---
 
 <details>
+<summary><b>2026-09-30</b> · [용어 정리] Scene/Scenario/Act 용어 확정 + 1단계 식별자 이름 변경(SceneManager → ScenarioPlayer 등) — <i>테스트 전</i></summary>
+
+### 2026-09-30 — [용어 정리] 용어 규칙 확정 및 1단계 이름 변경 (동작 변화 없음)
+
+- 커밋: 미커밋 (0단계 기준점 커밋 이후 작업, Sourcetree로 커밋 예정)
+- 변경 파일: `ScenarioPlayer.cs`(구 `SceneManager.cs`, .meta 함께 이름 변경), `DialogManager.cs`, `UIManager.cs`, `EffectManager.cs`, `AudioManager.cs`(주석), `Capture/ScreenCaptureUtil.cs`(구 `SceneCaptureUtil.cs`, .meta 함께), `Scenario/ScenarioCatalog.cs`, `Scenario/ScenarioSelection.cs`, 신규 `Scenario/ActXml.cs`, `Editor/ScenarioCatalogSync.cs`, `Editor/VNCaptureTool.cs`, `Editor/VNRecorderTool.cs`
+- 사용자 직접 변경(Unity): `main.unity` → `CommunicationScene.unity`, `ScenarioSelectScene.unity` 생성, Build Settings
+- 상태: **Unity 컴파일 및 인스펙터 연결/플레이 테스트 전**
+
+### 용어 규칙 (확정)
+| 용어 | 뜻 | 예 | 코드 |
+|---|---|---|---|
+| Scene (씬) | Unity 씬 전용 | `CommunicationScene` | `SceneTransitionManager`(예정), `EndingSceneController` |
+| Scenario (시나리오) | 이야기 한 편 전체(폴더) | `IL`, `NKS`, `SC` | `ScenarioPlayer`, `ScenarioCatalog`, `ScenarioSelection` |
+| Act (막) | 스크립트 XML 1개, SubTitle 단위 | `IL01.xml` | `LoadAct`, `actNames`, `<Act>` |
+| 장 | 막 안 TRANSITION 구간 | — | 주석에서 한글로만 사용 |
+| Screen / Panel | 화면 / 화면을 가리는 오브젝트 | — | `ClearScreen`, `ScreenCaptureUtil`, `wipeTransitionPanel` |
+
+### 결정 사항
+| # | 결정 | 이유 |
+|---|---|---|
+| 1 | Unity 씬 이름: `ScenarioSelectScene` / `CommunicationScene`(구 main) / `EndingScene` / `SpineDebugScene`. Build Settings 0 목록 · 1 커뮤 · 2 엔딩 | 역할별 씬이 늘어나므로 이름 규칙 필요. 커뮤니케이션 = 게임 내 스토리 기능 명칭 |
+| 2 | 씬 전환은 static `SceneTransitionManager` 한 곳에서만 (`SceneId` enum + 이름 매핑, `GoToXxx`) — 3단계에서 구현 | 특정 씬에 종속되지 않고 어느 씬에서 Play해도 동작, 씬 추가 시 매니저만 수정 |
+| 3 | `SceneManager` → `ScenarioPlayer` | Unity SceneManager/씬 전환 매니저와 혼동 방지 |
+| 4 | 데이터 패치(외부 폴더) 방식은 도입하지 않고 현재 Resources + 재빌드 배포 유지 | 신규 시나리오마다 새 Spine이 들어가며 Spine은 CommunicationScene에 배치된 오브젝트라 재빌드 필수. 보이스 비동기 로드/캐싱 구조 변경 부담 |
+| 5 | 리팩터링은 단계별 커밋: 1 이름 변경 → 2 데이터 폴더(`Resources/Scene` → `Resources/Scenario`) → 3 기능 | 동작 변화 없는 변경과 기능 변경 분리, 롤백 용이 |
+
+### 구현 / 수정 내역
+- **클래스**: `SceneManager` → `ScenarioPlayer`, `SceneCaptureUtil` → `ScreenCaptureUtil` (.cs/.meta 동시 이름 변경 → GUID 유지)
+- **ScenarioPlayer**: `sceneFiles/currentSceneIndex` → `actFiles/currentActIndex`, `LoadSceneFiles/OnSceneEnd/PlayNextScene/DebugNext·PreviousScene/ApplyStartScene/ResolveScenePath` → `LoadActFiles/OnActEnd/PlayCurrentAct/DebugNext·PreviousAct/ApplyStartAct/ResolveScenario`, `scenePath` → `defaultScenarioFolder`(값은 마지막 경로 조각만 사용 → 기존 `Scene/NKS`도 `NKS`로 동작), 로그 태그 `[ScenarioPlayer]`, 로그 "씬" → "막"
+- **DialogManager**: `sceneManager` → `scenarioPlayer`, `LoadScene` → `LoadAct`, `currentSceneName` → `currentActName`, `ClearScene` → `ClearScreen`, XML 루트 파싱 `ActXml.GetRoot`
+- **UIManager**: `ShowSceneTitle` → `ShowActTitle`, `sceneTitleUI/MainText/SubText` → `actTitleUI/MainText/SubText`
+- **EffectManager**: `wipeTransitionScene` → `wipeTransitionPanel`
+- **ScenarioCatalog/Selection/Sync**: `sceneNames` → `actNames`, `SceneRoot` → `ScenarioRoot`, `StartSceneName` → `StartActName`, `GetScenePath` → `GetScenarioPath`, `SceneFolder` → `ScenarioRootFolder` (경로 값은 2단계까지 `Scene` 유지)
+- **ActXml (신규)**: 루트 `<Act>` 우선, 기존 `<Scene>` 폴백. 막 XML 6개와 엑셀 템플릿(`Resources/XML`)이 전환되기 전까지 폴백 제거 금지. 루트가 없으면 에러 로그 + 빈 목록(기존 동작과 동일)
+- **VNRecorderTool**: `ScenarioPlayer.defaultScenarioFolder`를 읽도록 수정(마지막 조각 사용)
+
+### 고려 사항
+- 직렬화 필드 7개에 `[FormerlySerializedAs]` 적용 → 인스펙터 연결/값 보존: `DialogManager.sceneManager`, `ScenarioPlayer.scenePath`, `UIManager.sceneTitleUI/MainText/SubText`, `EffectManager.wipeTransitionScene`, `ScenarioEntry.sceneNames`
+- 검증: Assets 전체 스크립트에서 옛 식별자 코드 참조 0건 확인(주석·FormerlySerializedAs 문자열 제외). 남은 "Scene"은 Unity 씬 의미, 레거시 XML 태그, 2단계 폴더 경로뿐
+- `ScenarioPlayer.OnActEnd`의 `LoadScene("EndingScene")`은 3단계에서 `SceneTransitionManager.GoToEnding()`으로 교체 예정
+
+### 다음 단계
+- 2단계: Unity에서 `Resources/Scene` → `Resources/Scenario` 이름 변경 → `ScenarioCatalog.ScenarioRoot`, `ScenarioCatalogSync.ScenarioRootFolder` 2곳 수정
+- 3단계: `SceneTransitionManager` 추가 + `ScenarioSelectController`(목록 씬) 추가
+- (선택, 나중) 막 XML/엑셀 템플릿 루트 태그 `<Scene>` → `<Act>`
+
+### 테스트 필요
+- [ ] Unity 컴파일 에러 없음
+- [ ] 인스펙터 연결 유지: DialogManager `Scenario Player`, UIManager `Act Title UI/Main/Sub`, EffectManager `Wipe Transition Panel`, ScenarioPlayer `Default Scenario Folder`(값 `Scene/NKS` 그대로 보여도 정상)
+- [ ] 카탈로그 `ScenarioCatalog.asset`에 `Act Names` 목록 유지
+- [ ] CommunicationScene 직접 Play → NKS 재생, 막 타이틀 표시, TRANSITION(Wipe) 정상, 엔딩 전환
+- [ ] PageUp/PageDown 막 이동, 캡처 툴 켜고 `CaptureOutput/{막 이름}` 생성
+- [ ] 녹화 모드 폴더명 `Recordings/NKS`
+
+</details>
+
+<details>
+<summary><b>2026-09-30</b> · [시나리오] 2단계: 시나리오 선택값(static) + 시나리오 카탈로그 자동 동기화 — <i>테스트 전</i></summary>
+
+### 2026-09-30 — [시나리오] 2단계: ScenarioSelection / ScenarioCatalog / ScenarioCatalogSync
+
+- 커밋: 미커밋 (Sourcetree로 커밋 예정)
+- 변경 파일: 신규 `Assets/Scripts/Scenario/ScenarioCatalog.cs`, `Assets/Scripts/Scenario/ScenarioSelection.cs`, `Assets/Editor/ScenarioCatalogSync.cs` / 수정 `Assets/Scripts/SceneManager.cs`
+- 상태: **Unity 컴파일 및 플레이 테스트 전**
+
+### 결정 사항
+| # | 결정 | 이유 |
+|---|---|---|
+| 1 | 카탈로그 = ScriptableObject `Resources/Data/ScenarioCatalog.asset`, 에디터에서 `Resources/Scene` 하위 폴더 자동 동기화 | 목록 파일의 확실성 + 수동 갱신 부담 제거 |
+| 2 | `hidden` 항목 추가 | 테스트 시나리오(OT 등) 목록 숨김 |
+| 3 | 카탈로그 git 변경 허용 | 시나리오 추가 시 다른 파일도 함께 변경됨 |
+| 4 | 빌드(exe)는 빌드 시점 카탈로그 스냅샷을 읽기만 함 (런타임 갱신 없음) | Resources 폴더는 빌드 시 패키징되어 exe에서 시나리오 폴더를 추가할 수 없음 → 시나리오 추가 = 재빌드. 빌드 직전 동기화로 카탈로그·씬 파일 불일치 방지 |
+
+### 구현 / 수정 내역
+
+#### 1. ScenarioCatalog (신규, 런타임)
+- `ScenarioEntry { folderName(자동), displayName(수동), hidden(수동), sceneNames(자동, Ordinal 정렬) }`
+- `ScenarioCatalog.Load()` / `Find(folderName)` / `GetVisible()`(hidden 제외, 인스펙터 순서)
+- 네임스페이스 `UsoSCTheater.Scenario`
+
+#### 2. ScenarioSelection (신규, 런타임 static)
+- `ScenarioFolder`, `StartSceneName`, `HasSelection`, `Select()`, `Clear()`, `GetScenePath()`("IL" → "Scene/IL")
+- **고려 사항**: Domain Reload 비활성 프로젝트 → `[RuntimeInitializeOnLoadMethod(SubsystemRegistration)]`로 Play 시작마다 초기화. 시작 씬은 인덱스가 아닌 파일명으로 전달(카탈로그가 오래돼도 안전).
+
+#### 3. ScenarioCatalogSync (신규, 에디터)
+- 갱신 시점: `Resources/Scene` 하위 에셋 추가/삭제/이동 시 자동(`AssetPostprocessor`, delayCall로 1회), 메뉴 `Tools > Scenario > Sync Catalog`, 카탈로그 없으면 에디터 로드 시 생성, 빌드 직전(`IPreprocessBuildWithReport`)
+- 병합: folderName 기준, displayName/hidden/순서 유지, sceneNames만 갱신, 새 폴더는 끝에 추가, 삭제된 폴더 제거
+- 시나리오 폴더 안에 하위 폴더가 있으면 경고(`Resources.LoadAll` 재귀 로드)
+- **고려 사항**: 폴더명 변경 시 새 시나리오로 취급 → displayName/hidden 재설정 필요
+
+#### 4. SceneManager 런타임 경로
+- **변경 위치**: `activeScenePath` 필드, `ResolveScenePath()` / `ApplyStartScene()` 추가, `Start()` 순서 변경 + 씬 0개면 중단, `LoadSceneFiles()` / `GetScenarioFolderName()`이 `activeScenePath` 사용
+- **동작**: 선택값 있으면 `Scene/{선택 폴더}`, 없으면 인스펙터 `scenePath`(main.unity 직접 Play 유지). 시작 씬 못 찾으면 경고 후 첫 씬.
+- **고려 사항**: 인스펙터 `scenePath`는 덮어쓰지 않음 → VNRecorderTool(인스펙터 값 참조) 동작 유지, 4단계에서 대응. 중간 씬 시작 시 이전 씬 BGM/CG 상태 없음(PageUp 디버그와 동일).
+
+### 테스트 필요
+- [ ] Unity 컴파일 에러 없음
+- [ ] `Resources/Data/ScenarioCatalog.asset` 자동 생성, IL[4] / NKS[1] / SC[1] 등록
+- [ ] main.unity 직접 Play → "선택값 없음 → 인스펙터 scenePath 사용" 로그 + 기존과 동일 재생
+- [ ] 씬 폴더에 XML 추가/삭제 시 카탈로그 자동 갱신, displayName/hidden 유지
+
+</details>
+
+<details>
+<summary><b>2026-09-29</b> · [버그 수정] 보이스 폴더 이동 후 립싱크 전체 미동작 — 보이스 길이 조회를 AudioManager로 일원화 — <i>테스트 전</i></summary>
+
+### 2026-09-29 — [버그 수정] 립싱크 미동작 (보이스 길이 0)
+
+- 커밋: 미커밋 (Sourcetree로 커밋 예정)
+- 변경 파일: `Assets/Scripts/AudioManager.cs`, `Assets/Scripts/DialogManager.cs`
+- 상태: **Unity 플레이 테스트 전**
+
+### 구현 / 수정 내역
+
+#### 1. 보이스 길이 조회를 AudioManager로 일원화
+- **변경 위치**: `AudioManager.GetVoiceDuration()` 추가(public), `DialogManager.GetVoiceDuration()` 본문을 `audioManager.GetVoiceDuration()` 위임으로 교체
+- **원인**: 보이스가 시나리오별 하위 폴더(`Audio/Voice/{시나리오}/`)로 이동한 뒤, `AudioManager.PlayVoice`는 `LoadVoiceClip`(시나리오 폴더 → 루트 폴백)으로 찾지만 `DialogManager.GetVoiceDuration`은 루트(`Audio/Voice/{키}`)만 조회 → 길이 0 → `CGManager.SetCG` / `RestartLipSync`가 립 코루틴을 시작하지 않음 → **보이스는 재생되지만 립싱크 전체 미동작**. 같은 이유로 `AutoPlayCoroutine` 대기 시간이 타이핑 길이만 반영되어 자동재생/녹화에서 보이스가 끊길 수 있었음.
+- **고려 사항**:
+  - 보이스 경로 규칙을 `AudioManager.LoadVoiceClip` 한 곳에서만 관리 → 재생과 길이 계산이 다시 어긋나지 않도록 함.
+  - 다중 키(공백/쉼표 구분)는 기존과 동일하게 가장 긴 길이 반환.
+  - DialogManager의 기존 `audioManager` 참조 사용 → 인스펙터 추가 연결 불필요.
+  - 원인 조사 중 CGGroup Lip 재사용 변경분을 git diff로 재점검 → 단일 CG 동작은 기존과 동일(원인 아님).
+
+### 테스트 필요
+- [ ] CG 지정 대사 / CG 생략 이어지는 대사 모두 입 움직임
+- [ ] 자동재생 시 보이스가 끝난 뒤 다음 라인으로 진행 (녹화 포함)
+
+</details>
+
+<details>
 <summary><b>2026-09-29</b> · [시나리오] 시나리오별 보이스 폴더 검색(루트 폴백) 구현, main → NKS 폴더/씬 파일명 변경 — <i>테스트 전</i></summary>
 
 ### 2026-09-29 — [시나리오] 1단계: 시나리오별 보이스 폴더 분리 + 폴더/파일명 정리
@@ -87,12 +218,12 @@
 </details>
 
 <details>
-<summary><b>2026-09-29</b> · [설계 검토] 시나리오별 보이스 폴더 분리(루트 폴백) + 시나리오 선택 기능 방향 확정 — <i>1단계 완료, 2단계 설계 중</i></summary>
+<summary><b>2026-09-29</b> · [설계 검토] 시나리오별 보이스 폴더 분리(루트 폴백) + 시나리오 선택 기능 방향 확정 — <i>1·2단계 반영 완료, 용어 정리 후 3단계 진행 중</i></summary>
 
 ### 2026-09-29 — [설계 검토] 시나리오별 보이스 분리 / 시나리오 선택 기능
 
 - 커밋: 없음 (코드 변경 없음, 사전 검토만)
-- 상태: **결정 완료, 1단계 반영 완료(위 항목), 2단계 설계 중**
+- 상태: **결정 완료, 1·2단계 반영 완료(위 항목), 3단계 설계 중**
 
 ### 현황 (코드 확인 결과)
 - `SceneManager.scenePath`(인스펙터 SerializeField, 현재 `Scene/main`) → `Start()`에서 `Resources.LoadAll` + 파일명 Ordinal 정렬 → 마지막 씬 후 `EndingScene` 로드
@@ -240,7 +371,7 @@
 | 눈 깜빡임 트랜지션 | 이전 핸드오프에서 구현 취소 | 추후 결정 |
 
 ### 발견된 이슈 (미논의)
-- `BacklogManager` 백로그 생성 시 `line.cgKey`를 직접 대입(`null` / 직전 cgKey)함 → `GetReadNodes()`가 원본 DialogLine을 참조로 반환한다면 스크립트 데이터가 변형됨. 영향 범위는 `DebugPrevLine` 재생 등 제한적일 것으로 보이나 확인 필요.
+- `BacklogManager` 백로그 생성 시 `line.cgKey`를 직접 대입(`null` / 직전 cgKey)함 → `GetReadNodes()`는 `scriptNodes.GetRange()`(얕은 복사)라 원본 DialogLine이 변형됨을 확인. 영향 범위는 `DebugPrevLine` 재생 등 제한적일 것으로 보임.
 
 ### 테스트 필요
 - [ ] Unity 컴파일 에러 없음 확인

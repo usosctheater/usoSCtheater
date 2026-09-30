@@ -6,16 +6,17 @@ namespace UsoSCTheater.Scenario
 {
     /// <summary>
     /// 시나리오 1개 정보.
-    /// folderName / sceneNames는 에디터 동기화(ScenarioCatalogSync)가 자동 갱신,
+    /// folderName / actNames는 에디터 동기화(ScenarioCatalogSync)가 자동 갱신,
     /// displayName / hidden / 목록 순서는 인스펙터에서 수동 편집(동기화 시 유지).
     /// </summary>
     [Serializable]
     public class ScenarioEntry
     {
-        public string folderName;                               // Resources/Scene 하위 폴더명 (자동)
+        public string folderName;                               // 시나리오 루트(ScenarioCatalog.ScenarioRoot) 하위 폴더명 (자동)
         public string displayName;                              // 목록 표시명 (수동, 기본값 = folderName)
         public bool hidden;                                     // true면 목록에서 숨김 (수동, 테스트 시나리오용)
-        public List<string> sceneNames = new List<string>();    // 씬 파일명, Ordinal 정렬 = SceneManager 재생 순서 (자동)
+        [UnityEngine.Serialization.FormerlySerializedAs("sceneNames")]   //[용어 정리] sceneNames → actNames
+        public List<string> actNames = new List<string>();      // 막 파일명, Ordinal 정렬 = ScenarioPlayer 재생 순서 (자동)
     }
 
     /// <summary>
@@ -25,7 +26,7 @@ namespace UsoSCTheater.Scenario
     public class ScenarioCatalog : ScriptableObject
     {
         public const string ResourcePath = "Data/ScenarioCatalog";   // Resources.Load 경로
-        public const string SceneRoot = "Scene";                     // Resources/Scene
+        public const string ScenarioRoot = "Scene";                  // 시나리오 루트 폴더 (Resources/Scene) //[용어 정리] SceneRoot → ScenarioRoot. 폴더 이름 변경(2단계) 시 "Scenario"로 수정
 
         public List<ScenarioEntry> scenarios = new List<ScenarioEntry>();
 

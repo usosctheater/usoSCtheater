@@ -9,6 +9,7 @@ using NUnit.Framework;
 using UnityEngine.EventSystems;
 using UsoSCTheater.Recording; // [녹화] 에디터/빌드 페이싱 분기용
 using UsoSCTheater.Capture;   // [캡처] TEXT 라인 자동 스크린샷
+using UsoSCTheater.Scenario;  //[용어 정리] 막 XML 루트 파싱(ActXml)
 // using UnityEditor.Audio;
 
 public class DialogManager : MonoBehaviour
@@ -21,7 +22,8 @@ public class DialogManager : MonoBehaviour
     [SerializeField] private BGManager bgManager;
     [SerializeField] private CGManager cgManager;
     [SerializeField] private AudioManager audioManager;
-    [SerializeField] private SceneManager sceneManager;
+    [UnityEngine.Serialization.FormerlySerializedAs("sceneManager")]   //[용어 정리] 인스펙터 연결 보존
+    [SerializeField] private ScenarioPlayer scenarioPlayer;           //[용어 정리] SceneManager sceneManager → ScenarioPlayer scenarioPlayer
     [SerializeField] private EffectManager effectManager;
     [SerializeField] private UIManager uiManager;
     [SerializeField] private ImageManager imageManager;
@@ -56,7 +58,7 @@ public class DialogManager : MonoBehaviour
     //CGgroup 구현용 Dict
     private Dictionary<string, List<CGGroupEntry>> cgGroupDict = new Dictionary<string, List<CGGroupEntry>>();
 
-    private string currentSceneName = "";   // [캡처] 캡처 폴더명으로 사용되는 현재 씬 이름
+    private string currentActName = "";   // [캡처] 캡처 폴더명으로 사용되는 현재 막 이름 //[용어 정리] currentSceneName → currentActName
     
     void Update()
     {
@@ -97,17 +99,20 @@ public class DialogManager : MonoBehaviour
         }
     }
 
-    public void LoadScene(TextAsset xmlAsset)
+    public void LoadAct(TextAsset xmlAsset)   //[용어 정리] LoadScene → LoadAct
     {
         scriptNodes.Clear();
         currentIndex = 0;
-        currentSceneName = xmlAsset.name;   // [캡처] 캡처 폴더명으로 사용
+        currentActName = xmlAsset.name;   // [캡처] 캡처 폴더명으로 사용
 
         XmlDocument doc = new XmlDocument();
         doc.LoadXml(xmlAsset.text);
 
-        //Scene 바로 아래 모든 자식 노드를 순서대로 처리
-        XmlNodeList lineNodes = doc.SelectNodes("Scene/Line");
+        //막 루트(<Act>, 기존 <Scene> 호환) 바로 아래 모든 Line 노드를 순서대로 처리
+        //[용어 정리] "Scene/Line" → ActXml.GetRoot. 루트가 없으면 빈 목록(기존 동작과 동일)
+        XmlNode actRoot = ActXml.GetRoot(doc);
+        if (actRoot == null) Debug.LogError($"[DialogManager] {xmlAsset.name}: 루트 태그 <{ActXml.RootTag}>/<{ActXml.LegacyRootTag}>를 찾을 수 없습니다.");
+        XmlNodeList lineNodes = actRoot != null ? actRoot.SelectNodes("Line") : doc.SelectNodes($"{ActXml.RootTag}/Line");
 
         foreach (XmlNode node in lineNodes)
         {
@@ -299,7 +304,7 @@ public class DialogManager : MonoBehaviour
                     // normal 트랜지션이면 BGM 유지
                     bool isNormalTransition = node.transition_effect.ToLower() == "normal";
                     effectManager.PlayTransition(node.transition_effect, node.transition_se, ()=> {
-                        ClearScene(stopBGM: !isNormalTransition);
+                        ClearScreen(stopBGM: !isNormalTransition);   //[용어 정리] ClearScene → ClearScreen
                         isTransition = false;
                         ProcessNext();
                     });
@@ -321,10 +326,10 @@ public class DialogManager : MonoBehaviour
             }
         }
 
-        ClearScene();
-        //Debug.Log("씬 종료");
-        Debug.Log($"[DialogManager] 씬 종료 — SceneManager에 전달");
-        sceneManager.OnSceneEnd();
+        ClearScreen();   //[용어 정리] ClearScene → ClearScreen
+        //Debug.Log("막 종료");
+        Debug.Log($"[DialogManager] 막 종료 — ScenarioPlayer에 전달");
+        scenarioPlayer.OnActEnd();   //[용어 정리] sceneManager.OnSceneEnd → scenarioPlayer.OnActEnd
     }
 
     // 화자 Name으로 Lip 재사용 대상 탐색 후 립싱크 재시작. 하나라도 재생했으면 true
@@ -406,7 +411,8 @@ public class DialogManager : MonoBehaviour
     }
 
     // stopBGM: false이면 BGM을 정지하지 않음 (normal 트랜지션 등에서 BGM 유지 시 사용)
-    private void ClearScene(bool stopBGM = true)
+    //화면(CG/BG/텍스트 등) 초기화. 막 종료 및 장 전환(TRANSITION) 시 호출 //[용어 정리] ClearScene → ClearScreen
+    private void ClearScreen(bool stopBGM = true)
     {
         //텍스트 초기화
         nameText.text = "";
@@ -539,7 +545,7 @@ public class DialogManager : MonoBehaviour
 
         // [캡처] 타이핑/보이스 중 더 늦게 끝난 시점 = 여기. 렌더링 완료 보장 후 캡처.
         yield return new WaitForEndOfFrame();
-        SceneCaptureUtil.CaptureLine(currentSceneName, currentIndex - 1, captureCamera);
+        ScreenCaptureUtil.CaptureLine(currentActName, currentIndex - 1, captureCamera);   //[용어 정리] SceneCaptureUtil → ScreenCaptureUtil
 
         //고정 딜레이 적용
         yield return RecordingTimeUtil.PacingWait(autoPlayDelay);
@@ -572,7 +578,7 @@ public class DialogManager : MonoBehaviour
     }
 
     //디버그용 기능
-    //씬 강제 전환 전 진행 중이던 타이핑/자동재생/트랜지션 상태 초기화
+    //막 강제 전환 전 진행 중이던 타이핑/자동재생/트랜지션 상태 초기화
     public void DebugResetState()
     {
         if (typingCoroutine != null)
@@ -590,7 +596,7 @@ public class DialogManager : MonoBehaviour
         isTyping = false;
         isTransition = false;
 
-        ClearScene();
+        ClearScreen();   //[용어 정리] ClearScene → ClearScreen
     }
 
     public void DebugPrevLine()

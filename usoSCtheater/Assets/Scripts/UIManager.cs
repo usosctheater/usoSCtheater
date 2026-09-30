@@ -20,10 +20,13 @@ public class UIManager : MonoBehaviour
     [SerializeField] private Sprite dialogBoxBlue;
     [SerializeField] private Sprite dialogBoxGreen;
 
-    [Header("씬 타이틀 UI")]
-    [SerializeField] private GameObject sceneTitleUI;
-    [SerializeField] private TextMeshProUGUI sceneTitleMainText;   // 변경: mainTitle용 텍스트
-    [SerializeField] private TextMeshProUGUI sceneTitleSubText;    // 추가: subTitle용 텍스트
+    [Header("막 타이틀 UI")]   //[용어 정리] sceneTitle* → actTitle* (FormerlySerializedAs로 인스펙터 연결 보존)
+    [UnityEngine.Serialization.FormerlySerializedAs("sceneTitleUI")]
+    [SerializeField] private GameObject actTitleUI;
+    [UnityEngine.Serialization.FormerlySerializedAs("sceneTitleMainText")]
+    [SerializeField] private TextMeshProUGUI actTitleMainText;   // 변경: mainTitle용 텍스트
+    [UnityEngine.Serialization.FormerlySerializedAs("sceneTitleSubText")]
+    [SerializeField] private TextMeshProUGUI actTitleSubText;    // 추가: subTitle용 텍스트
     [SerializeField] private float titleDisplayDuration = 3.0f;
 
     [Header("설정 UI")]
@@ -89,7 +92,7 @@ public class UIManager : MonoBehaviour
     }
 
     // 변경: mainTitle / subTitle 두 인자를 받도록 시그니처 변경
-    public void ShowSceneTitle(string mainTitle, string subTitle)
+    public void ShowActTitle(string mainTitle, string subTitle)   //[용어 정리] ShowSceneTitle → ShowActTitle
     {
         if (string.IsNullOrEmpty(mainTitle) && string.IsNullOrEmpty(subTitle)) return;
 
@@ -105,13 +108,13 @@ public class UIManager : MonoBehaviour
 
     private IEnumerator ShowTitleCoroutine(string mainTitle, string subTitle)
     {
-        if (sceneTitleMainText != null) sceneTitleMainText.text = mainTitle;
-        if (sceneTitleSubText  != null) sceneTitleSubText.text  = subTitle;
-        sceneTitleUI.SetActive(true);
+        if (actTitleMainText != null) actTitleMainText.text = mainTitle;
+        if (actTitleSubText  != null) actTitleSubText.text  = subTitle;
+        actTitleUI.SetActive(true);
 
         yield return RecordingTimeUtil.PacingWait(titleDisplayDuration);
 
-        sceneTitleUI.SetActive(false);
+        actTitleUI.SetActive(false);
         titleCoroutine = null;
     }
 

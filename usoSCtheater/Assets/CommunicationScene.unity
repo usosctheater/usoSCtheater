@@ -2127,7 +2127,7 @@ MonoBehaviour:
   transitionHoldDuration: 0.5
   wipeBarRect: {fileID: 1527195209}
   wipeMaskRect: {fileID: 1345795432}
-  wipeTransitionScene: {fileID: 2066871507}
+  wipeTransitionPanel: {fileID: 2066871507}
   gearRect: {fileID: 336080967}
   wipeBarDuration: 3
   gearRotateSpeed: 45
@@ -2900,7 +2900,7 @@ GameObject:
   - component: {fileID: 717250288}
   - component: {fileID: 717250289}
   m_Layer: 0
-  m_Name: SceneManager
+  m_Name: ScenarioPlayer
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -2938,7 +2938,7 @@ MonoBehaviour:
   bgManager: {fileID: 1097194829}
   cgManager: {fileID: 209125015}
   audioManager: {fileID: 1400404542}
-  scenePath: Scene/NKS
+  defaultScenarioFolder: IL
 --- !u!1 &764495373
 GameObject:
   m_ObjectHideFlags: 0
@@ -4031,7 +4031,7 @@ MonoBehaviour:
   bgManager: {fileID: 1097194829}
   cgManager: {fileID: 209125015}
   audioManager: {fileID: 1400404542}
-  sceneManager: {fileID: 717250289}
+  scenarioPlayer: {fileID: 717250289}
   effectManager: {fileID: 502208736}
   uiManager: {fileID: 1589418730}
   imageManager: {fileID: 764495375}
@@ -5560,9 +5560,9 @@ MonoBehaviour:
   dialogBoxRed: {fileID: 21300000, guid: f3943918a91c29746b6c22d9420d3ca7, type: 3}
   dialogBoxBlue: {fileID: 21300000, guid: ab5c8737a05a3974da8cf2ea0c478101, type: 3}
   dialogBoxGreen: {fileID: 21300000, guid: 190b64ba8df14d0449dae6fdc0b15713, type: 3}
-  sceneTitleUI: {fileID: 2027259510}
-  sceneTitleMainText: {fileID: 2138941065}
-  sceneTitleSubText: {fileID: 1740356793}
+  actTitleUI: {fileID: 2027259510}
+  actTitleMainText: {fileID: 2138941065}
+  actTitleSubText: {fileID: 1740356793}
   titleDisplayDuration: 4
   settingButton: {fileID: 1804541741}
   settingButtonImage: {fileID: 1804541742}

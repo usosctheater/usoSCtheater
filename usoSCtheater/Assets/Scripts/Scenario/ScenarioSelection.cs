@@ -3,33 +3,34 @@ using UnityEngine;
 namespace UsoSCTheater.Scenario
 {
     /// <summary>
-    /// 목록 씬 → main 씬으로 선택값을 넘기는 정적 저장소.
+    /// 목록 씬(ScenarioSelectScene) → CommunicationScene으로 선택값을 넘기는 정적 저장소.
     /// 이 프로젝트는 Enter Play Mode Options로 Domain Reload가 꺼져 있어 static 값이 Play 세션 간 유지되므로
     /// Play 시작마다 SubsystemRegistration 시점에 초기화한다.
+    /// [용어 정리] StartSceneName → StartActName, GetScenePath → GetScenarioPath
     /// </summary>
     public static class ScenarioSelection
     {
         public static string ScenarioFolder { get; private set; }   // 예: "IL"
-        public static string StartSceneName { get; private set; }   // 예: "IL03" (null이면 첫 씬)
+        public static string StartActName { get; private set; }     // 예: "IL03" (null이면 첫 막)
 
         public static bool HasSelection => !string.IsNullOrEmpty(ScenarioFolder);
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetOnPlay() => Clear();
 
-        public static void Select(string scenarioFolder, string startSceneName = null)
+        public static void Select(string scenarioFolder, string startActName = null)
         {
             ScenarioFolder = scenarioFolder;
-            StartSceneName = string.IsNullOrEmpty(startSceneName) ? null : startSceneName;
+            StartActName = string.IsNullOrEmpty(startActName) ? null : startActName;
         }
 
         public static void Clear()
         {
             ScenarioFolder = null;
-            StartSceneName = null;
+            StartActName = null;
         }
 
-        //"IL" → "Scene/IL"
-        public static string GetScenePath(string scenarioFolder) => $"{ScenarioCatalog.SceneRoot}/{scenarioFolder}";
+        //"IL" → "Scene/IL" (시나리오 루트 + 폴더명)
+        public static string GetScenarioPath(string scenarioFolder) => $"{ScenarioCatalog.ScenarioRoot}/{scenarioFolder}";
     }
 }

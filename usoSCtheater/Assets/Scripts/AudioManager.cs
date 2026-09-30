@@ -63,7 +63,7 @@ public class AudioManager : MonoBehaviour
         }
     }
 
-    //[시나리오] SceneManager가 시나리오 로드 시 호출 (시나리오 폴더명 = 보이스 폴더명)
+    //[시나리오] ScenarioPlayer가 시나리오 로드 시 호출 (시나리오 폴더명 = 보이스 폴더명)
     public void SetScenarioVoiceFolder(string folderName)
     {
         scenarioVoiceFolder = string.IsNullOrEmpty(folderName) ? "" : folderName.Trim().Trim('/');

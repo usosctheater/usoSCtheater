@@ -18,15 +18,16 @@ namespace UsoSCTheater.Editor
             EditorGUILayout.LabelField("TEXT 라인 자동 캡처", EditorStyles.boldLabel);
             EditorGUILayout.Space();
 
-            bool enabled = SceneCaptureUtil.CaptureEnabled;
+            //[용어 정리] SceneCaptureUtil → ScreenCaptureUtil
+            bool enabled = ScreenCaptureUtil.CaptureEnabled;
             bool newEnabled = EditorGUILayout.Toggle("캡처 활성화", enabled);
-            if (newEnabled != enabled) SceneCaptureUtil.CaptureEnabled = newEnabled;
+            if (newEnabled != enabled) ScreenCaptureUtil.CaptureEnabled = newEnabled;
 
             EditorGUILayout.Space();
             EditorGUILayout.HelpBox(
                 "활성화 시 플레이모드에서 오토플레이로 TEXT 라인이 종료될 때마다\n" +
                 "자동으로 스크린샷을 캡처합니다 (1920x1080 고정).\n" +
-                "저장 경로: <프로젝트 루트>/CaptureOutput/{씬 이름}/\n" +
+                "저장 경로: <프로젝트 루트>/CaptureOutput/{막 이름}/\n" +
                 "DialogManager의 captureCamera 필드에 캡처용 카메라 할당 필요.",
                 MessageType.Info);
         }

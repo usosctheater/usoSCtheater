@@ -9,7 +9,8 @@ using UnityEditor;
 
 namespace UsoSCTheater.Capture
 {
-    public static class SceneCaptureUtil
+    //[용어 정리] SceneCaptureUtil → ScreenCaptureUtil (화면 캡처. 폴더 단위는 막 이름)
+    public static class ScreenCaptureUtil
     {
         private const int CaptureWidth = 1920;
         private const int CaptureHeight = 1080;
@@ -58,15 +59,15 @@ namespace UsoSCTheater.Capture
         }
 
         // TEXT 라인 1개 캡처. AutoPlayCoroutine에서 해당 라인 종료 시점에 호출.
-        // sceneName: 현재 씬 XML 이름, lineIndex: scriptNodes 상의 인덱스, targetCamera: 캡처 대상 카메라
-        public static void CaptureLine(string sceneName, int lineIndex, Camera targetCamera)
+        // actName: 현재 막 XML 이름, lineIndex: scriptNodes 상의 인덱스, targetCamera: 캡처 대상 카메라
+        public static void CaptureLine(string actName, int lineIndex, Camera targetCamera)
         {
 #if UNITY_EDITOR
             if (!CaptureEnabled) return;
 
             if (targetCamera == null)
             {
-                Debug.LogWarning("[SceneCaptureUtil] captureCamera가 지정되지 않아 캡처를 건너뜁니다.");
+                Debug.LogWarning("[ScreenCaptureUtil] captureCamera가 지정되지 않아 캡처를 건너뜁니다.");
                 return;
             }
 
@@ -85,7 +86,7 @@ namespace UsoSCTheater.Capture
 
                 if (request.hasError)
                 {
-                    Debug.LogWarning("[SceneCaptureUtil] AsyncGPUReadback 실패 - 캡처 건너뜀");
+                    Debug.LogWarning("[ScreenCaptureUtil] AsyncGPUReadback 실패 - 캡처 건너뜀");
                     return;
                 }
 
@@ -95,7 +96,7 @@ namespace UsoSCTheater.Capture
                     UnityEngine.Experimental.Rendering.GraphicsFormat.R8G8B8A8_UNorm,
                     (uint)CaptureWidth, (uint)CaptureHeight);
 
-                string folder = GetOutputFolder(sceneName);
+                string folder = GetOutputFolder(actName);
                 Directory.CreateDirectory(folder);
                 string path = Path.Combine(folder, $"{lineIndex:D4}.png");
 
@@ -103,18 +104,18 @@ namespace UsoSCTheater.Capture
                 System.Threading.Tasks.Task.Run(() =>
                 {
                     try { File.WriteAllBytes(path, pngBytes); }
-                    catch (System.Exception e) { Debug.LogWarning($"[SceneCaptureUtil] 저장 실패: {e.Message}"); }
+                    catch (System.Exception e) { Debug.LogWarning($"[ScreenCaptureUtil] 저장 실패: {e.Message}"); }
                 });
             });
 #endif
         }
 
 #if UNITY_EDITOR
-        // 저장 폴더: <프로젝트 루트>/CaptureOutput/{씬 이름}/ (Assets 밖 - Unity 임포트 대상 제외)
-        private static string GetOutputFolder(string sceneName)
+        // 저장 폴더: <프로젝트 루트>/CaptureOutput/{막 이름}/ (Assets 밖 - Unity 임포트 대상 제외)
+        private static string GetOutputFolder(string actName)
         {
             string projectRoot = Directory.GetParent(Application.dataPath).FullName;
-            return Path.Combine(projectRoot, "CaptureOutput", sceneName);
+            return Path.Combine(projectRoot, "CaptureOutput", actName);
         }
 #endif
     }

@@ -122,24 +122,25 @@ namespace UsoSCTheater.EditorTools
             _recorderController = null;
         }
 
-        // [녹화] 파일명용 시나리오 이름: SceneManager.scenePath("Scene/NKS")의 마지막 조각("NKS")
-        // scenePath는 private SerializeField라 SerializedObject로 인스펙터 값을 직접 읽는다
+        // [녹화] 파일명용 시나리오 이름: ScenarioPlayer.defaultScenarioFolder("NKS", 기존 값 "Scene/NKS"도 마지막 조각 사용)
+        // defaultScenarioFolder는 private SerializeField라 SerializedObject로 인스펙터 값을 직접 읽는다
+        // [용어 정리] SceneManager.scenePath → ScenarioPlayer.defaultScenarioFolder (4단계에서 런타임 선택값 기준으로 변경 예정)
         private static string GetScenarioName()
         {
             const string Fallback = "Unknown";
 
-            var sceneManager = UnityEngine.Object.FindFirstObjectByType<global::SceneManager>();
-            if (sceneManager == null)
+            var scenarioPlayer = UnityEngine.Object.FindFirstObjectByType<global::ScenarioPlayer>();
+            if (scenarioPlayer == null)
             {
-                Debug.LogWarning("[VNRecorderTool] SceneManager를 찾을 수 없어 시나리오 이름을 Unknown으로 저장합니다.");
+                Debug.LogWarning("[VNRecorderTool] ScenarioPlayer를 찾을 수 없어 시나리오 이름을 Unknown으로 저장합니다.");
                 return Fallback;
             }
 
-            var prop = new SerializedObject(sceneManager).FindProperty("scenePath");
-            string scenePath = prop != null ? prop.stringValue : null;
-            if (string.IsNullOrEmpty(scenePath)) return Fallback;
+            var prop = new SerializedObject(scenarioPlayer).FindProperty("defaultScenarioFolder");
+            string scenarioFolder = prop != null ? prop.stringValue : null;
+            if (string.IsNullOrEmpty(scenarioFolder)) return Fallback;
 
-            string name = scenePath.TrimEnd('/').Split('/')[^1];
+            string name = scenarioFolder.TrimEnd('/').Split('/')[^1];
             foreach (char c in Path.GetInvalidFileNameChars()) name = name.Replace(c, '_');
             return string.IsNullOrEmpty(name) ? Fallback : name;
         }
