@@ -123,7 +123,8 @@ namespace UsoSCTheater.Scenario
         {
             if (!ScenarioSelection.HasSelection || scenarioScrollRect == null) return;
 
-            ScenarioListItem target = items.Find(i => i.FolderName == ScenarioSelection.ScenarioFolder);
+            //[시나리오 데이터] 시나리오 ID 대소문자 무시
+            ScenarioListItem target = items.Find(i => string.Equals(i.FolderName, ScenarioSelection.ScenarioFolder, System.StringComparison.OrdinalIgnoreCase));
             if (target == null) return;
 
             Canvas.ForceUpdateCanvases();

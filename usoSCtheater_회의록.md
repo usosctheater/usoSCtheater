@@ -1,12 +1,83 @@
 # 가짜샤니마스극장 (usoSCtheater) 회의록
 
-> 작업할 때마다 Claude가 자동 갱신. 최신 항목이 위.
+> 작업 완료 시점(커밋 전)에 Claude가 1회 갱신 → 해당 작업의 코드와 같은 커밋에 포함. 커밋 후에는 갱신하지 않음. 최신 항목이 위.
 > 항목 형식: **내용** / **변경 위치** (파일 · 함수) / **원인** / **고려 사항**
 > 목록 형식: 항목마다 `<details>`로 접고, `<summary>`에 `날짜 · [분류] 한 줄 요약 — 상태` 기재 (펼치면 상세)
-> 원본 위치: `D:\usosctheater\usoSCtheater_회의록.md` + claude.ai 프로젝트 `claude/usoSCtheater_회의록.md` (동일 내용)
-> 보기용 페이지(접기/펼치기·검색): https://claude.ai/artifact/G24K2D8xS7C9E6EQuP319r — md 갱신 후 `notes.md`로 재게시 (절차는 핸드오프 문서 '회의록 갱신 절차')
+> 원본: `D:\usosctheater\usoSCtheater_회의록.md` 하나뿐 (git 추적). 커밋 해시는 적지 않음 — 이 파일의 커밋 이력으로 확인
+> 보기용 페이지(접기/펼치기·검색): https://claude.ai/artifact/G24K2D8xS7C9E6EQuP319r — 원본 기록과 같은 파일로 동시에 재게시 (절차: 핸드오프 '회의록 갱신 절차')
 
 ---
+
+<details>
+<summary><b>2026-10-06</b> · [기능] 시나리오 태그·등장인물 데이터(ScenarioData.xml) → 카탈로그 동기화 — <i>완료</i></summary>
+
+### 2026-10-06 — [기능] 시나리오 태그·등장인물 데이터 1단계: 데이터 문서 + 카탈로그 동기화
+
+**배경 (이번 대화 작업 계획)**
+1. 시나리오별 태그·등장인물 데이터 적용 (목록 항목에 태그 = 공통 TAG 이미지 + 텍스트 자동 리사이징, 등장인물 = 캐릭터별 아이콘을 데이터 순서대로 출력)
+2. (1번 완료 후) 엔딩 씬 SD Spine을 해당 시나리오 등장인물 중 랜덤 1명으로 교체
+
+이번 항목은 1번의 1단계(데이터 → 카탈로그). 목록 UI 표시(태그/아이콘 프리팹)와 캐릭터 DB는 다음 단계.
+
+**데이터 문서**: `Assets/Resources/Data/ScenarioData.xml` (신규, 사용자 작성)
+```xml
+<ScenarioData>
+    <Scenario Id="IL" Tag="태그1, 태그2" Character="asahi, fuyuko" />
+</ScenarioData>
+```
+- 작성 편의를 위해 요소 1개 + 속성 나열 방식 (초안의 `<Tag>` / `<Character>` 자식 요소 방식에서 변경)
+- `Tag` / `Character`는 쉼표 구분 목록 — 앞뒤 공백·빈 항목 무시, 태그 문구에 쉼표 사용 불가
+- 같은 요소에 같은 속성을 두 번 쓰면 XML 문법 오류 → 파일 전체 파싱 실패(전부 빈 값 + 경고)
+
+**변경 위치**
+| 파일 | 변경 |
+|---|---|
+| `Scripts/Scenario/ScenarioCatalog.cs` | `ScenarioEntry.tags` / `characters` 필드 추가(동기화 자동 저장). `ScenarioCatalog.Find()` 대소문자 무시 비교 |
+| `Scripts/Scenario/ScenarioSelectController.cs` | `RestoreScrollToLastScenario()` 시나리오 ID 비교 대소문자 무시 |
+| `Editor/ScenarioCatalogSync.cs` | `ReadScenarioData()` / `SplitList()` / `IsName()` 추가, `Sync()`에서 태그·등장인물 병합·비교, `IsRelated()`에 ScenarioData.xml 경로 추가(변경 시 자동 동기화), 폴더 스캔·병합 딕셔너리/셋 대소문자 무시, 클래스 주석 갱신 |
+
+**결정 사항**
+- 시나리오 ID = 시나리오 폴더명(개발명) 그대로 사용, **대/소문자 구분 없음** (XML Id ↔ 폴더명, 카탈로그 조회, 스크롤 복원). 요소/속성 이름도 대소문자 무시
+- 캐릭터 ID = 소문자 로마자 (`asahi`), 동기화 시 소문자로 저장
+- 데이터 문서는 XML. 클라이언트는 문서를 직접 읽지 않고 동기화된 카탈로그(SO)만 읽음
+- 데이터 문서 위치: `~Data` 문서를 한 폴더에 모으기 위해 `Assets/Resources/Data`로 통일 — DefaultLipData.xml·ScenarioCatalog.asset·(예정) CharacterDatabase.asset은 런타임 `Resources.Load` 대상이라 Resources 필수, ScenarioData.xml은 에디터 전용이라 빌드에 포함되지만 수 KB라 무시
+- 카탈로그 갱신은 감지 범위 확장(자동)으로 처리 — 동기화가 가벼움(시나리오 XML 몇 개 + 데이터 문서 1개)
+- 불일치 처리는 동기화를 멈추지 않고 경고 로그만: 문서에 없는 시나리오(비움), 폴더 없는 Id(무시), Id 누락/중복(첫 항목), 등장인물 중복, 알 수 없는 속성(오타 확인용), 문서 없음/파싱 실패
+
+**다음 단계 결정 (구현 전)**
+- 캐릭터 리소스는 `CharacterDatabase`(SO, `Resources/Data`) 하나로 통합 관리 — id → 목록 아이콘 / 엔딩 SD SkeletonDataAsset (추후 항목 확장). SD 에셋 이름 규칙이 제각각(`asahi_normal_1_SkeletonData` / `sd_fuyuko_idol_3`)이라 경로 규칙 로드 불가 → 인스펙터 직접 지정
+- 태그 리사이징은 코드 없이 UGUI 레이아웃: 9-slice(Sliced) Image + HorizontalLayoutGroup(Control Child Size) + TMP 선호 너비. 레이아웃 그룹 밖 단독 사용 시에만 ContentSizeFitter. 최소/최대 너비 제한이 필요해지면 공통 컴포넌트 추가 검토
+- 목록 표시 한도: 최대 개수에서 자름(경고) — 추후 스크롤 뷰/크기 조절 예정
+- 엔딩 SD: 넘어온 시나리오가 없으면(에디터에서 CommunicationScene/EndingScene 직접 Play) 씬 기본 SD 출력. 애니메이션은 현재처럼 전체에서 랜덤(노말/아이돌 타입별 구성 차이는 허용)
+
+**테스트**: 예시 데이터(IL / nks / SC)로 동기화 정상 동작 확인 (사용자)
+
+</details>
+
+<details>
+<summary><b>2026-10-06</b> · [정리] 시나리오 선택 기능 구현 점검 + 임시 디버그 GUI 코드 삭제 — <i>완료</i></summary>
+
+### 2026-10-06 — [정리] 시나리오 선택 기능 구현 점검 + 임시 GUI 코드 삭제
+**커밋**: `e456d97` 시나리오 목록 씬 임시 디버그 GUI 코드 삭제 (로컬 master, push 전)
+
+**구현 점검 결과 (코드 기준, 모두 존재 확인)**
+| 기능 | 위치 |
+|---|---|
+| 시나리오별 보이스 폴더 (폴더 우선 → 루트 폴백) | AudioManager.LoadVoiceClip |
+| 목록 씬 첫 씬 · 카탈로그 자동 동기화 | ScenarioSelectScene(Build 0) · ScenarioCatalogSync |
+| 씬 전환 단일 창구 | SceneTransitionManager (LoadScene 호출 1곳) |
+| 재생 범위 (모두 재생 → 엔딩 → 목록 / 단일 막 → 목록) | ScenarioPlayer.OnActEnd |
+| ESC 강제 종료 → 목록 (녹화 종료 신호 포함) | ScenarioPlayer (KeyCode.Escape) |
+| 엔딩 좌클릭 스킵(1초 후) → 목록 | EndingSceneController |
+| 녹화 재생 범위 연동 (ALL_ / 막 이름 파일) | RecordingSignal · VNRecorderTool |
+| 정식 목록 UI (썸네일·제목·막 목록·PlayButton 즉시 재생·스크롤 복원) | ScenarioListItem · ActListItem · ScenarioSelectController |
+| 제목 대소문자 무시 읽기 | ActXml.GetAttrIgnoreCase |
+
+**삭제**: ScenarioSelectController 하단 주석 블록 (선택 API·OnGUI 디버그 화면), 미사용 `using System;`, 클래스 주석의 '임시 GUI 주석 처리' 문구
+
+**남은 항목 (보류/후순위)**: 태그·등장인물 데이터, 첫 CG Y값 문제, 녹화 상태 표시 UI, ScenarioListItem 보강(선택), 엔딩 SD Spine 갱신, XML `MainTtitle` 오타 수정(데이터)
+
+</details>
 
 <details>
 <summary><b>2026-10-06</b> · [버그 수정] 시나리오/막 제목 미표시 — XML 제목 속성을 대소문자 구분 없이 읽도록 변경 + 목록 UI 프리팹 설정 수정 — <i>테스트 전</i></summary>

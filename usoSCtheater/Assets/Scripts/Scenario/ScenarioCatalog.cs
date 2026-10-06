@@ -22,6 +22,10 @@ namespace UsoSCTheater.Scenario
         public string scenarioTitle;                             // 막 순서상 처음으로 값이 있는 mainTitle (자동)
         public List<string> actTitles = new List<string>();      // actNames와 같은 순서의 subTitle (자동)
 
+        //[시나리오 데이터] Resources/Data/ScenarioData.xml에서 동기화 때 자동 저장 (인스펙터에서 고쳐도 동기화 시 덮어씀)
+        public List<string> tags = new List<string>();           // 태그 문구, 표시 순서 (자동)
+        public List<string> characters = new List<string>();     // 캐릭터 ID(소문자), 표시 순서 (자동)
+
         //[목록 UI] 표시명 (비어 있으면 폴더명)
         public string DisplayNameOrFolder => string.IsNullOrEmpty(displayName) ? folderName : displayName;
 
@@ -49,7 +53,9 @@ namespace UsoSCTheater.Scenario
             return catalog;
         }
 
-        public ScenarioEntry Find(string folderName) => scenarios.Find(s => s.folderName == folderName);
+        //[시나리오 데이터] 시나리오 ID(폴더명)는 대소문자 구분 없이 비교
+        public ScenarioEntry Find(string folderName) =>
+            scenarios.Find(s => string.Equals(s.folderName, folderName, StringComparison.OrdinalIgnoreCase));
 
         //목록 씬 표시용 (hidden 제외, 인스펙터 순서 유지)
         public List<ScenarioEntry> GetVisible() => scenarios.FindAll(s => !s.hidden);

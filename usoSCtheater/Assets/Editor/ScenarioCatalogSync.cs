@@ -16,6 +16,7 @@ using UsoSCTheater.Scenario;
 /// - 빌드 직전 1회 실행, 카탈로그가 없으면 에디터 로드 시 생성
 /// 병합 규칙: folderName 기준. displayName / hidden / 순서는 유지, actNames / actTitles / scenarioTitle만 갱신.
 /// [목록 UI] 막 XML 루트의 mainTitle(시나리오 제목: 처음으로 값이 있는 막) / subTitle(막 제목)도 함께 저장.
+/// [시나리오 데이터] Resources/Data/ScenarioData.xml의 태그(tags) / 등장인물(characters)도 함께 저장. 이 문서가 바뀌어도 자동 실행.
 /// [용어 정리] SceneFolder → ScenarioRootFolder, sceneNames → actNames
 /// 새 폴더는 끝에 추가, 없어진 폴더는 제거.
 /// 빌드(exe)는 빌드 시점 카탈로그를 그대로 사용 — 시나리오 추가는 재빌드로 반영.
@@ -25,6 +26,15 @@ public class ScenarioCatalogSync : AssetPostprocessor
     private const string ScenarioRootFolder = "Assets/Resources/Scenario";   //[용어 정리] "Assets/Resources/Scene" → "Assets/Resources/Scenario" (ScenarioCatalog.ScenarioRoot와 일치해야 함)
     private const string CatalogAssetPath = "Assets/Resources/Data/ScenarioCatalog.asset";
 
+    //[시나리오 데이터] 시나리오별 태그/등장인물 문서 (동기화 때만 읽음)
+    //양식: <Scenario Id="IL" Tag="a, b" Character="x, y" /> — 요소/속성 이름, Id 모두 대소문자 무시
+    private const string ScenarioDataPath = "Assets/Resources/Data/ScenarioData.xml";
+    private const string DataScenarioTag = "Scenario";
+    private const string DataIdAttr = "Id";
+    private const string DataTagAttr = "Tag";
+    private const string DataCharacterAttr = "Character";
+    private static readonly char[] DataListSeparator = { ',' };   // Tag / Character 목록 구분자
+
     private static bool syncPending = false;
 
     //[목록 UI] 폴더 스캔 결과
@@ -33,6 +43,15 @@ public class ScenarioCatalogSync : AssetPostprocessor
         public List<string> acts = new List<string>();
         public List<string> actTitles = new List<string>();
         public string scenarioTitle = "";
+        public List<string> tags = new List<string>();         //[시나리오 데이터]
+        public List<string> characters = new List<string>();   //[시나리오 데이터]
+    }
+
+    //[시나리오 데이터] ScenarioData.xml의 시나리오 1개
+    private class ScenarioDataItem
+    {
+        public List<string> tags = new List<string>();
+        public List<string> characters = new List<string>();
     }
 
     // ── 자동 트리거 ──────────────────────────────────────────────────────
@@ -56,7 +75,9 @@ public class ScenarioCatalogSync : AssetPostprocessor
         EditorApplication.delayCall += () => { syncPending = false; Sync(false); };
     }
 
-    private static bool IsRelated(string[] paths) => paths.Any(p => p.StartsWith(ScenarioRootFolder + "/", StringComparison.Ordinal));
+    private static bool IsRelated(string[] paths) => paths.Any(p =>
+        p.StartsWith(ScenarioRootFolder + "/", StringComparison.Ordinal)
+        || string.Equals(p, ScenarioDataPath, StringComparison.OrdinalIgnoreCase));   //[시나리오 데이터] 데이터 문서 변경도 감지
 
     [MenuItem("Tools/Scenario/Sync Catalog")]
     private static void SyncMenu() => Sync(true);
@@ -81,7 +102,7 @@ public class ScenarioCatalogSync : AssetPostprocessor
         }
 
         //현재 폴더 상태 스캔: 폴더명 → 막 파일명 / 제목
-        var found = new Dictionary<string, ScanResult>();   //[목록 UI] List<string> → ScanResult
+        var found = new Dictionary<string, ScanResult>(StringComparer.OrdinalIgnoreCase);   //[목록 UI] List<string> → ScanResult, [시나리오 데이터] 대소문자 무시
         foreach (string folder in AssetDatabase.GetSubFolders(ScenarioRootFolder))
         {
             string name = Path.GetFileName(folder);
@@ -109,9 +130,28 @@ public class ScenarioCatalogSync : AssetPostprocessor
             found[name] = scan;
         }
 
+        //[시나리오 데이터] 태그/등장인물 병합 (문서가 없거나 파싱 실패면 null → 전부 빈 값, 개별 경고 생략)
+        var data = ReadScenarioData();
+        if (data != null)
+        {
+            foreach (var kv in found)
+            {
+                if (data.TryGetValue(kv.Key, out var item))
+                {
+                    kv.Value.tags = item.tags;
+                    kv.Value.characters = item.characters;
+                }
+                else Debug.LogWarning($"[ScenarioCatalogSync] '{kv.Key}': ScenarioData.xml에 항목 없음 → 태그/등장인물 비움");
+            }
+            foreach (string id in data.Keys)
+            {
+                if (!found.ContainsKey(id)) Debug.LogWarning($"[ScenarioCatalogSync] ScenarioData.xml의 Id '{id}'에 해당하는 시나리오 폴더 없음 → 무시");
+            }
+        }
+
         //병합: 기존 항목 순서/수동 값 유지
         var merged = new List<ScenarioEntry>();   //[목록 UI] result → merged (ScanResult와 구분)
-        var added = new HashSet<string>();
+        var added = new HashSet<string>(StringComparer.OrdinalIgnoreCase);   //[시나리오 데이터] 대소문자 무시
         foreach (var entry in catalog.scenarios)
         {
             if (entry == null || !found.TryGetValue(entry.folderName ?? "", out var scan))
@@ -135,6 +175,17 @@ public class ScenarioCatalogSync : AssetPostprocessor
                 entry.scenarioTitle = scan.scenarioTitle;
                 changed = true;
             }
+            //[시나리오 데이터] 태그/등장인물 갱신
+            if (entry.tags == null || !entry.tags.SequenceEqual(scan.tags))
+            {
+                entry.tags = scan.tags;
+                changed = true;
+            }
+            if (entry.characters == null || !entry.characters.SequenceEqual(scan.characters))
+            {
+                entry.characters = scan.characters;
+                changed = true;
+            }
             merged.Add(entry);
             added.Add(entry.folderName);
         }
@@ -145,6 +196,7 @@ public class ScenarioCatalogSync : AssetPostprocessor
             {
                 folderName = kv.Key, displayName = kv.Key, hidden = false,
                 actNames = kv.Value.acts, actTitles = kv.Value.actTitles, scenarioTitle = kv.Value.scenarioTitle,   //[목록 UI]
+                tags = kv.Value.tags, characters = kv.Value.characters,   //[시나리오 데이터]
             });
             changed = true;
         }
@@ -184,6 +236,77 @@ public class ScenarioCatalogSync : AssetPostprocessor
             Debug.LogWarning($"[ScenarioCatalogSync] XML 파싱 실패: {assetPath} — {e.Message}");
         }
     }
+
+    //[시나리오 데이터] ScenarioData.xml 읽기 → Id(대소문자 무시) → 태그/등장인물
+    //<Scenario Id="" Tag="a, b" Character="x, y" /> — 쉼표 구분 목록, 앞뒤 공백·빈 항목 무시. 문서 없음/파싱 실패 시 null + 경고
+    private static Dictionary<string, ScenarioDataItem> ReadScenarioData()
+    {
+        var asset = AssetDatabase.LoadAssetAtPath<TextAsset>(ScenarioDataPath);
+        if (asset == null)
+        {
+            Debug.LogWarning($"[ScenarioCatalogSync] {ScenarioDataPath} 없음 → 태그/등장인물 없이 동기화");
+            return null;
+        }
+
+        var result = new Dictionary<string, ScenarioDataItem>(StringComparer.OrdinalIgnoreCase);
+        try
+        {
+            var doc = new XmlDocument();
+            doc.LoadXml(asset.text);
+            if (doc.DocumentElement == null) return result;
+
+            foreach (XmlNode node in doc.DocumentElement.ChildNodes)
+            {
+                if (node.NodeType != XmlNodeType.Element || !IsName(node, DataScenarioTag)) continue;
+
+                string id = ActXml.GetAttrIgnoreCase(node, DataIdAttr).Trim();
+                if (string.IsNullOrEmpty(id))
+                {
+                    Debug.LogWarning($"[ScenarioCatalogSync] ScenarioData.xml: Id 없는 <{DataScenarioTag}> → 무시");
+                    continue;
+                }
+                if (result.ContainsKey(id))
+                {
+                    Debug.LogWarning($"[ScenarioCatalogSync] ScenarioData.xml: Id '{id}' 중복 → 첫 항목만 사용");
+                    continue;
+                }
+
+                var item = new ScenarioDataItem();
+                foreach (string tag in SplitList(ActXml.GetAttrIgnoreCase(node, DataTagAttr)))
+                    item.tags.Add(tag);
+
+                foreach (string value in SplitList(ActXml.GetAttrIgnoreCase(node, DataCharacterAttr)))
+                {
+                    string charId = value.ToLowerInvariant();   //캐릭터 ID는 소문자로 저장
+                    if (item.characters.Contains(charId)) Debug.LogWarning($"[ScenarioCatalogSync] ScenarioData.xml '{id}': 등장인물 '{charId}' 중복 → 무시");
+                    else item.characters.Add(charId);
+                }
+
+                //속성 이름 오타 확인 (예: Charactor → 읽히지 않으므로 경고)
+                foreach (XmlAttribute attr in node.Attributes)
+                {
+                    if (!IsName(attr, DataIdAttr) && !IsName(attr, DataTagAttr) && !IsName(attr, DataCharacterAttr))
+                        Debug.LogWarning($"[ScenarioCatalogSync] ScenarioData.xml '{id}': 알 수 없는 속성 '{attr.Name}' → 무시");
+                }
+                result[id] = item;
+            }
+        }
+        catch (XmlException e)
+        {
+            Debug.LogWarning($"[ScenarioCatalogSync] ScenarioData.xml 파싱 실패 — {e.Message}");
+            return null;
+        }
+        return result;
+    }
+
+    //[시나리오 데이터] 요소/속성 이름 대소문자 무시 비교 (XmlAttribute도 XmlNode)
+    private static bool IsName(XmlNode node, string name) => string.Equals(node.Name, name, StringComparison.OrdinalIgnoreCase);
+
+    //[시나리오 데이터] "a, b, , c" → ["a", "b", "c"]
+    private static IEnumerable<string> SplitList(string value) =>
+        (value ?? "").Split(DataListSeparator, StringSplitOptions.RemoveEmptyEntries)
+                     .Select(s => s.Trim())
+                     .Where(s => s.Length > 0);
 }
 
 /// <summary>빌드 직전 카탈로그 최신화</summary>

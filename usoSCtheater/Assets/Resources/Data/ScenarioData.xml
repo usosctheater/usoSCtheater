@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ScenarioData>
+    <Scenario
+        Id="IL"
+        Tag="시리어스, 스트레이라이트"
+        Character="asahi, fuyuko, mei"
+    />
+    <Scenario
+        Id="nks"
+        Tag="일상, 나나쿠사 자매"
+        Character="nichika, hazuki"
+    />
+    <Scenario
+        Id="SC"
+        Tag="개그, 일상"
+        Character="asahi, fuyuko"
+    />
+</ScenarioData>

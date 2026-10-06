@@ -27,6 +27,13 @@ MonoBehaviour:
     - "\uC791\uC6A9\uC810"
     - "\uBE5B\uC758 \uAD00\uC131"
     - "\uC791\uC6A9\uACFC \uBC18\uC791\uC6A9"
+    tags:
+    - "\uC2DC\uB9AC\uC5B4\uC2A4"
+    - "\uC2A4\uD2B8\uB808\uC774\uB77C\uC774\uD2B8"
+    characters:
+    - asahi
+    - fuyuko
+    - mei
   - folderName: NKS
     displayName: NKS
     hidden: 0
@@ -35,6 +42,12 @@ MonoBehaviour:
     scenarioTitle: "\uB098\uB098\uCFE0\uC0AC \uC5B4\uD504\uB85C\uCE58"
     actTitles:
     - "\uC5B8\uB2C8\uC640 \uB3D9\uC0DD"
+    tags:
+    - "\uC77C\uC0C1"
+    - "\uB098\uB098\uCFE0\uC0AC \uC790\uB9E4"
+    characters:
+    - nichika
+    - hazuki
   - folderName: SC
     displayName: SC
     hidden: 0
@@ -44,3 +57,9 @@ MonoBehaviour:
       \uC8FC\uC6CC\uC654\uB2E4"
     actTitles:
     - "\uC218\uC0C1\uD55C \uC2DC\uACC4"
+    tags:
+    - "\uAC1C\uADF8"
+    - "\uC77C\uC0C1"
+    characters:
+    - asahi
+    - fuyuko
