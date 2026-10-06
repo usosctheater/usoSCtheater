@@ -1,3 +1,4 @@
+using System;
 using System.Xml;
 
 namespace UsoSCTheater.Scenario
@@ -12,8 +13,24 @@ namespace UsoSCTheater.Scenario
         public const string RootTag = "Act";
         public const string LegacyRootTag = "Scene";
 
+        //[목록 UI] 막 헤더 속성 이름 (ScenarioCatalogSync에서 제목 읽기에 사용)
+        public const string MainTitleAttr = "mainTitle";
+        public const string SubTitleAttr = "subTitle";
+
         //루트 노드 반환 (<Act> 우선 → <Scene>), 둘 다 없으면 null
         public static XmlNode GetRoot(XmlDocument doc) =>
             doc.SelectSingleNode(RootTag) ?? doc.SelectSingleNode(LegacyRootTag);
+
+        //[제목 읽기] 속성 값을 대소문자 구분 없이 조회 (예: subTitle / SubTitle 모두 허용). 없으면 ""
+        //철자가 다른 속성(예: MainTtitle)은 읽지 않음 → 제목이 안 나오면 XML 오타 확인
+        public static string GetAttrIgnoreCase(XmlNode node, string attrName)
+        {
+            if (node?.Attributes == null) return "";
+            foreach (XmlAttribute attr in node.Attributes)
+            {
+                if (string.Equals(attr.Name, attrName, StringComparison.OrdinalIgnoreCase)) return attr.Value ?? "";
+            }
+            return "";
+        }
     }
 }

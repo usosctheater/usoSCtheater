@@ -9,6 +9,155 @@
 ---
 
 <details>
+<summary><b>2026-10-06</b> · [버그 수정] 시나리오/막 제목 미표시 — XML 제목 속성을 대소문자 구분 없이 읽도록 변경 + 목록 UI 프리팹 설정 수정 — <i>테스트 전</i></summary>
+
+### 2026-10-06 — [버그 수정] 목록 UI 점검 결과 정리 + 제목 속성 대소문자 무시
+
+- 커밋: 미커밋
+- 변경 파일: `Scenario/ActXml.cs`, `Editor/ScenarioCatalogSync.cs`, `ScenarioPlayer.cs`
+- 사용자 직접 수정(Unity): Content/ScenarioListItem 레이아웃, 썸네일 Image, ActListItem 컴포넌트 위치
+- 상태: **Unity 컴파일 및 카탈로그 재동기화 후 확인 전**
+
+### 목록 UI 점검 결과 (사용자 수정 완료)
+| 증상 | 원인 | 조치 |
+|---|---|---|
+| 항목 자식들이 가운데 정렬 안 됨 | 씬 Content VerticalLayoutGroup의 Control Child Size Width ✘ → 가로 늘이기 앵커(sizeDelta.x 0)인 ScenarioListItem 너비가 0이 됨 + 항목 HorizontalLayoutGroup Force Expand Width ✔ | Content Control Child Size Width ✔, Content 앵커 top-stretch, 항목 HLG Force Expand ✘ + Middle Center |
+| 썸네일 미표시 | ScenarioThumbnail Image Color가 (0,0,0,0.39) — 배경 패널 설정 복사 | Color 흰색, Image Type Simple, Preserve Aspect |
+| ActListItem_All 사라짐 | ActListItem 컴포넌트가 ActList(부모)에 붙어 있고 Play All Item이 ActList를 가리킴 → 자식 정리 코드가 ActListItem_All까지 삭제 | 컴포넌트를 ActListItem_All로 이동, Play All Item 재연결 |
+
+### 시나리오/막 제목 미표시
+- **원인**: 막 XML 6개 모두 헤더가 `<Scene MainTtitle="…" SubTitle="…">` — 코드는 `mainTitle` / `subTitle`(대소문자 구분)만 읽음. 동기화는 정상 실행됐으나 빈 값 저장. 같은 이유로 CommunicationScene 막 타이틀(ShowActTitle)도 미표시였음
+- **결정**: XML은 수정하지 않고 코드에서 **대소문자 구분 없이** 읽음. 철자 오타(`MainTtitle`) 보강은 하지 않음 — 제목이 안 나오면 오타로 판단
+- **변경 위치**: `ActXml.GetAttrIgnoreCase()` 추가, `ScenarioCatalogSync.ReadActHeader()` / `ScenarioPlayer.PlayCurrentAct()`가 이 함수 사용
+- **고려 사항**:
+  - 현재 데이터 기준: `SubTitle` → 막 제목 정상 표시 / `MainTtitle`(t 2개 오타) → 시나리오 제목은 여전히 표시명으로 대체 + 경고 (XML 오타 수정 시 해결)
+  - 카탈로그 동기화는 시나리오 폴더 에셋 변경 시에만 자동 실행 → 코드만 바뀐 경우 **`Tools > Scenario > Sync Catalog` 수동 실행 필요**
+
+### 테스트 필요
+- [ ] 컴파일 후 Sync Catalog 수동 실행 → 카탈로그 `Act Titles` 채워짐 (횜의 법칙 / 작용점 / 빛의 관성 / 작용과 반작용 / 언니와 동생 / 수상한 시계)
+- [ ] 목록 씬 막 제목 표시, 시나리오 제목은 오타 수정 전까지 표시명 + 경고
+- [ ] CommunicationScene 막 시작 시 타이틀 UI 표시 (subTitle)
+
+</details>
+
+<details>
+<summary><b>2026-10-06</b> · [목록 UI] 정식 시나리오 목록 UI: ScenarioListItem/ActListItem + PlayButton 즉시 재생 + 카탈로그 제목 저장 + 복귀 시 스크롤 위치 복원 — <i>테스트 전</i></summary>
+
+### 2026-10-06 — [목록 UI] 시나리오 목록 정식 UI 연결
+
+- 커밋: 미커밋 (재생 범위/녹화 대응 커밋 이후 작업)
+- 변경 파일: 신규 `Scenario/ScenarioListItem.cs`, `Scenario/ActListItem.cs` / 수정 `Scenario/ScenarioSelectController.cs`, `Scenario/ScenarioCatalog.cs`, `Scenario/ActXml.cs`, `Editor/ScenarioCatalogSync.cs`
+- 사용자 직접 작업(Unity): `Prefab/ScenarioListItem.prefab`, `Prefab/ActListItem.prefab` 제작, ScenarioSelectScene UI 구성
+- 상태: **Unity 컴파일 및 인스펙터 연결/플레이 테스트 전**
+
+### 결정 사항
+| # | 결정 | 이유 |
+|---|---|---|
+| 1 | 선택 → 시작 버튼 흐름 폐지, 각 행의 PlayButton 클릭 시 즉시 재생 (ActListItem_All = 모두 재생, ActListItem = 단일 막) | 조작 단계 축소 |
+| 2 | 막 목록은 스크롤뷰 중첩 대신 VerticalLayoutGroup. 항목 크기 고정, 막 수에 따라 행 높이가 Preferred(80) 이하로만 줄어듦 (LayoutElement Min~Preferred) | 중첩 ScrollRect의 입력 충돌(휠/드래그를 안쪽이 모두 소비)·마스크/레이아웃 비용 제거, 막 개수는 많지 않음 |
+| 3 | 썸네일: `Resources/ScenarioThumbnail/{시나리오 폴더명}` (Sprite), 없으면 기본 썸네일 | |
+| 4 | 시나리오 제목 = 막 XML `mainTitle`(처음으로 값이 있는 막), 막 제목 = 각 막 `subTitle` — 카탈로그 동기화 때 저장. 없으면 표시명/파일명 대체 + 경고 로그 | 목록 씬에서 XML을 열지 않음 |
+| 5 | 목록 복귀 시 직전 재생 시나리오 위치로 스크롤 — `restoreScrollToLastScenario`로 온/오프 | 편의성 비교 후 결정 |
+| 6 | NestedScrollRect 미도입 | 2번 결정으로 불필요 |
+| 7 | 기존 선택 API·임시 디버그 GUI는 주석 처리, 정식 UI 완료 후 삭제 | |
+
+### 구현 / 수정 내역
+- **ScenarioListItem (신규)**: `Setup(entry, defaultThumbnail, onPlayAll, onPlayAct)` — 썸네일/제목(에디터에서 hidden은 `[hidden]` 표기), `ApplyTags`/`ApplyCharacters`(빈 함수, 추후 시나리오 데이터 파일 기반으로 TagArea/CharacterIconArea에 프리팹 생성), ActListItem_All 연결, 막 수만큼 ActListItem 생성 후 `LayoutRebuilder.ForceRebuildLayoutImmediate`, 행이 Min Height까지 줄어도 넘치면 경고
+- **ActListItem (신규)**: `Setup(title, onPlay)` — 제목 갱신(null이면 프리팹 문구 유지), PlayButton 리스너 코드 연결 (인스펙터 OnClick 미사용 — 중복 실행 방지)
+- **ScenarioSelectController**: 목록 UI 필드(`scenarioScrollRect`, `scenarioItemPrefab`, `defaultThumbnail`, `restoreScrollToLastScenario`), `Start()`에서 `BuildList()` + `RestoreScrollToLastScenario()`, `PlayAll(entry)` / `PlayAct(entry, index)` → `SceneTransitionManager.GoToCommunicationScene`. 기존 선택 API(`OnSelectionChanged`, `Selected*`, `SelectScenario/SelectAct/StartSelected/StartPlayAll`), `GetDisplayName`, `showDebugGUI`/`OnGUI` 주석 처리
+- **ScenarioCatalog**: `ScenarioEntry.scenarioTitle`, `actTitles`, `DisplayNameOrFolder`, `GetActTitle(i)`, `ScenarioCatalog.ThumbnailRoot`
+- **ScenarioCatalogSync**: 막 XML 루트의 mainTitle/subTitle 읽기(`ReadActHeader`, 파싱 실패 시 경고), 막/제목 변경 감지 갱신 (`ScanResult`)
+- **ActXml**: `MainTitleAttr`, `SubTitleAttr` 상수
+
+### 프리팹 설정 확인 결과 (코드 반영 시점, 수정 필요)
+- `ScenarioListItem/ActListScrollView`(막 목록) VerticalLayoutGroup: Control Child Size Height ✘ / Force Expand Height ✔ → 행 자동 축소가 동작하지 않음 → **Height ✔ / ✘로 변경**
+- `ActListItem_All`에 LayoutElement 없음 → ActListItem과 동일하게 Min 40 / Preferred 80 / Flexible 0 추가
+- PlayButton: Anchor Y 0.5 고정 높이 60 → 행이 줄어도 버튼이 안 줄어듦 → Anchor Y 0~1 + Top/Bottom 여백
+- ActTitle: Anchor Y 0.5 고정 높이 80 → Anchor Y 0~1(세로 늘이기)로 해야 Auto Size가 행 높이에 맞춰 축소
+
+### 테스트 필요
+- [ ] Unity 컴파일 에러 없음, `Tools > Scenario > Sync Catalog` 후 카탈로그에 `Scenario Title`/`Act Titles` 필드 표시
+- [ ] 목록 씬: 시나리오 3개 생성, 제목 없음 경고(현재 XML 대부분 제목 없음 — 정상), 썸네일 없으면 기본 썸네일
+- [ ] IL(5행) 행 높이 자동 축소(약 61), NKS/SC(2행)는 80 유지
+- [ ] 모두 재생 / 막 PlayButton 즉시 재생, 재생 범위 규칙 동일
+- [ ] 복귀 시 직전 시나리오 위치로 스크롤 (옵션 On/Off 비교)
+- [ ] 휠/드래그 스크롤이 막 목록 위에서도 정상 동작
+
+</details>
+
+<details>
+<summary><b>2026-09-30</b> · [시나리오] 재생 범위 규칙(모두 재생/단일 막) + 엔딩 좌클릭 스킵·목록 복귀 + ESC 강제 종료 + 녹화 도구 재생 시작 신호 대응 — <i>테스트 전</i></summary>
+
+### 2026-09-30 — [시나리오] 재생 범위 규칙, 엔딩 스킵/복귀, ESC 강제 종료, 녹화 도구 대응
+
+- 커밋: 미커밋 (3단계 커밋 이후 작업)
+- 변경 파일: `Recording/RecordingSignal.cs`, `Scenario/ScenarioSelection.cs`, `ScenarioPlayer.cs`, `Ending/EndingSceneController.cs`, `Editor/VNRecorderTool.cs`, `Scenario/ScenarioSelectController.cs`
+- 상태: **Unity 컴파일 및 플레이/녹화 테스트 전**
+
+### 결정 사항
+| # | 결정 | 이유 |
+|---|---|---|
+| 1 | **재생 범위 규칙**: 목록의 "모두 재생"으로 시작할 때만 전체 막 → 엔딩 씬. 특정 막(첫 막 포함)을 고르면 그 막만 재생 후 목록 씬 | 통 재생 + 엔딩 연결은 모두 재생 버튼으로만. CommunicationScene 직접 Play(선택값 없음)도 모두 재생 |
+| 2 | "특정 막부터 끝까지 이어서 재생"은 지원하지 않음 | 규칙 단순화 (필요 시 별도 버튼으로 추가) |
+| 3 | 단일 막 재생 중 PageUp/PageDown 디버그 이동 허용, 어느 막에서 끝나든 목록 복귀 | 디버그 기능 유지 |
+| 4 | 목록 GUI "처음부터" → "모두 재생", `StartFromBeginning()` → `StartPlayAll()` | 기획 용어와 일치 |
+| 5 | 엔딩 씬 좌클릭 스킵, 엔딩 시작 후 1초(`skipInputDelay`, 인스펙터 조절)는 클릭 무시 | 엔딩에는 상호작용 버튼이 없음. 대사 연타 클릭이 엔딩 즉시 스킵으로 이어지는 것 방지 |
+| 6 | 녹화 파일명: 모두 재생 `Recordings/{시나리오}/ALL_{타임스탬프}.mp4`, 단일 막 `Recordings/{시나리오}/{막}_{타임스탬프}.mp4` | 파일만 보고 범위 구분 |
+| 7 | 한 Play 안에서 재생할 때마다 녹화 파일 1개 (목록 복귀 후 다른 막 재생 시 새 파일) | 막 단위 분할 녹화 편의 |
+| 8 | ESC: 막 재생 중 강제 종료 → 녹화 종료 신호 → 목록 씬 | 테스트/녹화 중단 편의 |
+| 9 | 녹화 시작은 Play 진입이 아닌 ScenarioPlayer 재생 시작 신호 | 목록 씬 녹화 방지, 녹화 시점에 UIManager 존재 보장, 시나리오명을 런타임 선택값으로 |
+| 10 | 녹화 신호는 `RecordingSignal` 사용 (`SceneTransitionManager.OnBeforeLoad` 미사용) | OnBeforeLoad는 Play마다 초기화되어 에디터 도구 구독이 사라짐 |
+
+### 구현 / 수정 내역
+
+#### 1. RecordingSignal
+- `OnRecordingStartRequested(string scenarioFolder, string actName)` 이벤트 + `RequestStart()` 추가 (actName null = 모두 재생)
+
+#### 2. ScenarioSelection
+- `IsPlayAll` 속성 추가 (`StartActName`이 비어 있으면 true)
+
+#### 3. ScenarioPlayer
+- `Start()`: 재생 직전 `RecordingSignal.RequestStart(시나리오, 모두 재생이면 null / 단일이면 시작 막 이름)`
+- `OnActEnd()`: 단일 막이면 `RecordingSignal.RequestStop()` → `GoToScenarioSelectScene()`, 모두 재생이면 기존대로 다음 막 → 엔딩
+- `Update()`: ESC → `ForceReturnToScenarioSelect()` (`DebugResetState` + 보이스/오디오 정지 → 녹화 종료 신호 → 목록 씬, `isExiting`으로 중복 방지)
+- 로그 "시작 막: 처음부터" → "재생 범위: 모두 재생"
+
+#### 4. EndingSceneController
+- `Update()`: 좌클릭 → `FinishEnding()` (유예 시간 이후)
+- `FinishEnding()`: `_isFinished`로 1회 실행 보장, 타이머 코루틴 중단, 기존 정리 + 녹화 종료 신호 → `SceneTransitionManager.GoToScenarioSelectScene()`
+- `StartEnding()`: 스킵 상태/시작 시각 초기화
+
+#### 5. VNRecorderTool
+- `EnteredPlayMode` 자동 시작 제거, `OnRecordingStartRequested` 구독 → 녹화 모드일 때만 (남은 녹화 정리 후) 시작 + 자동재생 On
+- 인스펙터 값(SerializedObject)으로 시나리오명을 읽던 `GetScenarioName()` 삭제 → 신호의 시나리오/막 이름 사용 (`SanitizeFileName`)
+- Play 종료 시 정리(`ExitingPlayMode` → StopRecording)는 유지
+
+#### 6. ScenarioSelectController
+- `StartPlayAll()`, 디버그 GUI "모두 재생" 표기 및 재생 범위 설명
+
+### 녹화 상태 실시간 조회 (후순위 — 녹화 표시 UI용 메모)
+- 현재는 런타임 코드에서 조회 불가: 녹화 모드 여부(EditorPrefs)와 실제 녹화 여부(`RecorderController.IsRecording`)가 모두 에디터 전용 `VNRecorderTool` 내부에 있고, 런타임 어셈블리는 에디터 어셈블리를 참조할 수 없음
+- 구현 방안: `RecordingSignal`(런타임)에 `IsRecordingModeEnabled` / `IsRecording` 정적 상태 + `OnRecordingStateChanged` 이벤트를 두고, `VNRecorderTool`이 모드 토글·녹화 시작/종료 시점에 값을 갱신 → UI는 `RecordingSignal.IsRecording`만 읽으면 됨 (빌드에서는 항상 false)
+- 주의: 녹화 모드 여부는 에디터 로드/토글 시점에 한 번 밀어 넣어야 함(Domain Reload 비활성이라 static 값이 유지되는 점 고려)
+
+### 보류 (후순위)
+- CommunicationScene 첫 번째로 로드되는 CG의 Y값이 제자리를 찾지 못함 (두 번째 이후 로드되는 CG는 정상) — 원인 미조사
+- 녹화 중 표시 UI (위 조회 방안 기반)
+
+### 테스트 필요
+- [ ] Unity 컴파일 에러 없음
+- [ ] 목록 → IL "모두 재생": IL01 → IL04 → 엔딩 → (30초 또는 1초 이후 좌클릭) → 목록 씬, 목록에서 IL이 선택된 상태로 복원
+- [ ] 목록 → IL03 선택: IL03만 재생 후 바로 목록 씬 (엔딩 없음), IL01 선택도 IL01만 재생
+- [ ] 엔딩 시작 직후(1초 이내) 클릭은 무시, 이후 클릭 시 즉시 목록 복귀
+- [ ] 막 재생 중 ESC → 목록 씬 (백로그 열린 상태에서도 멈춤 없이 복귀)
+- [ ] 녹화 모드: 목록 화면은 녹화되지 않고 재생 시작 시 녹화 시작 + 자동재생 On
+- [ ] 녹화 파일: 모두 재생 `Recordings/IL/ALL_…mp4`(엔딩 포함), 단일 막 `Recordings/IL/IL03_…mp4`, ESC 강제 종료 시에도 파일 저장
+- [ ] 한 Play에서 연속 녹화(IL01 → 목록 → IL02) 시 파일 2개 정상, 목록 복귀 후 정상 속도
+- [ ] CommunicationScene 직접 Play → 모두 재생 → 엔딩 → 목록 씬
+
+</details>
+
+<details>
 <summary><b>2026-09-30</b> · [시나리오] 3단계: SceneTransitionManager(씬 전환 단일 창구) + 목록 씬 컨트롤러(임시 디버그 GUI) — <i>테스트 전</i></summary>
 
 ### 2026-09-30 — [시나리오] 3단계: 씬 전환 매니저 + ScenarioSelectController
@@ -292,7 +441,7 @@
 </details>
 
 <details>
-<summary><b>2026-09-29</b> · [설계 검토] 시나리오별 보이스 폴더 분리(루트 폴백) + 시나리오 선택 기능 방향 확정 — <i>3단계까지 반영, 엔딩 복귀·녹화 대응 남음</i></summary>
+<summary><b>2026-09-29</b> · [설계 검토] 시나리오별 보이스 폴더 분리(루트 폴백) + 시나리오 선택 기능 방향 확정 — <i>정식 목록 UI까지 반영 (태그/등장인물·임시 GUI 삭제 남음)</i></summary>
 
 ### 2026-09-29 — [설계 검토] 시나리오별 보이스 분리 / 시나리오 선택 기능
 

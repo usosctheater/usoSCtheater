@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Scene>
+<Scene MainTitle="아사히가 수상한 시계를 주워왔다" SubTitle="수상한 시계" >
 	<Line Type="BG" Key="bg_office_day"/>
 	<Line Type="AUDIO" Value="bgm" Track="BGM_2" Volume="0.4"/>
 	<Line Type="BREAK" Effect="clean"/>

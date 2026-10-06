@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Scene>
+<Scene MainTitle="InertiaLucis" SubTitle="작용과 반작용">
 	<Line Type="BG" Key="bg_hikaesitu2"/>
 	<Line Type="AUDIO" Value="bgm" Track="BGM_131" Volume="0.4"/>
 	<Line Type="BREAK" Effect="clean"/>

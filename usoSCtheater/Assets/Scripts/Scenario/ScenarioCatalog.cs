@@ -17,6 +17,17 @@ namespace UsoSCTheater.Scenario
         public bool hidden;                                     // true면 목록에서 숨김 (수동, 테스트 시나리오용)
         [UnityEngine.Serialization.FormerlySerializedAs("sceneNames")]   //[용어 정리] sceneNames → actNames
         public List<string> actNames = new List<string>();      // 막 파일명, Ordinal 정렬 = ScenarioPlayer 재생 순서 (자동)
+
+        //[목록 UI] 카탈로그 동기화 시 막 XML 헤더에서 자동 저장 (비어 있으면 목록에서 대체 표시 + 경고 로그)
+        public string scenarioTitle;                             // 막 순서상 처음으로 값이 있는 mainTitle (자동)
+        public List<string> actTitles = new List<string>();      // actNames와 같은 순서의 subTitle (자동)
+
+        //[목록 UI] 표시명 (비어 있으면 폴더명)
+        public string DisplayNameOrFolder => string.IsNullOrEmpty(displayName) ? folderName : displayName;
+
+        //[목록 UI] 막 제목 (없으면 null)
+        public string GetActTitle(int index) =>
+            (actTitles != null && index >= 0 && index < actTitles.Count && !string.IsNullOrEmpty(actTitles[index])) ? actTitles[index] : null;
     }
 
     /// <summary>
@@ -27,6 +38,7 @@ namespace UsoSCTheater.Scenario
     {
         public const string ResourcePath = "Data/ScenarioCatalog";   // Resources.Load 경로
         public const string ScenarioRoot = "Scenario";               // 시나리오 루트 폴더 (Resources/Scenario) //[용어 정리] SceneRoot → ScenarioRoot, 경로 "Scene" → "Scenario"
+        public const string ThumbnailRoot = "ScenarioThumbnail";     //[목록 UI] 썸네일 폴더 (Resources/ScenarioThumbnail/{폴더명}, Sprite)
 
         public List<ScenarioEntry> scenarios = new List<ScenarioEntry>();
 

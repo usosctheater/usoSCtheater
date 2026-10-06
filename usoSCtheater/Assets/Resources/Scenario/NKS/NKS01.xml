@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Scene>
+<Scene MainTitle="나나쿠사 어프로치" SubTitle="언니와 동생">
 	<Line Type="BG" Key="bg_office_day"/>
 	<Line Type="AUDIO" Value="bgm" Track="BGM_100" Volume="0.3"/>
 	<Line Type="BREAK" Effect="clean" Duration="1"/>

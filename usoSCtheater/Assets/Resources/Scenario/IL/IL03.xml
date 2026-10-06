@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Scene>
+<Scene MainTitle="InertiaLucis" SubTitle="빛의 관성">
 	<Line Type="BG" Key="bg_hikaesitu2"/>
 	<Line Type="AUDIO" Value="bgm" Track="bgm_101" Volume="0.4"/>
 	<Line Type="BREAK" Effect="clean"/>

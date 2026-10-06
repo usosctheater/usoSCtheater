@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Xml;   //[목록 UI] 막 헤더(mainTitle/subTitle) 읽기
 using UnityEditor;
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
@@ -13,7 +14,8 @@ using UsoSCTheater.Scenario;
 /// - 시나리오 루트 아래 에셋이 추가/삭제/이동되면 자동 실행
 /// - 수동: Tools > Scenario > Sync Catalog
 /// - 빌드 직전 1회 실행, 카탈로그가 없으면 에디터 로드 시 생성
-/// 병합 규칙: folderName 기준. displayName / hidden / 순서는 유지, actNames만 갱신.
+/// 병합 규칙: folderName 기준. displayName / hidden / 순서는 유지, actNames / actTitles / scenarioTitle만 갱신.
+/// [목록 UI] 막 XML 루트의 mainTitle(시나리오 제목: 처음으로 값이 있는 막) / subTitle(막 제목)도 함께 저장.
 /// [용어 정리] SceneFolder → ScenarioRootFolder, sceneNames → actNames
 /// 새 폴더는 끝에 추가, 없어진 폴더는 제거.
 /// 빌드(exe)는 빌드 시점 카탈로그를 그대로 사용 — 시나리오 추가는 재빌드로 반영.
@@ -24,6 +26,14 @@ public class ScenarioCatalogSync : AssetPostprocessor
     private const string CatalogAssetPath = "Assets/Resources/Data/ScenarioCatalog.asset";
 
     private static bool syncPending = false;
+
+    //[목록 UI] 폴더 스캔 결과
+    private class ScanResult
+    {
+        public List<string> acts = new List<string>();
+        public List<string> actTitles = new List<string>();
+        public string scenarioTitle = "";
+    }
 
     // ── 자동 트리거 ──────────────────────────────────────────────────────
     private static void OnPostprocessAllAssets(string[] imported, string[] deleted, string[] moved, string[] movedFrom)
@@ -70,8 +80,8 @@ public class ScenarioCatalogSync : AssetPostprocessor
             Debug.Log($"[ScenarioCatalogSync] 카탈로그 생성: {CatalogAssetPath}");
         }
 
-        //현재 폴더 상태 스캔: 폴더명 → 막 파일명 목록
-        var found = new Dictionary<string, List<string>>();
+        //현재 폴더 상태 스캔: 폴더명 → 막 파일명 / 제목
+        var found = new Dictionary<string, ScanResult>();   //[목록 UI] List<string> → ScanResult
         foreach (string folder in AssetDatabase.GetSubFolders(ScenarioRootFolder))
         {
             string name = Path.GetFileName(folder);
@@ -80,50 +90,99 @@ public class ScenarioCatalogSync : AssetPostprocessor
             if (AssetDatabase.GetSubFolders(folder).Length > 0)
                 Debug.LogWarning($"[ScenarioCatalogSync] '{name}' 안에 하위 폴더가 있습니다. ScenarioPlayer가 하위 폴더 막까지 함께 로드합니다.");
 
-            found[name] = AssetDatabase.FindAssets("t:TextAsset", new[] { folder })
+            //[목록 UI] 경로까지 보관 → 헤더(mainTitle/subTitle) 읽기
+            var actPaths = AssetDatabase.FindAssets("t:TextAsset", new[] { folder })
                 .Select(AssetDatabase.GUIDToAssetPath)
                 .Where(p => p.EndsWith(".xml", StringComparison.OrdinalIgnoreCase)
-                         && Path.GetDirectoryName(p).Replace('\\', '/') == folder)   //직속 파일만
-                .Select(Path.GetFileNameWithoutExtension)
-                .OrderBy(n => n, StringComparer.Ordinal)                             //ScenarioPlayer 정렬과 동일
+                         && Path.GetDirectoryName(p).Replace('\\', '/') == folder)                //직속 파일만
+                .OrderBy(p => Path.GetFileNameWithoutExtension(p), StringComparer.Ordinal)     //ScenarioPlayer 정렬과 동일
                 .ToList();
+
+            var scan = new ScanResult();
+            foreach (string path in actPaths)
+            {
+                ReadActHeader(path, out string mainTitle, out string subTitle);
+                scan.acts.Add(Path.GetFileNameWithoutExtension(path));
+                scan.actTitles.Add(subTitle);
+                if (string.IsNullOrEmpty(scan.scenarioTitle) && !string.IsNullOrEmpty(mainTitle)) scan.scenarioTitle = mainTitle;
+            }
+            found[name] = scan;
         }
 
         //병합: 기존 항목 순서/수동 값 유지
-        var result = new List<ScenarioEntry>();
+        var merged = new List<ScenarioEntry>();   //[목록 UI] result → merged (ScanResult와 구분)
         var added = new HashSet<string>();
         foreach (var entry in catalog.scenarios)
         {
-            if (entry == null || !found.TryGetValue(entry.folderName ?? "", out var acts))
+            if (entry == null || !found.TryGetValue(entry.folderName ?? "", out var scan))
             {
                 changed = true;   //폴더 삭제됨 → 제거
                 continue;
             }
-            if (entry.actNames == null || !entry.actNames.SequenceEqual(acts))
+            //[목록 UI] 막 목록 + 제목까지 비교/갱신
+            if (entry.actNames == null || !entry.actNames.SequenceEqual(scan.acts))
             {
-                entry.actNames = acts;
+                entry.actNames = scan.acts;
                 changed = true;
             }
-            result.Add(entry);
+            if (entry.actTitles == null || !entry.actTitles.SequenceEqual(scan.actTitles))
+            {
+                entry.actTitles = scan.actTitles;
+                changed = true;
+            }
+            if ((entry.scenarioTitle ?? "") != scan.scenarioTitle)
+            {
+                entry.scenarioTitle = scan.scenarioTitle;
+                changed = true;
+            }
+            merged.Add(entry);
             added.Add(entry.folderName);
         }
         foreach (var kv in found.OrderBy(k => k.Key, StringComparer.Ordinal))
         {
             if (added.Contains(kv.Key)) continue;
-            result.Add(new ScenarioEntry { folderName = kv.Key, displayName = kv.Key, hidden = false, actNames = kv.Value });
+            merged.Add(new ScenarioEntry
+            {
+                folderName = kv.Key, displayName = kv.Key, hidden = false,
+                actNames = kv.Value.acts, actTitles = kv.Value.actTitles, scenarioTitle = kv.Value.scenarioTitle,   //[목록 UI]
+            });
             changed = true;
         }
 
         if (changed)
         {
-            catalog.scenarios = result;
+            catalog.scenarios = merged;
             EditorUtility.SetDirty(catalog);
             AssetDatabase.SaveAssets();
         }
 
         if (verbose || changed)
             Debug.Log($"[ScenarioCatalogSync] 동기화 {(changed ? "완료(변경 있음)" : "완료(변경 없음)")}: "
-                    + string.Join(", ", result.Select(e => $"{e.folderName}[{e.actNames.Count}]{(e.hidden ? "(hidden)" : "")}")));
+                    + string.Join(", ", merged.Select(e => $"{e.folderName}[{e.actNames.Count}]{(e.hidden ? "(hidden)" : "")}")));
+    }
+
+    //[목록 UI] 막 XML 루트의 mainTitle / subTitle 읽기 (파싱 실패 시 빈 값 + 경고)
+    private static void ReadActHeader(string assetPath, out string mainTitle, out string subTitle)
+    {
+        mainTitle = "";
+        subTitle = "";
+
+        var asset = AssetDatabase.LoadAssetAtPath<TextAsset>(assetPath);
+        if (asset == null) return;
+
+        try
+        {
+            var doc = new XmlDocument();
+            doc.LoadXml(asset.text);
+            XmlNode root = ActXml.GetRoot(doc);
+            //[제목 읽기] 대소문자 구분 없이 조회
+            mainTitle = ActXml.GetAttrIgnoreCase(root, ActXml.MainTitleAttr);
+            subTitle  = ActXml.GetAttrIgnoreCase(root, ActXml.SubTitleAttr);
+        }
+        catch (XmlException e)
+        {
+            Debug.LogWarning($"[ScenarioCatalogSync] XML 파싱 실패: {assetPath} — {e.Message}");
+        }
     }
 }
 

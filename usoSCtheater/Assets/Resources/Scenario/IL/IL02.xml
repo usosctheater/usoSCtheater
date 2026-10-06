@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Scene>
+<Scene MainTitle="InertiaLucis" SubTitle="작용점" >
 	<Line Type="AUDIO" Value="bgm" Track="BGM_77" Volume="0.4"/>
 	<Line Type="BG" Key="bg_room_fuyuko"/>
 	<Line Type="BREAK" Effect="clean" Duration="0.5"/>

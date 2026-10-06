@@ -166,8 +166,9 @@ public class ScenarioPlayer : MonoBehaviour
         XmlDocument doc = new XmlDocument();
         doc.LoadXml(actFile.text);
         XmlNode actNode = ActXml.GetRoot(doc);   //[용어 정리] <Act> 우선, 기존 <Scene> 호환
-        string mainTitle = actNode?.Attributes["mainTitle"]?.Value ?? "";
-        string subTitle  = actNode?.Attributes["subTitle"]?.Value  ?? "";
+        //[제목 읽기] 대소문자 구분 없이 조회 (카탈로그 동기화와 동일 규칙)
+        string mainTitle = ActXml.GetAttrIgnoreCase(actNode, ActXml.MainTitleAttr);
+        string subTitle  = ActXml.GetAttrIgnoreCase(actNode, ActXml.SubTitleAttr);
 
         //Title 표시
         if (!string.IsNullOrEmpty(mainTitle) || !string.IsNullOrEmpty(subTitle))

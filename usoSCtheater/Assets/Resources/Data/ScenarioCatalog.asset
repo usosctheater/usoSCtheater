@@ -21,13 +21,26 @@ MonoBehaviour:
     - IL02
     - IL03
     - IL04
+    scenarioTitle: InertiaLucis
+    actTitles:
+    - "\uD798\uC758 \uBC95\uCE59"
+    - "\uC791\uC6A9\uC810"
+    - "\uBE5B\uC758 \uAD00\uC131"
+    - "\uC791\uC6A9\uACFC \uBC18\uC791\uC6A9"
   - folderName: NKS
     displayName: NKS
     hidden: 0
     actNames:
     - NKS01
+    scenarioTitle: "\uB098\uB098\uCFE0\uC0AC \uC5B4\uD504\uB85C\uCE58"
+    actTitles:
+    - "\uC5B8\uB2C8\uC640 \uB3D9\uC0DD"
   - folderName: SC
     displayName: SC
     hidden: 0
     actNames:
     - SC01
+    scenarioTitle: "\uC544\uC0AC\uD788\uAC00 \uC218\uC0C1\uD55C \uC2DC\uACC4\uB97C
+      \uC8FC\uC6CC\uC654\uB2E4"
+    actTitles:
+    - "\uC218\uC0C1\uD55C \uC2DC\uACC4"
