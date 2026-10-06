@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;          //[목록 UI] ScrollRect, LayoutRebuilder
@@ -10,7 +9,7 @@ namespace UsoSCTheater.Scenario
     /// 목록 씬(ScenarioSelectScene) 컨트롤러.
     /// 카탈로그의 시나리오마다 ScenarioListItem을 생성하고, 각 PlayButton 클릭 시 바로 재생한다.
     /// [재생 범위] ActListItem_All = 모두 재생(전체 막 → 엔딩 씬) / ActListItem = 그 막만 → 목록 씬
-    /// [목록 UI] 선택 → 시작 버튼 흐름은 폐지. 기존 선택 API와 임시 디버그 GUI는 파일 하단에 주석 처리 (UI 구현 완료 후 삭제)
+    /// [목록 UI] 선택 → 시작 버튼 흐름은 폐지 (PlayButton 즉시 재생)
     /// </summary>
     public class ScenarioSelectController : MonoBehaviour
     {
@@ -141,128 +140,5 @@ namespace UsoSCTheater.Scenario
             scenarioScrollRect.verticalNormalizedPosition = 1f - Mathf.Clamp01(offset / scrollable);
             Debug.Log($"[ScenarioSelect] 직전 시나리오 위치로 스크롤: {target.FolderName}");
         }
-
-        /* [임시 GUI] UI 구현 완료 후 삭제 ─────────────────────────────────────────
-           선택 → 시작 버튼 흐름 + OnGUI 디버그 화면. 정식 목록 UI(PlayButton 즉시 재생)로 대체됨.
-
-        [Header("임시 디버그 GUI")]
-        [SerializeField] private bool showDebugGUI = true;        // 정식 GUI 연결 후 끄기
-
-        public event Action OnSelectionChanged;                   // 정식 GUI 갱신용
-
-        public int SelectedScenarioIndex { get; private set; } = -1;
-        public int SelectedActIndex { get; private set; } = -1;   // -1 = 모두 재생
-
-        public ScenarioEntry SelectedScenario =>
-            (SelectedScenarioIndex >= 0 && SelectedScenarioIndex < scenarios.Count) ? scenarios[SelectedScenarioIndex] : null;
-
-        //LoadCatalog 끝에 있던 직전 선택 복원
-        //int prev = ScenarioSelection.HasSelection
-        //    ? scenarios.FindIndex(s => s.folderName == ScenarioSelection.ScenarioFolder)
-        //    : -1;
-        //SelectScenario(prev >= 0 ? prev : (scenarios.Count > 0 ? 0 : -1));
-
-        //→ ScenarioEntry.DisplayNameOrFolder로 대체
-        public static string GetDisplayName(ScenarioEntry entry) =>
-            string.IsNullOrEmpty(entry.displayName) ? entry.folderName : entry.displayName;
-
-        public void SelectScenario(int index)
-        {
-            bool valid = index >= 0 && index < scenarios.Count;
-            SelectedScenarioIndex = valid ? index : -1;
-            SelectedActIndex = -1;   //시나리오를 바꾸면 재생 범위는 모두 재생으로 초기화
-            OnSelectionChanged?.Invoke();
-        }
-
-        public void SelectScenarioByFolder(string folderName)
-        {
-            int index = scenarios.FindIndex(s => s.folderName == folderName);
-            if (index < 0) Debug.LogWarning($"[ScenarioSelect] 목록에 없는 시나리오: {folderName}");
-            SelectScenario(index);
-        }
-
-        //-1 = 모두 재생, 0 이상 = 해당 막만 단일 재생
-        public void SelectAct(int actIndex)
-        {
-            var scenario = SelectedScenario;
-            if (scenario == null) return;
-
-            SelectedActIndex = (actIndex >= 0 && actIndex < scenario.actNames.Count) ? actIndex : -1;
-            OnSelectionChanged?.Invoke();
-        }
-
-        public void StartPlayAll()
-        {
-            SelectAct(-1);
-            StartSelected();
-        }
-
-        public void StartSelected()
-        {
-            var scenario = SelectedScenario;
-            if (scenario == null)
-            {
-                Debug.LogWarning("[ScenarioSelect] 선택된 시나리오가 없습니다.");
-                return;
-            }
-
-            string startAct = SelectedActIndex >= 0 ? scenario.actNames[SelectedActIndex] : null;
-            Debug.Log($"[ScenarioSelect] 시작 요청: {scenario.folderName} / {startAct ?? "모두 재생"}");
-            SceneTransitionManager.GoToCommunicationScene(scenario.folderName, startAct);
-        }
-
-        private Vector2 debugScroll;
-
-        void OnGUI()
-        {
-            if (!showDebugGUI) return;
-
-            float scale = Screen.height / 1080f;
-            GUI.matrix = Matrix4x4.Scale(new Vector3(scale, scale, 1f));
-
-            var label = new GUIStyle(GUI.skin.label) { fontSize = 28 };
-            var button = new GUIStyle(GUI.skin.button) { fontSize = 26, alignment = TextAnchor.MiddleLeft };
-            var height = GUILayout.Height(56);
-
-            GUILayout.BeginArea(new Rect(40, 40, 900, 1000));
-            debugScroll = GUILayout.BeginScrollView(debugScroll);
-
-            GUILayout.Label("[임시] 시나리오 선택", label);
-            if (scenarios.Count == 0) GUILayout.Label("표시할 시나리오가 없습니다 (카탈로그 확인)", label);
-
-            for (int i = 0; i < scenarios.Count; i++)
-            {
-                var s = scenarios[i];
-                string mark = i == SelectedScenarioIndex ? "▶ " : "   ";
-                string hiddenTag = s.hidden ? " [hidden]" : "";
-                if (GUILayout.Button($"{mark}{GetDisplayName(s)}  ({s.actNames.Count}막){hiddenTag}", button, height))
-                    SelectScenario(i);
-            }
-
-            var selected = SelectedScenario;
-            if (selected != null)
-            {
-                GUILayout.Space(24);
-                GUILayout.Label("재생 범위 (모두 재생 = 엔딩까지 / 막 선택 = 그 막만)", label);
-
-                if (GUILayout.Button($"{(SelectedActIndex < 0 ? "▶ " : "   ")}모두 재생", button, height))
-                    SelectAct(-1);
-
-                for (int j = 0; j < selected.actNames.Count; j++)
-                {
-                    string mark = j == SelectedActIndex ? "▶ " : "   ";
-                    if (GUILayout.Button($"{mark}{selected.actNames[j]}", button, height))
-                        SelectAct(j);
-                }
-
-                GUILayout.Space(24);
-                if (GUILayout.Button("시작", button, GUILayout.Height(72)))
-                    StartSelected();
-            }
-
-            GUILayout.EndScrollView();
-            GUILayout.EndArea();
-        }
-        ─────────────────────────────────────────────────────────────────────────── */
     }
 }
