@@ -1,0 +1,61 @@
+<Window x:Class="SCResourceGrabber.ResourceDetailWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="리소스 상세" Width="900" Height="700" MinWidth="360" MinHeight="240"
+        Icon="app.ico" FontFamily="Malgun Gothic" FontSize="12"
+        WindowStartupLocation="CenterScreen">
+    <Window.Resources>
+        <!-- 투명 영역 확인용 체크무늬 배경 -->
+        <DrawingBrush x:Key="Checker" TileMode="Tile" Viewport="0,0,16,16" ViewportUnits="Absolute">
+            <DrawingBrush.Drawing>
+                <DrawingGroup>
+                    <GeometryDrawing Brush="#FFFFFF" Geometry="M0,0 L16,0 16,16 0,16Z"/>
+                    <GeometryDrawing Brush="#E6E6E6" Geometry="M0,0 L8,0 8,8 0,8Z M8,8 L16,8 16,16 8,16Z"/>
+                </DrawingGroup>
+            </DrawingBrush.Drawing>
+        </DrawingBrush>
+        <Style TargetType="Button">
+            <Setter Property="Padding" Value="8,2"/>
+            <Setter Property="Margin" Value="2"/>
+        </Style>
+        <Style TargetType="ToggleButton">
+            <Setter Property="Padding" Value="8,2"/>
+            <Setter Property="Margin" Value="2"/>
+        </Style>
+    </Window.Resources>
+
+    <DockPanel>
+        <!-- 상단: 정보 + 동작 -->
+        <DockPanel DockPanel.Dock="Top" Margin="4">
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                <ToggleButton x:Name="ActualSizeToggle" Content="1:1" ToolTip="원본 픽셀 크기로 보기 (끄면 창 크기에 맞춤)"
+                              Visibility="Collapsed" Checked="ActualSize_Changed" Unchecked="ActualSize_Changed"/>
+                <Button Content="저장" Click="Save_Click"/>
+                <Button Content="URL 복사" Click="CopyUrl_Click"/>
+            </StackPanel>
+            <TextBlock x:Name="InfoText" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="2"/>
+        </DockPanel>
+
+        <!-- 하단: 오디오/비디오 조작 -->
+        <DockPanel x:Name="MediaBar" DockPanel.Dock="Bottom" Margin="4" Visibility="Collapsed">
+            <Button DockPanel.Dock="Left" Content="▶ / ❚❚" Click="PlayPause_Click"/>
+            <Button DockPanel.Dock="Left" Content="■" Click="Stop_Click"/>
+            <TextBlock x:Name="TimeText" DockPanel.Dock="Right" VerticalAlignment="Center" Margin="6,0" FontFamily="Consolas"/>
+            <Slider x:Name="SeekSlider" VerticalAlignment="Center" Margin="6,0" IsMoveToPointEnabled="True"
+                    PreviewMouseUp="SeekSlider_PreviewMouseUp"/>
+        </DockPanel>
+
+        <!-- 본문 -->
+        <Grid Background="{StaticResource Checker}">
+            <ScrollViewer x:Name="ImageScroller" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Disabled">
+                <Image x:Name="DetailImage" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality"/>
+            </ScrollViewer>
+            <MediaElement x:Name="Media" LoadedBehavior="Manual" UnloadedBehavior="Close" Stretch="Uniform"
+                          Visibility="Collapsed" MediaOpened="Media_MediaOpened" MediaEnded="Media_MediaEnded"/>
+            <TextBlock x:Name="AudioLabel" Visibility="Collapsed" FontSize="20" Foreground="#555"
+                       HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center"/>
+            <TextBox x:Name="DetailText" IsReadOnly="True" FontFamily="Consolas" Visibility="Collapsed"
+                     VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" TextWrapping="NoWrap"/>
+        </Grid>
+    </DockPanel>
+</Window>

@@ -5,47 +5,42 @@ using SCResourceGrabber.Models;
 namespace SCResourceGrabber.Services;
 
 /// <summary>
-/// 캐시 파일을 저장 폴더로 복사한다. 경로 규칙은 설정(KeepUrlPath)에 따른다.
+/// 캐시 파일을 저장 폴더로 복사한다.
 /// </summary>
 public static class ResourceSaver
 {
     public enum Outcome { Saved, Skipped, Failed }
 
-    public static string BuildTargetPath(CapturedResource res, AppSettings settings)
+    /// <summary>
+    /// keepPath=false: 저장 폴더 바로 아래에 파일명으로 저장 (게임 리소스 — URL이 전부 assets/해시라 폴더가 의미 없음)
+    /// keepPath=true : URL 경로(호스트 제외)를 폴더로 유지 (Spine 수집 — data.json/data.atlas처럼 이름이 겹치므로)
+    /// </summary>
+    public static string BuildTargetPath(CapturedResource res, string folder, bool keepPath)
     {
         var uri = new Uri(res.Url);
         var segments = uri.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries)
                                        .Select(Uri.UnescapeDataString)
                                        .ToList();
-
         string name = segments.Count > 0 ? segments[^1] : "index";
         if (segments.Count > 0) segments.RemoveAt(segments.Count - 1);
 
-        // 확장자가 없거나 내용과 다르면 판정된 확장자를 붙인다
+        // 확장자가 없으면 판정된 확장자를 붙인다
         if (!Regex.IsMatch(name, @"\.[A-Za-z0-9]{1,6}$"))
             name += "." + res.Extension;
 
-        var parts = new List<string> { settings.SaveFolder };
-        if (settings.KeepUrlPath)
-        {
-            parts.Add(Sanitize(uri.Host));
-            parts.AddRange(segments.Select(Sanitize));
-        }
-        else
-        {
-            parts.Add(CapturedResource.CategoryLabels[res.Category]);
-        }
+        var parts = new List<string> { folder };
+        if (keepPath) parts.AddRange(segments.Select(Sanitize));
         parts.Add(Sanitize(name));
         return Path.Combine(parts.ToArray());
     }
 
-    public static (Outcome outcome, string path, string? error) Save(CapturedResource res, AppSettings settings)
+    public static (Outcome outcome, string path, string? error) Save(CapturedResource res, string folder, bool keepPath, bool overwrite)
     {
-        string target = BuildTargetPath(res, settings);
+        string target = BuildTargetPath(res, folder, keepPath);
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(target)!);
-            if (File.Exists(target) && !settings.OverwriteExisting)
+            if (File.Exists(target) && !overwrite)
             {
                 // 내용이 같으면 건너뛰고, 다르면 번호를 붙여 저장
                 if (new FileInfo(target).Length == res.Size && FilesEqual(target, res.CachePath))

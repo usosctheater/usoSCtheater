@@ -67,6 +67,9 @@ public static class ResourceClassifier
         bool At(int offset, string ascii) =>
             d.Length >= offset + ascii.Length && Encoding.ASCII.GetString(d, offset, ascii.Length) == ascii;
 
+        // 게임 전용 암호화 형식 (모든 파일이 같은 바이트로 시작: 5D AC 43 59 ...)
+        if (d[0] == 0x5D && d[1] == 0xAC && d[2] == 0x43 && d[3] == 0x59) return new(ResourceCategory.Encrypted, "dat");
+
         if (d[0] == 0x89 && At(1, "PNG")) return new(ResourceCategory.Image, "png");
         if (d[0] == 0xFF && d[1] == 0xD8 && d[2] == 0xFF) return new(ResourceCategory.Image, "jpg");
         if (At(0, "GIF8")) return new(ResourceCategory.Image, "gif");
@@ -97,7 +100,22 @@ public static class ResourceClassifier
         if (AtlasHeader.IsMatch(head)) return new(ResourceCategory.Spine, "atlas", "atlas");
         if (head.StartsWith("<svg") || (head.StartsWith("<?xml") && head.Contains("<svg"))) return new(ResourceCategory.Image, "svg");
 
+        // 알려진 형식이 아니고 무작위에 가까운 바이너리 → 암호화(또는 알 수 없는 압축)로 본다
+        if (d.Length >= 512 && Entropy(d, 4096) > 7.5) return new(ResourceCategory.Encrypted, "dat");
+
         return null;
+    }
+
+    /// <summary>앞부분 바이트 엔트로피 (bit/byte, 0~8). 8에 가까울수록 무작위.</summary>
+    private static double Entropy(byte[] d, int max)
+    {
+        int n = Math.Min(d.Length, max);
+        Span<int> count = stackalloc int[256];
+        for (int i = 0; i < n; i++) count[d[i]]++;
+        double h = 0;
+        foreach (int c in count)
+            if (c > 0) { double p = (double)c / n; h -= p * Math.Log2(p); }
+        return h;
     }
 
     public static string GetUrlExtension(string url)

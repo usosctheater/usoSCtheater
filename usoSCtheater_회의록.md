@@ -9,6 +9,90 @@
 ---
 
 <details>
+<summary><b>2026-10-07</b> · [도구] SCResourceGrabber 상세 창 분리 + 추적 모드 + 단축키·필터·정렬 + 암호화 분류 + Spine 수집 창 — <i>테스트 필요</i></summary>
+
+### 2026-10-07 — [도구] SCResourceGrabber: 상세 창 분리, 저장 경로 변경, 추적 모드, 단축키
+
+**1. 리소스 상세 창 분리**
+- 원인: 목록 아래 미리보기는 메인 창 크기에 묶여, 이미지를 크게 보려면 프로그램 전체를 키워야 했음
+- 목록 더블클릭/Enter → 리소스별 독립 창 (`ResourceDetailWindow`, 리소스당 1개, 이미 열려 있으면 앞으로)
+- 이미지: 창 크기에 맞춰 확대/축소(Uniform), 처음 열 때 창을 이미지에 맞춤(작업 영역 85% 이내), 체크무늬 배경, `1:1` 토글(파일 DPI와 무관하게 픽셀 1:1 + 스크롤)
+- 오디오/비디오: 열면 자동 재생, 재생/일시정지·정지·위치 슬라이더·시간 표시 / JSON: 들여쓰기 정리 표시(2MB까지)
+- 메인 창의 미리보기 영역·관련 코드 삭제, `App.xaml` `ShutdownMode=OnMainWindowClose`(메인 종료 시 상세 창도 종료)
+- 버그 수정 (사용자 제보): 투명도가 있는 WebP(VP8L)가 상세 창에서만 배경이 검게·글자 모양이 깨져 보임 → 원인: Windows WebP 디코더가 원본 크기 디코딩 시 형식을 `Bgr32`(투명도 없음)로 보고(픽셀 4번째 바이트에는 실제 알파 존재, 축소 디코딩인 썸네일은 `Bgra32`라 정상). `CapturedResource.LoadBitmap`에서 WebP + `Bgr32`이면 픽셀을 `Bgra32`로 재지정 (`IsWebp`, `ReinterpretAsBgra32`, 반환형 `BitmapSource`)
+
+**2. 저장 경로**
+- 기본 저장 폴더 `D:\usosctheater\resource\Grabber` — 기존 settings.json이 옛 기본값(내 문서\SCResourceGrabber)이면 자동으로 새 경로로 교체, 직접 지정한 경로는 유지
+- 저장 시 `호스트/assets/` 폴더를 만들지 않고 저장 폴더 바로 아래에 파일명으로 저장 (모든 리소스 URL이 `assets/해시` 형식이라 폴더 구조가 의미 없음) — "URL 경로 구조 유지" 옵션·`KeepUrlPath` 설정 삭제
+
+**3. 추적 모드**
+- 결정: "지금 게임 화면에 그려지는 리소스 목록"은 게임이 단일 캔버스(WebGL)에 그려 페이지에 정보가 없고, 엔진 내부 접근은 게임 업데이트에 취약 → 채택하지 않음. 대신 추적 모드
+- [● 추적 모드] → 추적 창(`TrackingWindow`)이 열려 있는 동안: 새로 캡처된 리소스 + 재생된 오디오를 URL 단위 한 줄로 합쳐 최신순 표시 (구분: 로드/재생/로드+재생, 재생 횟수, 마지막 재생 시각), 재생 중 행 강조("▶ 재생 중"), 다시 재생되면 맨 위로
+- 분류 필터: 메인 목록과 같은 형식별 체크박스(이미지·오디오·비디오·Spine·JSON·폰트·기타, 개수 표시, 기본 표시 분류도 메인과 동일) — 게임이 주기적으로 보내는 Ping 등이 목록을 오염시키는 문제(사용자 테스트에서 발견)를 형식 필터로 해결. 캡처 목록에 없는 URL은 재생된 적 있으면 오디오, 아니면 기타로 분류
+  - 처음 넣었던 "새로 로드 / 재생 / 재생 중만" 필터는 삭제 (오디오 필터 + 재생 시 맨 위 정렬로 충분)
+- 체크한 항목 저장, 더블클릭 상세 창, 목록 비우기(재생 중 항목은 유지), 창 닫으면 추적 종료
+- 저장 버튼 정리: "보이는 항목 (전부) 저장" 버튼 삭제 (메인·추적 창 모두) — 체크한 항목 저장만 유지
+- 오디오 재생 추적: `Scripts/audio_hook.js`를 페이지 생성 시점에 주입(`AddScriptToExecuteOnDocumentCreated`, iframe 포함) — fetch/XHR 응답(ArrayBuffer·Blob) → URL 기억 → `decodeAudioData` 결과(AudioBuffer)에 URL 연결 → `AudioBufferSourceNode.start` / `HTMLMediaElement.play` 시 'play', `ended`/`pause` 시 'end' 메시지 → `PageAudioMonitor`가 수신. 프로그램 시작부터 주입되므로 추적 시작 전에 받은 보이스도 재생 시 잡힘
+- 새로고침/페이지 이동 시 재생 중 표시 일괄 해제
+- 진단 로그: `%LocalAppData%\SCResourceGrabber\audio_hook.log` (실행마다 새로 씀 — 훅 설치 여부, 재생 URL, 매핑 실패 통계)
+
+**4. 분류 필터 [전체] 체크박스 (메인·추적 창 공용)**
+- 분류 체크박스 맨 왼쪽 [전체]: 하나라도 꺼져 있으면 전부 켜고, 모두 켜져 있으면 전부 끔. 일부만 켜져 있으면 중간 상태 표시
+- 메인·추적 창이 같은 코드를 쓰도록 `Services/CategoryFilterBar.cs`로 분리
+
+**5. 검색창 삭제**: 검색 기준이 URL인데 모든 리소스 URL이 `assets/해시`라 의미 없음 → 검색창·관련 코드 삭제 (필요해지면 그때 다시 추가)
+
+**6. 프로그램 전용 단축키 (설정 파일 편집 방식)**
+- 결정: 고정 키 / 설정 파일 편집 / 설정 창 중 "설정 파일 편집" 채택 (자주 바꾸지 않음). 설정 창은 필요해지면 이 구조 위에 추가
+- `settings.json`의 `"Hotkeys"`(동작 이름 → "Ctrl+S" 형식, 빈 값이면 해제), 수정 후 재시작. 새 동작은 기존 설정 파일에도 기본값 자동 추가, 잘못된 키·중복은 상태 표시줄에 경고
+- 기본: `SaveChecked` Ctrl+S(체크 저장, 상세 창에서는 그 리소스 저장) / `ToggleTracking` Ctrl+R(추적 창 열기·닫기) / `ToggleAllChecks` Ctrl+A(보이는 항목 전체 체크/해제) / `ClearList` Ctrl+L(목록 비우기) — 포커스가 있는 창의 목록에 적용
+- 게임 화면에 포커스가 있어도 동작하며, 처리한 키는 브라우저 기본 동작(Ctrl+R 새로고침 등)을 막음. 새로고침은 F5. 글자 입력 칸에 포커스가 있으면 단축키 무시
+- 버튼 툴팁에 현재 단축키 표시
+
+**7. Spine 데이터 조사 결과 → 암호화 분류**
+- 확인: 게임은 Spine atlas·json을 평문으로 보내지 않음. 수집 데이터(tempdata 339개) 중 `.txt` 227개가 모두 같은 바이트(`5D AC 43 59 57 4C 5B 44 49`)로 시작하는 무작위 바이너리(엔트로피 ≈ 8) = 게임 전용 암호화 형식. 평문 atlas/Spine JSON은 0개
+- 기존 Spine 데이터(bbang.shinymaskr.work에서 받은 것, Spine 3.6.53, atlas 7.6KB / json 696KB)와 크기 비교: 동일 크기 없음(암호화 파일 최대 약 210KB) → 압축 후 암호화로 추정, 압축 크기 근처 파일(1.4KB대 3개, 93~95KB대)은 있으나 확정 불가
+- 결정: 암호화 해제(직접 복호화·게임 내부에서 풀린 데이터 가로채기)는 하지 않음
+- 분류 `Encrypted`("암호화") 추가 — 앞 4바이트 `5D AC 43 59`, 또는 알려진 형식이 아닌 512바이트 이상·엔트로피 7.5 초과 바이너리. 기타에서 분리되어 Ping 등만 기타에 남음. 상세 창은 "암호화된 데이터" 안내 표시
+- 게임 창 필터에서 Spine 분류 제거 (게임이 평문 Spine을 보내지 않음). 분류 자체는 Spine 수집 창에서 사용
+
+**8. 목록 정렬 + 받은 시각**
+- 메인 목록에 "받은 시각" 열 추가, 추적 창 "처음" → "받은 시각"
+- 머리글 "종류·크기·받은 시각" 클릭 정렬: 오름차순 ▲ → 내림차순 ▼ → 해제(받은 순서). 종류는 필터 순서(이미지·오디오·비디오·Spine·JSON·폰트·암호화·기타) — `Services/ListViewSorter.cs`, 메인·추적 창 공용
+
+**9. Spine 수집 창**
+- 목적: Spine atlas·json은 이미 풀린 데이터를 제공하는 공개 뷰어 사이트(https://spine.shinycolors.moe/)에서 수집, 텍스처 이미지는 게임에서 수집. 기존에 쓰던 외부 사이트의 서버 상태에 의존하지 않는 수집 경로 확보
+- [Spine 수집] 버튼 → 같은 프로그램 창(`MainWindow(CollectorKind.Spine)`)을 하나 더 열어 `SpineStartUrl`로 접속, 동일한 방식으로 캡처
+- 게임 창과 차이: 제목, Spine 분류 표시(기본: 이미지·Spine), 저장 폴더 `SpineSaveFolder`(기본 `D:\usosctheater\resource\Grabber\Spine`), 저장 시 URL 경로 폴더 유지(data.json·data.atlas 이름 겹침 방지), 오디오 추적 없음, 이전 세션 캐시 정리는 게임 창만
+- 설정 객체는 두 창이 공유(`AppSettings.Shared`), 게임 창을 닫으면 Spine 창·추적 창도 함께 정리
+
+**변경 위치**
+| 파일 | 변경 |
+|---|---|
+| `ResourceDetailWindow.xaml(.cs)` | 신규 — 상세 창 |
+| `TrackingWindow.xaml(.cs)`, `Models/TrackedItem.cs` | 신규 — 추적 창 / 항목 (분류 필터는 `CategoryFilterBar`, `TrackedItem.Category`, 단축키 처리) |
+| `ResourceDetailWindow.xaml.cs` | 저장 단축키 → 이 리소스 저장, `BitmapSource` 사용 |
+| `Services/PageAudioMonitor.cs`, `Scripts/audio_hook.js` | 신규 — 스크립트 주입·메시지 수신 (js는 EmbeddedResource) |
+| `MainWindow.xaml(.cs)` | 미리보기 영역 삭제, 더블클릭/Enter → `OpenDetail`, [● 추적 모드] 버튼·`Tracking_Click`/`ToggleTracking`, URL→리소스 사전, 오디오 모니터 연결·로그, `SaveVisible_Click`·버튼 삭제, `DefaultVisible`을 추적 창과 공유(internal), 검색창·경로 유지 옵션 삭제, `CategoryFilterBar` 사용, `OnPreviewKeyDown` 단축키·툴팁 |
+| `Services/AppSettings.cs` | 기본 저장 경로 변경 + 옛 기본값 이전, `KeepUrlPath` 삭제, `Hotkeys` 추가(기본값 자동 보충) |
+| `Services/ResourceSaver.cs` | `BuildTargetPath`: 저장 폴더 + 파일명만 |
+| `Services/CategoryFilterBar.cs`, `Services/HotkeyMap.cs`, `Services/ListViewSorter.cs` | 신규 — 분류 필터 줄([전체] 포함, 표시 분류 지정), 단축키, 머리글 정렬 |
+| `Services/ResourceClassifier.cs` | 암호화 판정(매직 바이트·엔트로피) |
+| `Services/AppSettings.cs`(추가) | `SpineStartUrl`, `SpineSaveFolder`, `Shared` |
+| `Services/ResourceSaver.cs`(추가) | `BuildTargetPath`/`Save`가 폴더·경로 유지 여부를 인자로 받음 |
+| `Models/CapturedResource.cs` | `LoadBitmap` WebP 투명도 수정, `Encrypted` 분류·`CapturedAtText` |
+| `App.xaml`, `SCResourceGrabber.csproj`, `README.md` | 종료 모드, 스크립트 리소스, 문서 |
+
+**고려 사항 / 한계**
+- 이미지·Spine은 "새로 받은 시점"만 알 수 있음 — 게임이 메모리에 가진 리소스를 재사용하면 추적 목록에 안 나옴 (커뮤 진입 직전에 추적 시작 권장)
+- 게임의 실제 오디오 재생 방식은 미확인 — 테스트 페이지에서 fetch·XHR·Audio 요소 3경로 동작 확인. 게임이 JS에서 데이터를 가공(복호화 등)한 뒤 재생하면 매핑 실패 → 로그로 확인 후 보완
+- exe 갱신 규칙: 실행 중이면 exe를 덮어쓸 수 없으므로, 갱신 전 사용자에게 종료 요청 (또는 Claude가 종료 후 교체 — 사용자 허락)
+
+**테스트 필요**: 실제 게임에서 추적 모드 — 보이스/BGM 재생 표시, audio_hook.log 확인 / WebP 상세 창 표시 / 게임 화면 포커스 상태에서 단축키 / Spine 수집 창에서 atlas·json 캡처·분류·폴더 저장 (사용자)
+
+</details>
+
+<details>
 <summary><b>2026-10-07</b> · [도구] 리소스 수집 도구 SCResourceGrabber 신규 + 저장소 Tools/ 폴더 도입 — <i>완료</i></summary>
 
 ### 2026-10-07 — [도구] SCResourceGrabber 신규 작성 + 개발 보조 도구 관리 방식 결정

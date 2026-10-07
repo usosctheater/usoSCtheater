@@ -42,29 +42,33 @@
         <Grid Grid.Column="2" Margin="4">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>   <!-- 분류 필터 -->
-                <RowDefinition Height="Auto"/>   <!-- 검색/캡처 -->
-                <RowDefinition Height="2*"/>     <!-- 목록 -->
-                <RowDefinition Height="5"/>
-                <RowDefinition Height="*" MinHeight="120"/> <!-- 미리보기 -->
+                <RowDefinition Height="Auto"/>   <!-- 캡처/목록 동작 -->
+                <RowDefinition Height="*"/>      <!-- 목록 -->
                 <RowDefinition Height="Auto"/>   <!-- 저장 -->
                 <RowDefinition Height="Auto"/>   <!-- 상태 -->
             </Grid.RowDefinitions>
 
             <WrapPanel x:Name="CategoryPanel" Grid.Row="0"/>
 
-            <DockPanel Grid.Row="1" Margin="0,2">
+            <DockPanel Grid.Row="1" Margin="0,2" LastChildFill="False">
                 <CheckBox x:Name="CaptureToggle" DockPanel.Dock="Left" Content="캡처 중" IsChecked="True"
                           Checked="CaptureToggle_Changed" Unchecked="CaptureToggle_Changed"/>
-                <Button DockPanel.Dock="Right" Content="목록 비우기" Click="Clear_Click"/>
-                <Button DockPanel.Dock="Right" Content="전체 선택/해제" Click="ToggleAll_Click"/>
-                <TextBox x:Name="SearchBox" Margin="4,2" VerticalContentAlignment="Center"
-                         ToolTip="URL 검색 (공백으로 여러 단어 AND)" TextChanged="SearchBox_TextChanged"/>
+                <Button DockPanel.Dock="Right" x:Name="ClearButton" Content="목록 비우기" Click="Clear_Click"/>
+                <Button DockPanel.Dock="Right" x:Name="TrackingButton" Content="● 추적 모드" Click="Tracking_Click"/>
+                <Button DockPanel.Dock="Right" x:Name="ToggleAllButton" Content="전체 선택/해제" Click="ToggleAll_Click"/>
+                <Button DockPanel.Dock="Left" x:Name="SpineButton" Content="Spine 수집" Click="Spine_Click" Margin="12,2,2,2"
+                        ToolTip="Spine 뷰어 사이트를 별도 창으로 열어 atlas·json·텍스처를 수집합니다"/>
             </DockPanel>
 
             <ListView x:Name="ResourceList" Grid.Row="2"
                       VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
-                      SelectionMode="Extended" SelectionChanged="ResourceList_SelectionChanged"
-                      KeyDown="ResourceList_KeyDown">
+                      SelectionMode="Extended" KeyDown="ResourceList_KeyDown"
+                      ToolTip="더블클릭 또는 Enter: 리소스 상세 창 열기">
+                <ListView.ItemContainerStyle>
+                    <Style TargetType="ListViewItem">
+                        <EventSetter Event="MouseDoubleClick" Handler="ResourceItem_DoubleClick"/>
+                    </Style>
+                </ListView.ItemContainerStyle>
                 <ListView.View>
                     <GridView>
                         <GridViewColumn Width="30">
@@ -84,34 +88,15 @@
                         <GridViewColumn Header="파일" Width="220" DisplayMemberBinding="{Binding FileName}"/>
                         <GridViewColumn Header="종류" Width="110" DisplayMemberBinding="{Binding CategoryLabel}"/>
                         <GridViewColumn Header="크기" Width="70" DisplayMemberBinding="{Binding SizeText}"/>
+                        <GridViewColumn Header="받은 시각" Width="75" DisplayMemberBinding="{Binding CapturedAtText}"/>
                         <GridViewColumn Header="상태" Width="55" DisplayMemberBinding="{Binding Status}"/>
                         <GridViewColumn Header="URL" Width="400" DisplayMemberBinding="{Binding Url}"/>
                     </GridView>
                 </ListView.View>
             </ListView>
 
-            <GridSplitter Grid.Row="3" Height="5" HorizontalAlignment="Stretch" Background="#DDD"/>
-
-            <!-- 미리보기 -->
-            <DockPanel Grid.Row="4">
-                <DockPanel DockPanel.Dock="Top">
-                    <StackPanel x:Name="AudioPanel" DockPanel.Dock="Right" Orientation="Horizontal" Visibility="Collapsed">
-                        <Button Content="▶ 재생" Click="Play_Click"/>
-                        <Button Content="■ 정지" Click="Stop_Click"/>
-                    </StackPanel>
-                    <Button DockPanel.Dock="Right" Content="URL 복사" Click="CopyUrl_Click"/>
-                    <Button DockPanel.Dock="Right" Content="이 파일 저장" Click="SaveCurrent_Click"/>
-                    <TextBlock x:Name="PreviewInfo" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="2"/>
-                </DockPanel>
-                <Grid Background="#F4F4F4">
-                    <Image x:Name="PreviewImage" Stretch="Uniform" StretchDirection="DownOnly" Margin="4"/>
-                    <TextBox x:Name="PreviewText" IsReadOnly="True" FontFamily="Consolas" Visibility="Collapsed"
-                             VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" TextWrapping="NoWrap"/>
-                </Grid>
-            </DockPanel>
-
             <!-- 저장 -->
-            <StackPanel Grid.Row="5" Margin="0,4,0,0">
+            <StackPanel Grid.Row="3" Margin="0,4,0,0">
                 <DockPanel>
                     <TextBlock DockPanel.Dock="Left" Text="저장 폴더" VerticalAlignment="Center" Margin="2,0,4,0"/>
                     <Button DockPanel.Dock="Right" Content="열기" Click="OpenSaveFolder_Click"/>
@@ -119,14 +104,12 @@
                     <TextBox x:Name="SaveFolderBox" VerticalContentAlignment="Center" Margin="2" LostFocus="SaveFolderBox_LostFocus"/>
                 </DockPanel>
                 <WrapPanel>
-                    <CheckBox x:Name="KeepPathCheck" Content="URL 경로 구조 유지" Checked="SaveOption_Changed" Unchecked="SaveOption_Changed"/>
                     <CheckBox x:Name="OverwriteCheck" Content="같은 이름 덮어쓰기" Checked="SaveOption_Changed" Unchecked="SaveOption_Changed"/>
-                    <Button Content="체크한 항목 저장" FontWeight="Bold" Click="SaveChecked_Click"/>
-                    <Button Content="보이는 항목 전부 저장" Click="SaveVisible_Click"/>
+                    <Button x:Name="SaveCheckedButton" Content="체크한 항목 저장" FontWeight="Bold" Click="SaveChecked_Click"/>
                 </WrapPanel>
             </StackPanel>
 
-            <TextBlock x:Name="StatusText" Grid.Row="6" Foreground="#666" Margin="2,4,2,0" TextTrimming="CharacterEllipsis"/>
+            <TextBlock x:Name="StatusText" Grid.Row="4" Foreground="#666" Margin="2,4,2,0" TextTrimming="CharacterEllipsis"/>
         </Grid>
     </Grid>
 </Window>

@@ -6,7 +6,8 @@ using System.Windows.Media.Imaging;
 
 namespace SCResourceGrabber.Models;
 
-public enum ResourceCategory { Image, Audio, Video, Spine, Json, Font, Other }
+/// <summary>선언 순서 = 필터·정렬 순서</summary>
+public enum ResourceCategory { Image, Audio, Video, Spine, Json, Font, Encrypted, Other }
 
 /// <summary>
 /// 네트워크에서 캡처한 리소스 1건. 본문은 메모리가 아니라 세션 캐시 파일(CachePath)에 보관한다.
@@ -24,6 +25,7 @@ public class CapturedResource : INotifyPropertyChanged
     public string SubType { get; init; } = "";
     public required string CachePath { get; init; }
     public DateTime CapturedAt { get; init; } = DateTime.Now;
+    public string CapturedAtText => CapturedAt.ToString("HH:mm:ss");
 
     public string Host => new Uri(Url).Host;
 
@@ -53,6 +55,7 @@ public class CapturedResource : INotifyPropertyChanged
         [ResourceCategory.Spine] = "Spine",
         [ResourceCategory.Json] = "JSON",
         [ResourceCategory.Font] = "폰트",
+        [ResourceCategory.Encrypted] = "암호화",
         [ResourceCategory.Other] = "기타",
     };
 
@@ -81,7 +84,7 @@ public class CapturedResource : INotifyPropertyChanged
         }
     }
 
-    public static BitmapImage? LoadBitmap(string path, int decodeWidth = 0)
+    public static BitmapSource? LoadBitmap(string path, int decodeWidth = 0)
     {
         try
         {
@@ -92,12 +95,41 @@ public class CapturedResource : INotifyPropertyChanged
             if (decodeWidth > 0) bmp.DecodePixelWidth = decodeWidth;
             bmp.EndInit();
             bmp.Freeze();
+
+            // Windows WebP 디코더는 투명도가 있는 WebP를 원본 크기로 읽을 때 형식을 Bgr32(투명도 없음)로 알려준다.
+            // 픽셀의 4번째 바이트에는 실제 알파 값이 들어 있으므로 Bgra32로 다시 지정하면 정상 표시된다.
+            // (축소 디코딩 시에는 Bgra32로 나와서 썸네일은 원래 정상)
+            if (bmp.Format == PixelFormats.Bgr32 && IsWebp(path))
+                return ReinterpretAsBgra32(bmp);
+
             return bmp;
         }
         catch
         {
-            return null; // WPF가 못 읽는 포맷(일부 webp/avif 등)
+            return null; // WPF가 못 읽는 포맷(일부 avif 등)
         }
+    }
+
+    private static bool IsWebp(string path)
+    {
+        try
+        {
+            using var fs = File.OpenRead(path);
+            Span<byte> h = stackalloc byte[12];
+            return fs.Read(h) == 12 && h[..4].SequenceEqual("RIFF"u8) && h[8..12].SequenceEqual("WEBP"u8);
+        }
+        catch { return false; }
+    }
+
+    private static BitmapSource ReinterpretAsBgra32(BitmapSource src)
+    {
+        int stride = src.PixelWidth * 4;
+        var pixels = new byte[stride * src.PixelHeight];
+        src.CopyPixels(pixels, stride, 0);
+        var result = BitmapSource.Create(src.PixelWidth, src.PixelHeight, src.DpiX, src.DpiY,
+                                         PixelFormats.Bgra32, null, pixels, stride);
+        result.Freeze();
+        return result;
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;

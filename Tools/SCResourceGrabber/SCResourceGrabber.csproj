@@ -21,6 +21,11 @@
     <Resource Include="app.ico" />
   </ItemGroup>
 
+  <!-- 게임 페이지에 주입하는 오디오 재생 추적 스크립트 -->
+  <ItemGroup>
+    <EmbeddedResource Include="Scripts\audio_hook.js" LogicalName="audio_hook.js" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.*" />
   </ItemGroup>
