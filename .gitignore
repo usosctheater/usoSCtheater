@@ -107,3 +107,11 @@ InitTestScene*.unity*
 
 #리소스 관리 폴더 용량이 커져서 제외
 resource/
+
+# 개발 보조 도구 (Tools/) - 소스만 추적, 빌드 결과물/exe 제외
+!/Tools/**/*.csproj
+/Tools/**/[Bb]in/
+/Tools/**/[Oo]bj/
+/Tools/**/publish/
+/Tools/**/*.exe
+/Tools/**/*.zip

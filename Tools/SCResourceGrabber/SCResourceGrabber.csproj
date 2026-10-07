@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>SCResourceGrabber</RootNamespace>
+    <AssemblyName>SCResourceGrabber</AssemblyName>
+    <Version>0.1.0</Version>
+    <!-- exe 파일 아이콘 (탐색기·바로가기에 표시) -->
+    <ApplicationIcon>app.ico</ApplicationIcon>
+    <!-- publish 시 네이티브 dll까지 exe 하나에 포함 -->
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <DebugType Condition="'$(Configuration)' == 'Release'">none</DebugType>
+  </PropertyGroup>
+
+  <!-- 창 아이콘용 리소스 -->
+  <ItemGroup>
+    <Resource Include="app.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.*" />
+  </ItemGroup>
+
+</Project>

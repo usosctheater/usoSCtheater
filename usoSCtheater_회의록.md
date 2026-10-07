@@ -9,6 +9,48 @@
 ---
 
 <details>
+<summary><b>2026-10-07</b> · [도구] 리소스 수집 도구 SCResourceGrabber 신규 + 저장소 Tools/ 폴더 도입 — <i>완료</i></summary>
+
+### 2026-10-07 — [도구] SCResourceGrabber 신규 작성 + 개발 보조 도구 관리 방식 결정
+
+**배경**
+- 리소스(이미지·보이스·Spine 등)를 CYKViewer에서 찾아 DevTools로 하나씩 받던 작업이 오래 걸려 일괄 수집 도구를 만들기로 함
+- CYKViewer는 WPF + WebView2 앱이라 Edge 확장(DevTools 패널)을 붙일 수 없음 → Chrome/Edge 확장 시안은 폐기
+- 기능을 계속 추가할 예정이라 확장 프로그램보다 자유도가 높은 별도 프로그램으로 결정, 언어는 Unity 확장성을 고려해 C#
+
+**SCResourceGrabber v0.1** (`Tools/SCResourceGrabber`, C# WPF + WebView2, .NET 10)
+| 파일 | 역할 |
+|---|---|
+| `MainWindow.xaml(.cs)` | 왼쪽 게임 화면(WebView2, 주소창·DevTools 버튼), 오른쪽 분류 필터·목록(썸네일)·미리보기(이미지/오디오/텍스트)·저장 |
+| `Services/ResourceCapture.cs` | `WebResourceResponseReceived`로 응답 본문 캡처 → 세션 캐시 파일 기록 (같은 URL 1회, GET·2xx만) |
+| `Services/ResourceClassifier.cs` | URL 확장자 / 매직 바이트 / 텍스트 패턴 / Content-Type으로 분류 — 이미지·오디오·비디오·Spine(atlas, skeleton json, skel)·JSON·폰트·기타 |
+| `Services/ResourceSaver.cs` | 저장 경로(URL 경로 유지 또는 분류별 폴더), 동일 내용 건너뜀, 이름 충돌 시 번호 |
+| `Services/AppSettings.cs` | `%AppData%\SCResourceGrabber\settings.json` (시작 주소, 저장 폴더, HostFilter 등) |
+| `Models/CapturedResource.cs` | 캡처 항목 모델 (썸네일 지연 로딩) |
+- 로그인: 전용 프로필 `%LocalAppData%\SCResourceGrabber\Profile` 유지 → 첫 실행 때만 로그인
+- 실행 파일: `dotnet publish` 단일 exe (네이티브 dll 포함), 아이콘 `app.ico`(icon.png 변환)
+- 사용자 실행·리소스 로드 테스트 완료
+
+**저장소 구조 결정 (개발 보조 도구 관리)**
+- 메인 저장소 하나에서 관리, 별도 저장소/서브모듈은 사용하지 않음 (다른 프로젝트 공유·별도 배포가 생기면 그때 분리)
+- Unity 에디터 안에서 도는 도구(녹화, Spine 임포트 등) → 기존처럼 `usoSCtheater/Assets/Editor` 쪽
+- 독립 실행 프로그램 → 저장소 루트 `Tools/` (Unity 프로젝트 밖이라 Unity가 읽지 않음)
+- 소스만 추적, 빌드 결과물·exe는 무시 (exe는 Tools 폴더 안에 두고 사용)
+
+**변경 위치**
+| 파일 | 변경 |
+|---|---|
+| `Tools/SCResourceGrabber/` | 신규 (`resource/SCResourceGrabber`에서 이동) |
+| `.gitignore` (루트) | `Tools/` 규칙 추가 — `!/Tools/**/*.csproj`(기존 `*.csproj` 무시 규칙 예외), `bin/`·`obj/`·`publish/`·`*.exe`·`*.zip` 무시 |
+
+**알려진 제한 / 다음 후보**
+- 206(부분 응답) 스트리밍 미디어는 건너뜀, Service Worker 요청은 캡처 안 될 수 있음
+- 오디오 미리보기는 Windows MediaPlayer 기반 (ogg는 코덱 없으면 재생 불가, 저장은 정상)
+- 추가 예정 기능: 미리보기 강화, Spine 묶음(atlas·json·png) 처리 등
+
+</details>
+
+<details>
 <summary><b>2026-10-06</b> · [기능] 시나리오 태그·등장인물 데이터(ScenarioData.xml) → 카탈로그 동기화 — <i>완료</i></summary>
 
 ### 2026-10-06 — [기능] 시나리오 태그·등장인물 데이터 1단계: 데이터 문서 + 카탈로그 동기화
