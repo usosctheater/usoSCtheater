@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  아이돌 체크리스트의 유닛 분류. 위에서부터 순서대로 왼쪽→오른쪽에 표시된다.
+  Idols = idolId 목록 (쉼표 구분, idollist API의 idolId). 유닛 안 멤버 순서는 아이돌 목록 순서를 따른다.
+  여기에 없는 아이돌(새로 추가된 아이돌 등)은 자동으로 "기타"에 들어간다.
+-->
+<IdolUnits>
+  <Unit Name="イルミネーションスターズ" Idols="1, 2, 3" />
+  <Unit Name="アンティーカ" Idols="4, 5, 6, 7, 8" />
+  <Unit Name="放課後クライマックスガールズ" Idols="9, 10, 11, 12, 13" />
+  <Unit Name="アルストロメリア" Idols="14, 15, 16" />
+  <Unit Name="ストレイライト" Idols="17, 18, 19" />
+  <Unit Name="ノクチル" Idols="20, 21, 22, 23" />
+  <Unit Name="シーズ" Idols="24, 25" />
+  <Unit Name="コメティック" Idols="26, 27, 28" />
+  <Unit Name="B小町" Idols="801, 802, 803" />
+  <Unit Name="기타" Idols="91, 804" />
+</IdolUnits>

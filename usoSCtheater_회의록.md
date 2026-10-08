@@ -9,6 +9,64 @@
 ---
 
 <details>
+<summary><b>2026-10-08</b> · [도구] Spine 관리 도구 SCSpineManager 신규 — 목록·명명 규칙·일괄 다운로드(WebP→PNG)·신규 감지·리소스 탭·유닛 필터 — <i>완료</i></summary>
+
+### 2026-10-08 — [도구] SCSpineManager (Spine 전용 관리 프로그램) 1차: 다운로드·리소스 관리
+
+`Tools/SCSpineManager` (C# WPF, .NET 10, RG와 같은 구성·단일 exe). 착수 문서: 프로젝트 문서 `claude/SCSpineManager-handoff.md`
+
+**1. 목록 받기 + 명명 규칙 + 받을 계획**
+- 출처: spine.shinycolors.moe의 API(`idollist`, `dresslist?idolId=`) + 파일 서버(`cf-static.shinycolors.moe/{path}data.json·data.atlas·data.png`)
+- [목록 갱신]: 요청 약 34회, 1초 간격. 서버 응답 원문을 `SpineData\_meta\idollist.json`, `dresslist\{idolId}.json`에 스냅샷으로 저장. 하나라도 실패·취소하면 이전 스냅샷 유지
+- 저장 루트 `D:\usosctheater\resource\SpineData` (기존 `resource\Spine`에는 다른 데이터가 있어 새 폴더)
+- 명명 규칙(`SpineNaming`): 폴더 `{DressType}/{DressName}/`, 파일 `{그룹 접두어}{spineType}_{ID}` + `.json` / `.atlas.txt`(spine-unity 인식 확장자) / `.png`
+  - 그룹 접두어: idols 없음, `awake_`, `support_`, `evo_` (처음 보는 그룹은 `그룹명_`으로 임시 처리 + 경고)
+  - ID: 기본 enzaId, 서버 경로 마지막 폴더명이 enzaId로 시작하는 숫자면 그 값 (evo 스킨 `…01~…04` 4종 구분)
+  - 폴더명 금지 문자(`\/:*?"<>|`)는 지우기만 함, 빈 의상명(【】…)은 그대로
+- 계획(`SpinePlanner`): `exist:false` 6벌·path 없는 항목 16개 건너뜀, 같은 서버 경로를 공유하는 의상(Special `…0370`: S.T.E.P./エモーショナルユニフォーム 7건)은 1번만 받고 다른 의상 폴더에 로컬 복사, 서로 다른 경로가 같은 파일명이 되면 "이름 충돌"로 표시
+- 실측(2026-10-08): 아이돌 33명·의상 1,571벌 → 세트 4,600개(파일 13,800개), 로컬 복사 12세트, 이름 충돌 0
+
+**2. 일괄 다운로드**
+- `SpineDownloader`: 세트(json → atlas → 텍스처) 단위, 요청은 하나씩·시작 간격 1초. 3파일을 모두 받은 뒤 `.part`로 쓰고 이름 변경 → 중간 실패·중지 시 반쯤 저장된 세트가 남지 않음
+- 텍스처(`TextureConverter`): 서버 `data.png` 중 실제로는 WebP인 파일이 섞여 있음(円香 시험: PNG 79 / WebP 70) → 바이트로 형식 판별, PNG면 그대로, 그 외는 SkiaSharp(MIT)로 PNG 변환(Unpremul 유지)
+- atlas 페이지명(`data.png`)을 새 파일명으로 교체, 페이지가 여러 장이면 `이름_2.png`…
+- 재시도: 네트워크 오류·429·5xx는 30초 → 2분 → 10분, 그래도 429·5xx면 큐 전체 중지, 404 등은 그 세트만 실패
+- 매니페스트(`_meta\manifest.json`): 서버 경로별 저장 이름·폴더·ETag·Last-Modified·크기·원본 이미지 형식. 20세트마다 + 큐 종료 시 저장. 기록 + 파일이 모두 있으면 완료로 보고 건너뜀(이어받기), 복사본만 없으면 로컬 복사
+- 로그: 화면 + `_meta\log.txt`
+- 시험: 樋口円香 149세트, 요청 447회(재시도 0), 7분 31초, 150MB, 실패 0. 재실행 시 요청 0회로 전부 건너뜀 확인. 전체 예상: 약 3시간 50분, 4.5~5GB
+
+**3. 화면**
+- 다운로드 탭: 상태 열(대기/받는 중/완료/실패), 진행 바·남은 시간, [체크한 아이돌 받기] / [전체 받기] / [중지], 받지 않은 세트를 목록 맨 위에 표시(다운로드 중에는 정렬 고정, 끝나면 다시 정렬), 검색
+- 아이돌 필터(`IdolFilterBar`, 다운로드·리소스 탭 공용): [전체] + 유닛 열을 가로로, 유닛 아래 멤버를 세로로. 유닛 체크박스는 [전체]와 같은 규칙(하나라도 꺼져 있으면 전부 켬, 일부만 켜져 있으면 중간 상태). 탭별 체크 상태를 설정에 따로 저장
+  - 유닛 분류: `Resources/IdolUnits.xml` (exe에 포함, 수정 시 재빌드) — イルミネーションスターズ / アンティーカ / 放課後クライマックスガールズ / アルストロメリア / ストレイライト / ノクチル / シーズ / コメティック / B小町(801~803) / 기타(91 はづき, 804 黒川あかね). 목록에 없는 새 아이돌은 자동으로 기타
+- 신규 감지: [목록 갱신] 뒤 이전 스냅샷과 비교(`CatalogDiff`) → 바뀌었으면 프로그램 안 알림 창(`ChangeNoticeWindow`): 새 아이돌·새 의상·기존 의상에 추가된 세트·의상명/종류 변경·목록에서 사라진 의상/세트. 사라져도 받은 파일은 지우지 않음
+- 리소스 탭: 받은 세트를 실제 폴더 구조로 표시 — SpineData(위에 고정) / 의상 종류(`dress_type_order` 순) / 의상(아이돌 목록 순 → enzaId) / 세트 / 파일. 선택 시 정보(서버 경로·받은 시각·파일 크기·원본 형식·ETag)·텍스처 미리보기·탐색기에서 열기, [새로 고침]은 실제 파일 존재까지 다시 확인
+- 라이선스 탭: `Resources/THIRD-PARTY-NOTICES.txt` 표시 (현재 내용 비어 있음)
+
+**변경 위치**
+| 파일 | 변경 |
+|---|---|
+| `Tools/SCSpineManager/` (신규) | `SCSpineManager.csproj`(SkiaSharp 3.*, 리소스 포함), `App.xaml(.cs)`, `MainWindow.xaml(.cs)`, `ChangeNoticeWindow.cs`, `.gitignore` |
+| `Models/` | `CatalogModels.cs`(API 형식), `SpinePlan.cs`(세트·저장 위치·건너뜀), `ResourceNode.cs`(리소스 트리 + `ResourceTreeBuilder`) |
+| `Services/` | `AppSettings`(`%AppData%\SCSpineManager\settings.json`), `SpineNaming`, `SpineCatalog`(`CatalogSnapshot`, `SpineCatalogClient`), `SpinePlanner`, `SpineDownloader`(+`AtlasPages`), `SpineManifest`, `TextureConverter`, `IdolFilterBar`(+`IdolUnits`), `CatalogDiff` |
+| `Resources/` | `IdolUnits.xml`, `THIRD-PARTY-NOTICES.txt` |
+
+**원인**: Spine 데이터를 개인 운영 사이트(bbang)에 의존 → 서버 상태 보장 불가. 게임은 atlas·json을 암호화해서 보내고 복호화는 하지 않기로 함 → 이미 풀린 데이터를 공개하는 spine.shinycolors.moe를 출처로 하는 전용 도구로 일괄 관리
+
+**고려 사항**
+- 개인 운영 서버 → 동시 요청 없음·1초 간격·받은 파일 재요청 없음·느린 재시도. 전체 받기 전 운영자 문의 고려. 데이터는 게임사 저작물 — 원작사 2차 창작 가이드라인을 따름
+- 매니페스트가 서버 경로 기준이라, 명명 규칙이 바뀌어도 서버 요청 없이 로컬에서 다시 정리 가능
+- 변경 확인(ETag 비교)은 전체 자동 확인 시 요청 1만 회 이상이라 넣지 않음 (서버에서 json이 수정된 사례는 있음)
+
+**결정·보류**
+- 결정: 뷰어 재생 규칙은 게임(`CGManager`)과 완전히 동일, eye_ 트랙은 당분간 프로젝트와 같게(트랙 0) — 추후 트랙 수를 늘려 face 위에 얹도록 프로젝트·매니저 함께 수정 예정, 내보내기는 트랙 문자열만, 렌더러는 PixiJS v7 + pixi-spine(3.7)
+- 보류: 라이선스 고지(SkiaSharp, Spine Runtimes License, pixi-spine)는 프로그램 완성 후 라이선스 탭에 추가. Spine 런타임은 통합 시 유효한 Spine Editor 라이선스 필요(spine-unity와 같은 조건)
+- 보류: 전체 다운로드 실행(현재 円香만 받음), 바로가기 `SCSpineManager.lnk`는 PC 절대 경로라 커밋하지 않음
+- 다음: 뷰어(아이돌·의상·타입 선택 → 재생, SpineDebugScene 기능 전부, 트랙 문자열 내보내기)
+
+</details>
+
+<details>
 <summary><b>2026-10-07</b> · [도구] SCResourceGrabber 상세 창 분리 + 추적 모드 + 단축키·필터·정렬 + 암호화 분류 + Spine 수집 창 — <i>테스트 필요</i></summary>
 
 ### 2026-10-07 — [도구] SCResourceGrabber: 상세 창 분리, 저장 경로 변경, 추적 모드, 단축키
