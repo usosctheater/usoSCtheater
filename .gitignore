@@ -115,3 +115,8 @@ resource/
 /Tools/**/publish/
 /Tools/**/*.exe
 /Tools/**/*.zip
+
+# 내부 문서 (핸드오프·회의록 등) - 비공개 레포 usoSCtheater-docs에서 별도 관리
+/_docs/
+# Claude 작업 결과 임시 폴더
+/Claude outputs/
