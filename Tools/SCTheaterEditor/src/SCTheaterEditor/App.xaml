@@ -1,0 +1,7 @@
+<Application x:Class="SCTheaterEditor.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             ShutdownMode="OnMainWindowClose">
+    <!-- 변경: StartupUri 삭제 — 중복 실행 확인·설정·로그 준비 후 App.OnStartup에서 창을 띄움 -->
+    <Application.Resources/>
+</Application>

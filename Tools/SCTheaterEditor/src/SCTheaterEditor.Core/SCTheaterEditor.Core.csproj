@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- TE 핵심 로직 (화면 없음): 목록·다운로드·명명 규칙·립·애니메이션 규칙·설정·로그 -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>SCTheaterEditor</RootNamespace>
+    <AssemblyName>SCTheaterEditor.Core</AssemblyName>
+    <Version>0.2.0</Version>
+    <DebugType Condition="'$(Configuration)' == 'Release'">none</DebugType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 유닛 분류 (아이돌 필터) -->
+    <EmbeddedResource Include="Resources\IdolUnits.xml" LogicalName="IdolUnits.xml" />
+    <!-- 립 기본값 (게임 프로젝트 Assets/Resources/Data/DefaultLipData.xml의 복사본 — 게임 쪽을 고치면 함께 갱신) -->
+    <EmbeddedResource Include="Resources\DefaultLipData.xml" LogicalName="DefaultLipData.xml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- WebP 텍스처 → PNG 변환 (MIT) -->
+    <PackageReference Include="SkiaSharp" Version="3.*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="SCTheaterEditor.Tests" />
+  </ItemGroup>
+
+</Project>

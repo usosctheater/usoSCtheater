@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>SCTheaterEditor</RootNamespace>
+    <AssemblyName>SCTheaterEditor</AssemblyName>
+    <Version>0.2.0</Version>
+    <!-- publish 시 네이티브 dll까지 exe 하나에 포함 (RG와 같은 구성) -->
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <DebugType Condition="'$(Configuration)' == 'Release'">none</DebugType>
+  </PropertyGroup>
+
+  <!-- 라이선스 탭에 표시할 고지 문구 (exe에 포함) -->
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\THIRD-PARTY-NOTICES.txt" LogicalName="THIRD-PARTY-NOTICES.txt" />
+  </ItemGroup>
+
+  <!-- 뷰어 페이지 (WebView2가 https://viewer.scsm/ 으로 읽음, 경로 = LogicalName에서 "viewer/" 뒤) -->
+  <ItemGroup>
+    <EmbeddedResource Include="Viewer\viewer.html" LogicalName="viewer/viewer.html" />
+    <EmbeddedResource Include="Viewer\viewer.js" LogicalName="viewer/viewer.js" />
+    <EmbeddedResource Include="Viewer\lib\pixi.min.js" LogicalName="viewer/lib/pixi.min.js" />
+    <EmbeddedResource Include="Viewer\lib\pixi-spine.js" LogicalName="viewer/lib/pixi-spine.js" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- 뷰어 (RG와 같은 패키지) -->
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SCTheaterEditor.Core\SCTheaterEditor.Core.csproj" />
+  </ItemGroup>
+
+</Project>

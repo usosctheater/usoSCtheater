@@ -110,12 +110,13 @@ resource/
 
 # 개발 보조 도구 (Tools/) - 소스만 추적, 빌드 결과물/exe 제외
 !/Tools/**/*.csproj
+!/Tools/**/*.slnx
 /Tools/**/[Bb]in/
 /Tools/**/[Oo]bj/
 /Tools/**/publish/
 /Tools/**/*.exe
 /Tools/**/*.zip
-# SCSpineManager 데이터 (exe 옆 SpineData, 용량이 커서 제외)
+# SCTheaterEditor 데이터 (exe 옆 SpineData, 용량이 커서 제외)
 /Tools/**/SpineData/
 
 # 내부 문서 (핸드오프·회의록 등) - 비공개 레포 usoSCtheater-docs에서 별도 관리
