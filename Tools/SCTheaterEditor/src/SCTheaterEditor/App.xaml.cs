@@ -15,6 +15,12 @@ public partial class App : Application
     /// <summary>프로그램 전체 설정 (ViewModel에는 생성자로 넘김 — 뷰어 탭 코드만 MainWindow를 통해 사용)</summary>
     public static AppSettings Settings { get; private set; } = new();
 
+    /// <summary>스크립트 탭 무대(WebView2) 연결 — ScriptView가 WebView2를 붙이고, MainWindow가 단축키를 연결</summary>
+    public static WpfStageHost Stage { get; } = new();
+
+    /// <summary>배경 이미지 목록 (exe 옆 Backgrounds\)</summary>
+    public static BackgroundLibrary Backgrounds { get; private set; } = new(BackgroundLibrary.DefaultFolder);
+
     private const string MutexName = @"Local\SCTheaterEditor.SingleInstance";
     private Mutex? _singleInstance;
     private static DispatcherTimer? _saveTimer;
@@ -65,7 +71,7 @@ public partial class App : Application
         var library = new SpineLibrary(Settings.SaveFolder, manifest);
         library.Rebuild();
         var vm = new MainViewModel(
-            Settings, library, new WpfDialogService(), new WpfDispatcher(Dispatcher),
+            Settings, library, Backgrounds, Stage, new WpfDialogService(), new WpfDispatcher(Dispatcher),
             catalogFactory: () => new SpineCatalogClient(Settings),
             downloaderFactory: () => new SpineDownloader(Settings, library.Manifest, AppLog.Shared),
             saveSettings: SaveSettingsSoon,

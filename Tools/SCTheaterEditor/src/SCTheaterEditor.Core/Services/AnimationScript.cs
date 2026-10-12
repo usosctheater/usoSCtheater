@@ -14,6 +14,28 @@ public static class AnimationScript
     /// <summary>무한 반복 애니메이션 (CGManager.FORCE_LOOP_ANIMS)</summary>
     public static readonly HashSet<string> ForceLoopAnims = new() { "wait", "blank" };
 
+    /// <summary>알려진 접두어 (트랙 0의 우선 그룹 = 이 접두어가 없는 것)</summary>
+    public static readonly string[] KnownPrefixes = { "face_", "lip_", "arm_", "eye_" };
+
+    /// <summary>트랙별 우선 표시 접두어 (SpineDebugManager와 동일: 3은 arm_ 다음 eye_)</summary>
+    private static readonly Dictionary<int, string[]> TrackPriorityPrefixes = new()
+    {
+        { 1, new[] { "face_" } },
+        { 2, new[] { "lip_" } },
+        { 3, new[] { "arm_", "eye_" } },
+    };
+
+    /// <summary>애니메이션 목록에서 이 트랙의 우선 그룹인지 (이전 뷰어 탭 코드에서 이동)</summary>
+    public static bool IsPriority(string name, int track)
+    {
+        if (track == 0) return !KnownPrefixes.Any(p => name.StartsWith(p));
+        return TrackPriorityPrefixes.TryGetValue(track, out var ps) && ps.Any(p => name.StartsWith(p));
+    }
+
+    /// <summary>우선 그룹 안의 순서 (3번 트랙: arm_ → eye_)</summary>
+    public static int PriorityOrder(string name, int track) =>
+        TrackPriorityPrefixes.TryGetValue(track, out var ps) ? Math.Max(0, Array.FindIndex(ps, p => name.StartsWith(p))) : 0;
+
     /// <summary>접두어 기준 트랙 (CGManager.GetTrackIndex와 동일 — eye_는 0)</summary>
     public static int TrackIndex(string name)
     {

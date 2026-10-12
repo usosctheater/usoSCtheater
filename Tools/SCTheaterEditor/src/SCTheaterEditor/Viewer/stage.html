@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>SCTheaterEditor Stage</title>
+<!--
+  스크립트 탭의 무대 페이지 (exe에 포함, https://viewer.scsm/ 으로 제공. 디버그 빌드는 소스 폴더에서 바로 읽음).
+  PixiJS v7 + pixi-spine 4 (Spine 3.7 런타임, 3.6 데이터도 3.7로 처리)
+  모듈: js/bridge.js(C#과 메시지) · js/actor.js(캐릭터 1명: 불러오기·게임 재생 규칙·립) · js/stage.js(1920×1080 무대) · js/main.js(메시지 연결)
+  메시지 형식의 기준은 C# Core/Stage/StageMessages.cs
+-->
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; }
+  body { background: #2b2d31; font: 13px "Malgun Gothic", sans-serif; }
+  #stage { position: absolute; inset: 0; }
+  #message { position: absolute; left: 12px; top: 10px; color: #ddd; pointer-events: none; }
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<div id="message"></div>
+<script src="lib/pixi.min.js"></script>
+<script src="lib/pixi-spine.js"></script>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

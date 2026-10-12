@@ -64,7 +64,7 @@ public sealed partial class ResourceViewModel : ObservableObject
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(SelectedAsset))]
-    [NotifyCanExecuteChangedFor(nameof(OpenCommand), nameof(OpenFolderCommand))]
+    [NotifyCanExecuteChangedFor(nameof(OpenCommand), nameof(AddImmediatelyCommand), nameof(OpenFolderCommand))]
     public partial ResourceItem? SelectedItem { get; set; }
 
     public SpineAsset? SelectedAsset => (SelectedItem as ResourceAssetItem)?.Asset;
@@ -84,11 +84,18 @@ public sealed partial class ResourceViewModel : ObservableObject
 
     private bool HasAsset() => SelectedAsset != null;
 
-    /// <summary>선택한 세트 열기 (뷰어 → 3회차부터 스크립트 탭 미리보기)</summary>
+    /// <summary>선택한 세트를 스크립트 탭 무대에 미리보기 (Space·더블클릭·버튼)</summary>
     [RelayCommand(CanExecute = nameof(HasAsset))]
     private void Open()
     {
         if (SelectedAsset is { } a) _messenger.Send(new OpenSpineMessage(a));
+    }
+
+    /// <summary>추가: 미리보기 없이 바로 무대에 추가 (Ctrl+Space)</summary>
+    [RelayCommand(CanExecute = nameof(HasAsset))]
+    private void AddImmediately()
+    {
+        if (SelectedAsset is { } a) _messenger.Send(new OpenSpineMessage(a, Immediate: true));
     }
 
     [RelayCommand(CanExecute = nameof(HasAsset))]

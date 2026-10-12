@@ -19,10 +19,14 @@
     <EmbeddedResource Include="Resources\THIRD-PARTY-NOTICES.txt" LogicalName="THIRD-PARTY-NOTICES.txt" />
   </ItemGroup>
 
-  <!-- 뷰어 페이지 (WebView2가 https://viewer.scsm/ 으로 읽음, 경로 = LogicalName에서 "viewer/" 뒤) -->
+  <!-- 스크립트 탭 무대 페이지 (WebView2가 https://viewer.scsm/ 으로 읽음, 경로 = LogicalName에서 "viewer/" 뒤)
+       디버그 빌드는 소스 폴더(Viewer\)에서 바로 읽으므로 JS 수정 후 다시 빌드할 필요 없음 (WpfStageHost) -->
   <ItemGroup>
-    <EmbeddedResource Include="Viewer\viewer.html" LogicalName="viewer/viewer.html" />
-    <EmbeddedResource Include="Viewer\viewer.js" LogicalName="viewer/viewer.js" />
+    <EmbeddedResource Include="Viewer\stage.html" LogicalName="viewer/stage.html" />
+    <EmbeddedResource Include="Viewer\js\bridge.js" LogicalName="viewer/js/bridge.js" />
+    <EmbeddedResource Include="Viewer\js\actor.js" LogicalName="viewer/js/actor.js" />
+    <EmbeddedResource Include="Viewer\js\stage.js" LogicalName="viewer/js/stage.js" />
+    <EmbeddedResource Include="Viewer\js\main.js" LogicalName="viewer/js/main.js" />
     <EmbeddedResource Include="Viewer\lib\pixi.min.js" LogicalName="viewer/lib/pixi.min.js" />
     <EmbeddedResource Include="Viewer\lib\pixi-spine.js" LogicalName="viewer/lib/pixi-spine.js" />
   </ItemGroup>

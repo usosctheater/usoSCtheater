@@ -1,58 +1,87 @@
 using System.IO;
 using System.Reflection;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Threading;
 using CommunityToolkit.Mvvm.Messaging;
-using SCTheaterEditor.Services;
 using SCTheaterEditor.ViewModels;
 
 namespace SCTheaterEditor;
 
 /// <summary>
-/// 메인 창 (변경 2026-10-12: 다운로드·리소스 탭은 MVVM — Views/, Core의 ViewModels/).
-/// 여기에 남은 것: 탭 이동 단축키, 라이선스 탭, 뷰어 탭(MainWindow.Viewer.cs — 3회차에 스크립트 탭으로 전환 예정)
+/// 메인 창: 탭 틀 + 탭 이동 단축키 + 라이선스 탭. 각 탭 화면은 Views/, 동작은 Core의 ViewModels/.
+/// 탭 이동 (E-001 수정, 2026-10-12)
+/// - Ctrl+PageUp/PageDown: Window_PreviewKeyDown (무대 WebView2에 포커스가 있어도 WPF WebView2 컨트롤이 Ctrl 조합을 WPF 키 이벤트로 넘겨 줌)
+/// - 원인: 탭을 바꿔도 숨겨진 WebView2가 키보드 포커스(Win32)를 쥔 채 남아, 다음 키가 화면에 없는 컨트롤로 가서 사라짐
+///   → 탭을 바꾸면 새 탭 내용으로 키보드 포커스를 옮김
 /// </summary>
 public partial class MainWindow : Window
 {
     private readonly MainViewModel _vm;
-    private readonly AppSettings _settings;
 
     public MainWindow(MainViewModel vm)
     {
         _vm = vm;
-        _settings = vm.Settings;
         InitializeComponent();
         DataContext = vm;
 
         LicenseBox.Text = LoadEmbeddedText("THIRD-PARTY-NOTICES.txt");
 
-        // 리소스 탭 → 뷰어에서 열기 (탭 사이 메시지)
-        WeakReferenceMessenger.Default.Register<OpenSpineMessage>(this, (_, m) => OpenInViewer(m.Asset));
+        // 탭 사이 메시지: 이 탭으로 (스크립트 탭 미리보기 → Esc → 리소스 탭 복귀 등)
+        WeakReferenceMessenger.Default.Register<ShowTabMessage>(this, (_, m) => ShowTab(m.Tab));
         Closed += (_, _) => WeakReferenceMessenger.Default.UnregisterAll(this);
 
         // 저장된 목록은 창이 뜬 뒤 읽음 (매니페스트 v2 이전 포함)
         Loaded += (_, _) => _vm.Initialize();
     }
 
-    // Ctrl+PageUp / Ctrl+PageDown → 이전·다음 탭 (끝에서는 반대쪽 끝으로)
     private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
     {
-        if (Keyboard.Modifiers != ModifierKeys.Control) return;
-        int step = e.Key switch
+        if (HandleTabKeys(e.Key, Keyboard.Modifiers)) e.Handled = true;
+    }
+
+    /// <summary>Ctrl+PageUp / Ctrl+PageDown → 이전·다음 탭 (끝에서는 반대쪽 끝으로). 처리했으면 true</summary>
+    private bool HandleTabKeys(Key key, ModifierKeys mods)
+    {
+        if (mods != ModifierKeys.Control) return false;
+        int step = key switch
         {
             Key.PageDown => 1,
             Key.PageUp => -1,
             _ => 0,
         };
-        if (step == 0) return;
+        if (step == 0) return false;
         int count = MainTabs.Items.Count;
         MainTabs.SelectedIndex = (MainTabs.SelectedIndex + step + count) % count;
-        e.Handled = true;
+        return true;
     }
 
-    private static void Log(string message) => AppLog.Shared.Info(message);
-    private static void LogWarn(string message) => AppLog.Shared.Warn(message);
-    private static void LogError(string message, Exception ex) => AppLog.Shared.Error(message, ex);
+    private void ShowTab(AppTab tab)
+    {
+        MainTabs.SelectedItem = tab switch
+        {
+            AppTab.Download => DownloadTab,
+            AppTab.Resource => ResourceTab,
+            AppTab.Script => ScriptTab,
+            _ => LicenseTab,
+        };
+    }
+
+    /// <summary>탭을 바꾸면 새 탭 내용으로 포커스 이동 (리소스 탭은 선택한 세트로)</summary>
+    private void MainTabs_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (e.Source != MainTabs) return;   // 안쪽 목록의 선택 변경이 올라온 것은 무시
+        Dispatcher.BeginInvoke(DispatcherPriority.Input, () =>
+        {
+            if (MainTabs.SelectedItem == ResourceTab) ResourcePage.FocusSelection();
+            else if (MainTabs.SelectedContent is IInputElement content)
+            {
+                Keyboard.Focus(content);
+                if (content is UIElement ui && !ui.IsKeyboardFocusWithin) ui.MoveFocus(new TraversalRequest(FocusNavigationDirection.First));
+            }
+        });
+    }
 
     private static string LoadEmbeddedText(string name)
     {

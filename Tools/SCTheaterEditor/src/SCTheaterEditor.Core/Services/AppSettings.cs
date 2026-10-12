@@ -188,7 +188,7 @@ public sealed class ResourceSettings
     public string? SelectedUnit { get; set; }
 }
 
-/// <summary>뷰어 탭 (3회차에 스크립트 탭으로 발전 예정)</summary>
+/// <summary>무대 재생 설정 (스크립트 탭의 선택 캐릭터 패널, 이전 뷰어 탭 설정을 그대로 사용)</summary>
 public sealed class ViewerSettings
 {
     /// <summary>true면 선택한 트랙만 교체(디버그 씬 방식), false면 게임 방식(전체 다시 재생)</summary>
@@ -200,7 +200,9 @@ public sealed class ViewerSettings
     public double LipSeconds { get; set; } = 3.0;
 }
 
-/// <summary>스크립트 탭 (에디터) — 문서 모델 단계에서 채움</summary>
+/// <summary>스크립트 탭 (에디터)</summary>
 public sealed class EditorSettings
 {
+    /// <summary>추가: 무대에 마지막으로 고른 배경 키 (없으면 null)</summary>
+    public string? Background { get; set; }
 }

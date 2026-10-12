@@ -71,8 +71,10 @@
         <DockPanel Grid.Row="1" Grid.Column="2" Margin="6,0,0,0">
             <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
                 <Button Content="탐색기에서 열기" Padding="10,2" Command="{Binding OpenFolderCommand}"/>
-                <Button Content="뷰어에서 열기" Padding="10,2" Margin="6,0,0,0" Command="{Binding OpenCommand}"
-                        ToolTip="세트를 더블클릭하거나 스페이스바를 눌러도 열립니다"/>
+                <Button Content="스크립트 탭에서 미리보기" Padding="10,2" Margin="6,0,0,0" Command="{Binding OpenCommand}"
+                        ToolTip="세트를 더블클릭하거나 Space를 눌러도 됩니다. 무대에서 Enter = 적용, Esc = 취소하고 이 탭으로"/>
+                <Button Content="바로 추가" Padding="10,2" Margin="6,0,0,0" Command="{Binding AddImmediatelyCommand}"
+                        ToolTip="미리보기 없이 무대의 다음 빈자리에 바로 올립니다 (Ctrl+Space)"/>
             </StackPanel>
             <TextBox DockPanel.Dock="Top" Text="{Binding InfoText, Mode=OneWay}" Height="250" IsReadOnly="True"
                      VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" TextWrapping="NoWrap" FontFamily="Consolas"/>
