@@ -173,6 +173,9 @@ public sealed class DownloadSettings
 
     /// <summary>체크한 아이돌 (idolId). null이면 전부 체크</summary>
     public List<int>? CheckedIdolIds { get; set; }
+
+    /// <summary>추가: 아이돌 필터에서 고른 유닛 (드롭다운)</summary>
+    public string? SelectedUnit { get; set; }
 }
 
 /// <summary>리소스 탭</summary>
@@ -180,6 +183,9 @@ public sealed class ResourceSettings
 {
     /// <summary>체크한 아이돌 (idolId). null이면 전부 체크</summary>
     public List<int>? CheckedIdolIds { get; set; }
+
+    /// <summary>추가: 아이돌 필터에서 고른 유닛 (드롭다운)</summary>
+    public string? SelectedUnit { get; set; }
 }
 
 /// <summary>뷰어 탭 (3회차에 스크립트 탭으로 발전 예정)</summary>

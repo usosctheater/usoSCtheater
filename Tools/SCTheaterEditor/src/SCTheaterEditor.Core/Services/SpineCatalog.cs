@@ -73,7 +73,7 @@ public sealed class CatalogSnapshot
 /// 목록 API 요청. 요청은 하나씩 순서대로, 요청 사이에 설정된 간격을 둔다 (서버 부담 최소화).
 /// 전체 요청 수 = 1(idollist) + 아이돌 수(dresslist) ≈ 34회
 /// </summary>
-public sealed class SpineCatalogClient : IDisposable
+public sealed class SpineCatalogClient : ICatalogSource
 {
     private readonly HttpClient _http;
     private readonly AppSettings _settings;

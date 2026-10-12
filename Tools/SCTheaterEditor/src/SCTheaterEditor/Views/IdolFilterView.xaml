@@ -1,0 +1,27 @@
+<UserControl x:Class="SCTheaterEditor.Views.IdolFilterView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- 아이돌 필터 (다운로드·리소스 탭 공용): 유닛 드롭다운 → 그 유닛 멤버 체크박스. DataContext = IdolFilterViewModel -->
+    <DockPanel>
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,4">
+            <TextBlock Text="유닛:" VerticalAlignment="Center" Margin="0,0,6,0"/>
+            <ComboBox ItemsSource="{Binding Units}" SelectedItem="{Binding SelectedUnit}" DisplayMemberPath="Label"
+                      MinWidth="240" VerticalContentAlignment="Center"/>
+            <Button Content="유닛 전체 켜기/끄기" Command="{Binding ToggleUnitCommand}" Margin="6,0,0,0" Padding="8,1"
+                    ToolTip="고른 유닛 멤버가 모두 켜져 있으면 모두 끄고, 아니면 모두 켭니다"/>
+            <TextBlock Text="{Binding Summary}" VerticalAlignment="Center" Margin="12,0,0,0" Foreground="Gray"/>
+        </StackPanel>
+        <ItemsControl ItemsSource="{Binding VisibleMembers}">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <WrapPanel/>
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <CheckBox Content="{Binding Label}" IsChecked="{Binding IsChecked}" Margin="0,1,14,1"/>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+    </DockPanel>
+</UserControl>

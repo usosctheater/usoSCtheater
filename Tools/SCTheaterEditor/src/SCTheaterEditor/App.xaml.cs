@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Threading;
 using SCTheaterEditor.Services;
+using SCTheaterEditor.ViewModels;
 
 namespace SCTheaterEditor;
 
@@ -11,7 +12,7 @@ namespace SCTheaterEditor;
 /// </summary>
 public partial class App : Application
 {
-    /// <summary>프로그램 전체 설정 (이후 MVVM 전환 때 ViewModel에 넘겨주는 방식으로 바뀜)</summary>
+    /// <summary>프로그램 전체 설정 (ViewModel에는 생성자로 넘김 — 뷰어 탭 코드만 MainWindow를 통해 사용)</summary>
     public static AppSettings Settings { get; private set; } = new();
 
     private const string MutexName = @"Local\SCTheaterEditor.SingleInstance";
@@ -59,7 +60,19 @@ public partial class App : Application
         // 4) 이전 빌드의 임시 폴더 정리 (시작을 늦추지 않도록 백그라운드)
         _ = Task.Run(() => Housekeeping.CleanExtractionFolders(AppSettings.AppName, AppLog.Shared));
 
-        var window = new MainWindow();
+        // 5) 공용 데이터와 화면 (변경: MVVM — App이 서비스를 만들어 ViewModel에 넘김)
+        var manifest = SpineManifest.Load(Settings.MetaFolder);
+        var library = new SpineLibrary(Settings.SaveFolder, manifest);
+        library.Rebuild();
+        var vm = new MainViewModel(
+            Settings, library, new WpfDialogService(), new WpfDispatcher(Dispatcher),
+            catalogFactory: () => new SpineCatalogClient(Settings),
+            downloaderFactory: () => new SpineDownloader(Settings, library.Manifest, AppLog.Shared),
+            saveSettings: SaveSettingsSoon,
+            messenger: CommunityToolkit.Mvvm.Messaging.WeakReferenceMessenger.Default,
+            log: AppLog.Shared);
+
+        var window = new MainWindow(vm);
         MainWindow = window;
         window.Show();
     }

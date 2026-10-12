@@ -1,16 +1,60 @@
 using System.IO;
 using System.Text.Json;
+using SCTheaterEditor.Models;
 
 namespace SCTheaterEditor.Services;
 
 /// <summary>
 /// 받은 세트 기록. {SaveFolder}\_meta\manifest.json
 /// 키 = 서버 경로(SourcePath). 이름 규칙이 바뀌어도 이 기록으로 서버 요청 없이 로컬에서 다시 정리할 수 있다.
+/// v2 (2026-10-12): 아이돌 표(Idols)와 세트별 아이돌·의상 정보를 함께 기록 → 서버 목록 스냅샷 없이도 리소스 목록·CG 키를 만들 수 있음
 /// </summary>
 public sealed class SpineManifest
 {
-    public int Version { get; set; } = 1;
+    public const int CurrentVersion = 2;
+
+    /// <summary>읽은 파일의 형식 버전 (v1 파일은 1로 읽힘 → FillFromCatalog로 채운 뒤 2)</summary>
+    public int Version { get; set; } = CurrentVersion;
+
+    /// <summary>추가(v2): idolId → 아이돌 정보 (이름·nickName·아이돌 목록 순서)</summary>
+    public Dictionary<int, ManifestIdol> Idols { get; set; } = new();
+
     public Dictionary<string, ManifestEntry> Sets { get; set; } = new(StringComparer.Ordinal);
+
+    /// <summary>v1 기록이거나 아이돌·의상 정보가 빠진 세트가 있음 → 목록 스냅샷으로 채워야 함</summary>
+    public bool NeedsCatalogInfo => Version < CurrentVersion || Sets.Values.Any(e => e.IdolId == 0 || !Idols.ContainsKey(e.IdolId));
+
+    /// <summary>아이돌 표 갱신 (목록 스냅샷 기준, 목록 순서 = 표시 순서). 바뀌었으면 true</summary>
+    public bool UpdateIdols(IReadOnlyList<IdolInfo> idols)
+    {
+        bool changed = false;
+        for (int i = 0; i < idols.Count; i++)
+        {
+            var src = idols[i];
+            if (Idols.TryGetValue(src.IdolId, out var cur) && cur.Name == src.IdolName && cur.NickName == src.NickName && cur.Order == i)
+                continue;
+            Idols[src.IdolId] = new ManifestIdol { Name = src.IdolName, NickName = src.NickName, Order = i };
+            changed = true;
+        }
+        return changed;
+    }
+
+    /// <summary>
+    /// v1 → v2 이전: 다운로드 계획(목록 스냅샷 기준)으로 세트별 아이돌·의상 정보를 채운다. 채운 세트 수 반환.
+    /// 이미 정보가 있는 세트도 계획과 다르면 갱신 (의상명 변경 등)
+    /// </summary>
+    public int FillFromCatalog(CatalogSnapshot snap, SpinePlan plan)
+    {
+        UpdateIdols(snap.Idols);
+        int filled = 0;
+        foreach (var set in plan.Sets)
+        {
+            if (!Sets.TryGetValue(set.SourcePath, out var e)) continue;
+            if (e.ApplySetInfo(set)) filled++;
+        }
+        Version = CurrentVersion;
+        return filled;
+    }
 
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
@@ -45,9 +89,38 @@ public sealed class SpineManifest
         SafeFile.WriteAllText(PathOf(metaFolder), JsonSerializer.Serialize(this, JsonOptions), keepBackup: true);
 }
 
+/// <summary>추가(v2): 아이돌 1명 (idollist 기준)</summary>
+public sealed class ManifestIdol
+{
+    public string Name { get; set; } = "";
+    /// <summary>게임 키(CG 키 앞부분, DefaultLipData 아이돌 이름)와 같은 형식</summary>
+    public string NickName { get; set; } = "";
+    /// <summary>아이돌 목록 순서 (0부터)</summary>
+    public int Order { get; set; }
+}
+
 /// <summary>세트 1개의 기록</summary>
 public sealed class ManifestEntry
 {
+    // 추가(v2): 아이돌·의상 정보 (첫 저장 위치 = Folders[0] 기준, 의상명은 서버 원문 — 폴더명처럼 문자를 지우지 않음)
+    public int IdolId { get; set; }
+    public string DressType { get; set; } = "";
+    public int DressTypeOrder { get; set; }
+    public string DressName { get; set; } = "";
+
+    /// <summary>다운로드 계획의 세트 정보로 채움. 바뀐 값이 있으면 true</summary>
+    public bool ApplySetInfo(SpineSet set)
+    {
+        var t = set.Targets[0];
+        if (IdolId == set.IdolId && DressType == t.DressType && DressTypeOrder == t.DressTypeOrder && DressName == t.DressName)
+            return false;
+        IdolId = set.IdolId;
+        DressType = t.DressType;
+        DressTypeOrder = t.DressTypeOrder;
+        DressName = t.DressName;
+        return true;
+    }
+
     public string BaseName { get; set; } = "";
     public string Group { get; set; } = "";
     public string SpineType { get; set; } = "";

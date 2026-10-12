@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <!-- TE 핵심 로직 (화면 없음): 목록·다운로드·명명 규칙·립·애니메이션 규칙·설정·로그 -->
+  <!-- TE 핵심 로직 (화면 없음): 목록·다운로드·명명 규칙·립·애니메이션 규칙·설정·로그 + ViewModel (WPF에 의존하지 않아 테스트 가능) -->
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
@@ -21,6 +21,8 @@
   <ItemGroup>
     <!-- WebP 텍스처 → PNG 변환 (MIT) -->
     <PackageReference Include="SkiaSharp" Version="3.*" />
+    <!-- 추가: MVVM (ObservableObject, RelayCommand, Messenger) — MIT, UI 프레임워크에 의존하지 않음 -->
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.*" />
   </ItemGroup>
 
   <ItemGroup>

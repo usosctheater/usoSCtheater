@@ -8,13 +8,13 @@ namespace SCTheaterEditor;
 /// <summary>목록 갱신 후 이전 목록과 달라졌을 때 띄우는 알림 창 (프로그램 안 창)</summary>
 public sealed class ChangeNoticeWindow : Window
 {
-    public ChangeNoticeWindow(Window owner, CatalogDiff diff, DateTime previousAt)
+    public ChangeNoticeWindow(Window? owner, CatalogDiff diff, DateTime previousAt)
     {
-        Owner = owner;
+        Owner = owner;   // 변경: 주인 창이 없을 수도 있음 (대화상자 서비스에서 호출)
         Title = "목록 변경 알림";
         Width = 760;
         Height = 520;
-        WindowStartupLocation = WindowStartupLocation.CenterOwner;
+        WindowStartupLocation = owner != null ? WindowStartupLocation.CenterOwner : WindowStartupLocation.CenterScreen;
         ShowInTaskbar = false;
 
         var header = new TextBlock

@@ -1,0 +1,8 @@
+<UserControl x:Class="SCTheaterEditor.Views.LogView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- 화면 로그 (최근 1,000줄, 가상화). DataContext = LogViewModel -->
+    <ListBox x:Name="LogList" ItemsSource="{Binding Lines}" FontFamily="Consolas"
+             VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
+             ScrollViewer.HorizontalScrollBarVisibility="Auto"/>
+</UserControl>

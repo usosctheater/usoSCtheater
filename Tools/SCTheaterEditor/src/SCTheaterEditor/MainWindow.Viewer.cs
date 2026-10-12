@@ -5,7 +5,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
-using SCTheaterEditor.Models;
 using SCTheaterEditor.Services;
 
 namespace SCTheaterEditor;
@@ -74,16 +73,14 @@ public partial class MainWindow
         await _viewer.InitializeAsync(_settings.SaveFolder);
     }
 
-    /// <summary>리소스 탭의 세트(또는 그 세트의 파일)를 뷰어 탭에서 연다</summary>
-    private async void OpenInViewer(ResourceNode? node)
+    /// <summary>
+    /// 변경: SpineLibrary의 세트를 뷰어 탭에서 연다 (리소스 탭에서 OpenSpineMessage로 요청).
+    /// 립 기본값 조회용 아이돌 키 = 세트의 nickName (매니페스트 v2 아이돌 표 — 서버 목록 스냅샷 불필요)
+    /// </summary>
+    private async void OpenInViewer(SpineAsset asset)
     {
-        if (node?.Set == null || node.Entry?.Json == null || node.Entry.Atlas == null) return;
-        string folder = node.Kind == ResourceNodeKind.File ? Path.GetDirectoryName(node.FullPath)! : node.FullPath;
-        string relative = Path.GetRelativePath(_settings.SaveFolder, folder);
-        string title = $"{node.Set.IdolName} · {Path.GetFileName(folder)} · {node.Set.BaseName}";
-
-        // 추가: 립 기본값 조회용 아이돌 키 (= idollist nickName)
-        _viewerIdolKey = _snapshot?.Idols.FirstOrDefault(i => i.IdolId == node.Set.IdolId)?.NickName ?? "";
+        string title = $"{asset.DressName} · {asset.CgKey}";
+        _viewerIdolKey = asset.NickName;
 
         MainTabs.SelectedItem = ViewerTab;
         ViewerTitleText.Text = title;
@@ -95,9 +92,9 @@ public partial class MainWindow
             _viewer!.Post(new
             {
                 type = "load",
-                folderUrl = ViewerHost.FolderUrl(relative),
-                json = node.Entry.Json.SavedName,
-                atlas = node.Entry.Atlas.SavedName,
+                folderUrl = ViewerHost.FolderUrl(asset.RelativeFolder),
+                json = asset.JsonFile,
+                atlas = asset.AtlasFile,
                 title,
             });
         }

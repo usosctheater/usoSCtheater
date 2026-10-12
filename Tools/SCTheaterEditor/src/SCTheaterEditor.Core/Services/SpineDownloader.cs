@@ -23,7 +23,7 @@ public enum SetResult { Downloaded, CopiedOnly, AlreadyDone }
 /// - 실패 재시도: 네트워크 오류·429·5xx는 30초 → 2분 → 10분 뒤 다시 시도
 ///   그래도 429·5xx면 ServerBusyException(큐 중지), 네트워크 오류면 이 세트만 실패
 /// </summary>
-public sealed class SpineDownloader : IDisposable
+public sealed class SpineDownloader : ISetDownloader
 {
     private static readonly TimeSpan[] RetryDelays =
         { TimeSpan.FromSeconds(30), TimeSpan.FromMinutes(2), TimeSpan.FromMinutes(10) };
@@ -82,7 +82,8 @@ public sealed class SpineDownloader : IDisposable
             if (source != null)
             {
                 bool copied = CopyToMissingTargets(set, existing, source);
-                if (copied) MarkDirty();
+                bool infoChanged = existing.ApplySetInfo(set);   // 추가(v2): 아이돌·의상 정보가 비어 있으면 채움
+                if (copied || infoChanged) MarkDirty();
                 return copied ? SetResult.CopiedOnly : SetResult.AlreadyDone;
             }
         }
@@ -125,6 +126,7 @@ public sealed class SpineDownloader : IDisposable
             Atlas = atlas.ToRemoteFile("data.atlas", set.BaseName + SpineNaming.AtlasExt),
             Images = images.Select(x => x.info).ToList(),
         };
+        entry.ApplySetInfo(set);   // 추가(v2): 아이돌·의상 정보
 
         string primary = Path.Combine(root, set.Targets[0].RelativeFolder);
         Directory.CreateDirectory(primary);
