@@ -19,11 +19,23 @@
     <EmbeddedResource Include="Resources\THIRD-PARTY-NOTICES.txt" LogicalName="THIRD-PARTY-NOTICES.txt" />
     <!-- 추가: 아이돌 필터의 유닛 분류 -->
     <EmbeddedResource Include="Resources\IdolUnits.xml" LogicalName="IdolUnits.xml" />
+    <!-- 추가: 립 기본값 (게임 프로젝트 Assets/Resources/Data/DefaultLipData.xml의 복사본 — 게임 쪽을 고치면 함께 갱신) -->
+    <EmbeddedResource Include="Resources\DefaultLipData.xml" LogicalName="DefaultLipData.xml" />
+  </ItemGroup>
+
+  <!-- 추가: 뷰어 페이지 (WebView2가 https://viewer.scsm/ 으로 읽음, 경로 = LogicalName에서 "viewer/" 뒤) -->
+  <ItemGroup>
+    <EmbeddedResource Include="Viewer\viewer.html" LogicalName="viewer/viewer.html" />
+    <EmbeddedResource Include="Viewer\viewer.js" LogicalName="viewer/viewer.js" />
+    <EmbeddedResource Include="Viewer\lib\pixi.min.js" LogicalName="viewer/lib/pixi.min.js" />
+    <EmbeddedResource Include="Viewer\lib\pixi-spine.js" LogicalName="viewer/lib/pixi-spine.js" />
   </ItemGroup>
 
   <!-- 추가: WebP 텍스처 → PNG 변환 (MIT) -->
   <ItemGroup>
     <PackageReference Include="SkiaSharp" Version="3.*" />
+    <!-- 추가: 뷰어 (RG와 같은 패키지) -->
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.*" />
   </ItemGroup>
 
 </Project>

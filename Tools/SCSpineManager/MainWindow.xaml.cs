@@ -22,6 +22,7 @@ public partial class MainWindow : Window
     private ResourceNode? _selectedResource;                   // 추가: 리소스 탭에서 선택한 항목
     private readonly List<IdolUnit> _units = IdolUnits.LoadEmbedded();   // 추가: 유닛 분류 (Resources\IdolUnits.xml)
     private readonly IdolFilterBar _resourceFilter;            // 추가: 리소스 탭 아이돌 필터
+    // 변경: 뷰어 관련 필드는 MainWindow.Viewer.cs로 이동
 
     public MainWindow()
     {
@@ -295,11 +296,30 @@ public partial class MainWindow : Window
         catch (Exception ex) { Log($"탐색기 열기 실패: {ex.Message}"); }
     }
 
+    // 추가: 뷰어에서 열기 (버튼 / 세트·파일 더블클릭)
+    private void ResourceOpenViewerButton_Click(object sender, RoutedEventArgs e) => OpenInViewer(_selectedResource);
+
+    // 추가: 세트·파일이 선택된 상태에서 스페이스바 → 뷰어에서 열기
+    private void ResourceTree_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (e.Key != System.Windows.Input.Key.Space || _selectedResource?.Set == null) return;
+        e.Handled = true;
+        OpenInViewer(_selectedResource);
+    }
+
+    private void ResourceTree_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (_selectedResource?.Set == null) return;   // 폴더는 기본 동작(펼치기/접기) 유지
+        e.Handled = true;
+        OpenInViewer(_selectedResource);
+    }
+
     /// <summary>오른쪽 정보 칸 + 텍스처 미리보기</summary>
     private void ShowResourceInfo(ResourceNode? node)
     {
         _selectedResource = node;
         ResourceOpenFolderButton.IsEnabled = node != null;
+        ResourceOpenViewerButton.IsEnabled = node?.Set != null;   // 추가: 세트·파일일 때만
         ResourcePreview.Source = null;
         if (node == null) { ResourceInfoBox.Text = ""; return; }
 
@@ -442,6 +462,25 @@ public partial class MainWindow : Window
         }
         catch (Exception ex) { Log($"폴더 열기 실패: {ex.Message}"); }
     }
+
+    // 추가: Ctrl+PageUp / Ctrl+PageDown → 이전·다음 탭 (포커스가 어디에 있든, 끝에서는 반대쪽 끝으로)
+    // 뷰어 화면(WebView2)에 포커스가 있을 때도 Ctrl 조합 키는 WPF 키 이벤트로 넘어옴
+    private void Window_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (System.Windows.Input.Keyboard.Modifiers != System.Windows.Input.ModifierKeys.Control) return;
+        int step = e.Key switch
+        {
+            System.Windows.Input.Key.PageDown => 1,
+            System.Windows.Input.Key.PageUp => -1,
+            _ => 0,
+        };
+        if (step == 0) return;
+        int count = MainTabs.Items.Count;
+        MainTabs.SelectedIndex = (MainTabs.SelectedIndex + step + count) % count;
+        e.Handled = true;
+    }
+
+    // 변경: 뷰어 탭 코드는 MainWindow.Viewer.cs로 이동
 
     private void Log(string message)
     {
