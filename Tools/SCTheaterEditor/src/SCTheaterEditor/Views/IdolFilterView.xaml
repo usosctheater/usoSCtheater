@@ -9,6 +9,9 @@
                       MinWidth="240" VerticalContentAlignment="Center"/>
             <Button Content="유닛 전체 켜기/끄기" Command="{Binding ToggleUnitCommand}" Margin="6,0,0,0" Padding="8,1"
                     ToolTip="고른 유닛 멤버가 모두 켜져 있으면 모두 끄고, 아니면 모두 켭니다"/>
+            <!-- 추가: 유닛과 상관없이 모든 아이돌 -->
+            <Button Content="전체 선택/해제" Command="{Binding ToggleAllCommand}" Margin="6,0,0,0" Padding="8,1"
+                    ToolTip="모든 아이돌이 켜져 있으면 모두 끄고, 아니면 모두 켭니다 (유닛과 상관없이)"/>
             <TextBlock Text="{Binding Summary}" VerticalAlignment="Center" Margin="12,0,0,0" Foreground="Gray"/>
         </StackPanel>
         <ItemsControl ItemsSource="{Binding VisibleMembers}">

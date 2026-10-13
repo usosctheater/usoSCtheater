@@ -9,6 +9,7 @@ namespace SCTheaterEditor.ViewModels;
 /// 아이돌 필터 (다운로드·리소스 탭 공용): 유닛 드롭다운 → 그 유닛 멤버 체크박스.
 /// - 체크 상태는 유닛을 바꿔도 아이돌별로 유지
 /// - [유닛 전체] 버튼: 고른 유닛 멤버가 모두 켜져 있으면 모두 끄고, 아니면 모두 켬
+/// - [전체 선택/해제] 버튼: 유닛과 상관없이 모든 아이돌을 같은 방식으로 (추가)
 /// - 드롭다운 맨 앞 "전체"는 모든 아이돌
 /// </summary>
 public sealed partial class IdolFilterViewModel : ObservableObject
@@ -95,6 +96,18 @@ public sealed partial class IdolFilterViewModel : ObservableObject
         bool allOn = ids.All(id => _items[id].IsChecked);
         _suppress = true;
         foreach (var id in ids) _items[id].IsChecked = !allOn;
+        _suppress = false;
+        Notify();
+    }
+
+    /// <summary>추가: 모든 아이돌을 켜거나 끔 (모두 켜져 있으면 모두 끄고, 아니면 모두 켬)</summary>
+    [RelayCommand]
+    private void ToggleAll()
+    {
+        if (_items.Count == 0) return;
+        bool allOn = _items.Values.All(i => i.IsChecked);
+        _suppress = true;
+        foreach (var item in _items.Values) item.IsChecked = !allOn;
         _suppress = false;
         Notify();
     }

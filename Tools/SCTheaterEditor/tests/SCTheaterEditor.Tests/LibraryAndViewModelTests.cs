@@ -225,6 +225,20 @@ public class IdolFilterViewModelTests
     }
 
     [Fact]
+    public void ToggleAll_IgnoresUnit_AndNotifiesOnce()
+    {
+        var f = Make(on: new[] { 1 }, unit: "U2");
+        int changed = 0;
+        f.Changed += () => changed++;
+        f.ToggleAllCommand.Execute(null);           // 일부만 켜짐 → 모두 켬
+        Assert.Equal(new[] { 1, 2, 3 }, f.CheckedIds);
+        f.ToggleAllCommand.Execute(null);           // 모두 켜짐 → 모두 끔
+        Assert.Empty(f.CheckedIds);
+        Assert.Equal(2, changed);
+        Assert.Equal("전체 (0/3)", f.Units[0].Label);
+    }
+
+    [Fact]
     public void Rebuild_DoesNotRaiseChanged()
     {
         var f = new IdolFilterViewModel();
@@ -328,6 +342,28 @@ public class DownloadViewModelTests
         Assert.NotNull(lib.Find("madoka_stand_1040210050"));
         Assert.False(vm.IsBusy);
         Assert.Equal(0, dialogs.NoticeCount);   // 첫 목록은 비교 안 함
+    }
+
+    [Fact]
+    public async Task DownloadSelected_OnlySelectedRows()
+    {
+        using var t = new TempFolder();
+        var settings = new AppSettings { SpineDataFolderSetting = t.Path };
+        var manifest = new SpineManifest();
+        var lib = new SpineLibrary(settings.SaveFolder, manifest);
+        var vm = new DownloadViewModel(settings, lib, new List<IdolUnit>(), new FakeDialogs(),
+            () => new FakeCatalog(Fixture.Snapshot()), () => new FakeDownloader(settings.SaveFolder, manifest), () => { }, new AppLog());
+
+        await vm.RefreshCommand.ExecuteAsync(null);
+        Assert.False(vm.DownloadSelectedCommand.CanExecute(null));   // 선택 없음
+        var target = vm.VisibleRows[0];
+        vm.SelectedRows = [target];
+        Assert.True(vm.DownloadSelectedCommand.CanExecute(null));
+        await vm.DownloadSelectedCommand.ExecuteAsync(null);
+
+        Assert.Equal(SetRowViewModel.Done, target.Status);
+        Assert.Equal(1, lib.Count);
+        Assert.Equal(2, vm.VisibleRows.Count(r => r.Status == SetRowViewModel.Waiting));
     }
 
     [Fact]

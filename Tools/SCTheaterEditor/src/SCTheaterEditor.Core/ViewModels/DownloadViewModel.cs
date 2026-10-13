@@ -39,6 +39,7 @@ public sealed partial class DownloadViewModel : ObservableObject
         _log = log;
 
         VisibleRows = [];
+        SelectedRows = [];   // 추가
         Skipped = [];
         SkippedHeader = "건너뛴 항목 / 충돌";
         SummaryText = "";
@@ -77,7 +78,7 @@ public sealed partial class DownloadViewModel : ObservableObject
     [ObservableProperty] public partial double ProgressMax { get; private set; }
 
     [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(RefreshCommand), nameof(DownloadCheckedCommand), nameof(DownloadAllCommand), nameof(CancelCommand))]
+    [NotifyCanExecuteChangedFor(nameof(RefreshCommand), nameof(DownloadCheckedCommand), nameof(DownloadSelectedCommand), nameof(DownloadAllCommand), nameof(CancelCommand))]
     public partial bool IsBusy { get; private set; }
 
     /// <summary>검색어 (아이돌·의상명·파일명·경로, 공백으로 여러 단어)</summary>
@@ -259,6 +260,17 @@ public sealed partial class DownloadViewModel : ObservableObject
     /// <summary>체크한 아이돌의 세트 전부 (검색어와 무관)</summary>
     [RelayCommand(CanExecute = nameof(CanStart))]
     private Task DownloadCheckedAsync() => RunDownloadAsync(_rows.Where(r => Filter.Allows(r.IdolId)).ToList(), "체크한 아이돌");
+
+    /// <summary>추가: 목록에서 선택한 행 (DataGrid 선택은 화면이 넘겨 줌 — Ctrl·Shift로 여러 개, Ctrl+A로 전부)</summary>
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(DownloadSelectedCommand))]
+    public partial IReadOnlyList<SetRowViewModel> SelectedRows { get; set; }
+
+    private bool CanDownloadSelected() => !IsBusy && SelectedRows.Count > 0;
+
+    /// <summary>추가: 선택한 의상만 받기</summary>
+    [RelayCommand(CanExecute = nameof(CanDownloadSelected))]
+    private Task DownloadSelectedAsync() => RunDownloadAsync(SelectedRows.ToList(), "선택한 의상");
 
     [RelayCommand(CanExecute = nameof(CanStart))]
     private Task DownloadAllAsync() => RunDownloadAsync(_rows, "전체");

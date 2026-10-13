@@ -12,8 +12,12 @@
             <Button Content="폴더 열기" Margin="6,0,0,0" Padding="10,2" Command="{Binding OpenFolderCommand}"/>
             <Button Content="목록 갱신 (서버)" Margin="16,0,0,0" Padding="10,2" Command="{Binding RefreshCommand}"
                     ToolTip="idollist + 아이돌별 dresslist를 받아 스냅샷을 갱신합니다 (요청 약 34회, 1초 간격)"/>
-            <Button Content="체크한 아이돌 받기" Margin="16,0,0,0" Padding="10,2" Command="{Binding DownloadCheckedCommand}"
+            <!-- 변경: 이름 (이전: 체크한 아이돌 받기) -->
+            <Button Content="체크한 아이돌 의상 전부 받기" Margin="16,0,0,0" Padding="10,2" Command="{Binding DownloadCheckedCommand}"
                     ToolTip="아이돌 필터에서 켠 아이돌의 세트 중 아직 받지 않은 것만 받습니다 (검색어와 무관)"/>
+            <!-- 추가: 목록에서 선택한 행만 -->
+            <Button Content="선택한 의상만 받기" Margin="6,0,0,0" Padding="10,2" Command="{Binding DownloadSelectedCommand}"
+                    ToolTip="아래 목록에서 선택한 행 중 아직 받지 않은 것만 받습니다 (Ctrl·Shift+클릭으로 여러 개, Ctrl+A로 전부)"/>
             <Button Content="전체 받기" Margin="6,0,0,0" Padding="10,2" Command="{Binding DownloadAllCommand}"
                     ToolTip="아직 받지 않은 모든 세트를 받습니다"/>
             <Button Content="중지" Margin="6,0,0,0" Padding="10,2" Command="{Binding CancelCommand}"/>
@@ -57,6 +61,7 @@
 
         <!-- 받을 세트 목록 -->
         <DataGrid ItemsSource="{Binding VisibleRows}" AutoGenerateColumns="False" IsReadOnly="True"
+                  SelectionMode="Extended" SelectionChanged="Rows_SelectionChanged"
                   HeadersVisibility="Column" CanUserAddRows="False"
                   EnableRowVirtualization="True" VirtualizingPanel.VirtualizationMode="Recycling">
             <DataGrid.Columns>
