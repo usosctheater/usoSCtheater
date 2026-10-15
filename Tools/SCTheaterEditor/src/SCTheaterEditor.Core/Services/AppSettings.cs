@@ -205,4 +205,17 @@ public sealed class EditorSettings
 {
     /// <summary>추가: 무대에 마지막으로 고른 배경 키 (없으면 null)</summary>
     public string? Background { get; set; }
+
+    /// <summary>추가(4-1): 막 목록을 읽을 시나리오 폴더 (게임 Assets\Resources\Scenario — 도구 독립 규칙상 코드에 경로를 두지 않고 사용자가 지정)</summary>
+    public string? ScenarioFolder { get; set; }
+
+    /// <summary>추가(4-1): 막별로 남길 저장 전 백업 수</summary>
+    public int BackupCount { get; set; } = 10;
+
+    /// <summary>추가(4-1): 마지막으로 연 막 파일과 선택한 라인(0부터) — 재실행 시 다시 엶</summary>
+    public string? LastActPath { get; set; }
+    public int LastLine { get; set; }
+
+    /// <summary>추가: 스크립트 표 칸 폭 (키: 종류.속성, 예: TEXT.Text). 없으면 LineTypes.xml 기본값</summary>
+    public Dictionary<string, double> FieldWidths { get; set; } = new();
 }

@@ -67,6 +67,16 @@ internal sealed class FakeDialogs : IDialogService
     public bool Confirm(string title, string message) => ConfirmResult;
     public void ShowChangeNotice(CatalogDiff diff, DateTime previousAt) => NoticeCount++;
     public void OpenInExplorer(string path) { }
+
+    // 추가(4-1): 막 열기·저장
+    public SaveChoice SaveChoiceResult { get; set; } = SaveChoice.Cancel;
+    public int AskSaveCount { get; private set; }
+    public string? PickResult { get; set; }
+    public List<string> Errors { get; } = new();
+    public SaveChoice AskSave(string title, string message) { AskSaveCount++; return SaveChoiceResult; }
+    public string? PickFolder(string title, string? initialFolder) => PickResult;
+    public string? PickFile(string title, string filter, string? initialFolder) => PickResult;
+    public void ShowError(string title, string message) => Errors.Add(message);
 }
 
 internal sealed class FakeCatalog(CatalogSnapshot snap) : ICatalogSource

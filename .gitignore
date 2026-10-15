@@ -120,6 +120,7 @@ resource/
 /Tools/**/SpineData/
 # SCTheaterEditor 배경 이미지 (exe 옆 Backgrounds, 사용자가 넣어 쓰는 파일)
 /Tools/**/Backgrounds/
+/Tools/**/Backups/
 
 # 내부 문서 (핸드오프·회의록 등) - 비공개 레포 usoSCtheater-docs에서 별도 관리
 /_docs/

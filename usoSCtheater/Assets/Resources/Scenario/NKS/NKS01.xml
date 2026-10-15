@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Scene MainTitle="나나쿠사 어프로치" SubTitle="언니와 동생">
-	<Line Type="BG" Key="bg_office_day"/>
+<Act mainTitle="나나쿠사 어프로치" subTitle="언니와 동생">
+	<Line Type="BG" ResourceKey="bg_office_day"/>
 	<Line Type="AUDIO" Value="bgm" Track="BGM_100" Volume="0.3"/>
 	<Line Type="BREAK" Effect="clean" Duration="1"/>
 	<Line Type="TEXT" Name="프로듀서" Text="후우. 벌써 이런 시간인가." Voice="NKS001001" SpeakerType="2"/>
@@ -14,14 +14,14 @@
 	<Line Type="SE" Track="se_door_sime"/>
 	<Line Type="BREAK" Effect="clean"/>
 	<Line Type="TRANSITION" Effect="iris" SE="se_trans_out|se_trans_in"/>
-	<Line Type="BG" Key="bg_office_day"/>
+	<Line Type="BG" ResourceKey="bg_office_day"/>
 	<Line Type="AUDIO" Value="bgm" Track="BGM_101" Volume="0.3"/>
 	<Line Type="BREAK" Effect="clean" Duration="2"/>
 	<Line Type="SE" Track="se_door_ake"/>
 	<Line Type="TEXT" Name="니치카" Text="수고하십니다~" Voice="NKS001007" CG="nichika_normal_2" Position="center" Animation="smile1" SpeakerType="1"/>
 	<Line Type="TEXT" Name="니치카" Text="어라? 아무도 없네." Voice="NKS001008" CG="nichika_normal_2" Position="center" Animation="think1 face_serious lip_sad" SpeakerType="1"/>
 	<Line Type="TRANSITION" Effect="normal"/>
-	<Line Type="BG" Position="5" Effect="zoom" Value="1.5" Key="bg_office_day"/>
+	<Line Type="BG" Position="5" Effect="zoom" Value="1.5" ResourceKey="bg_office_day"/>
 	<Line Type="BREAK" Effect="clean" Duration="0.5"/>
 	<Line Type="TEXT" Name="니치카" Text="얼마나 급하게 나갔으면 핸드폰도 안 챙기고…" Voice="NKS001009" CG="nichika_normal_2" Position="center" Animation="think2 face_serious lip_sad" SpeakerType="1"/>
 	<Line Type="TEXT" Name="니치카" Text="…" CG="nichika_normal_2" Position="center" Animation="shy2" SpeakerType="1"/>
@@ -30,7 +30,7 @@
 	<Line Type="SE" Duration="1" Track="se_footstep_slip"/>
 	<Line Type="BREAK" Effect="clean" Duration="1"/>
 	<Line Type="TRANSITION" Effect="normal"/>
-	<Line Type="BG" Key="bg_phone"/>
+	<Line Type="BG" ResourceKey="bg_phone"/>
 	<Line Type="TEXT" Name="니치카" Text="비밀번호…" Voice="NKS001010" SpeakerType="1"/>
 	<Line Type="SE" Duration="1" Track="se_phone_long"/>
 	<Line Type="BREAK" Duration="1"/>
@@ -57,14 +57,14 @@
 	<Line Type="TRANSITION" Effect="normal"/>
 	<Line Type="AUDIO" Effect="stop" Value="bgm"/>
 	<Line Type="AUDIO" Value="bgm" Track="BGM_15" Volume="0.3"/>
-	<Line Type="BG" Key="illust_hazuki"/>
+	<Line Type="BG" ResourceKey="illust_hazuki"/>
 	<Line Type="BREAK" Effect="clean" Duration="1"/>
 	<Line Type="TEXT" Name="니치카" Text="…" Voice="NKS001018" SpeakerType="1"/>
 	<Line Type="BREAK" Duration="2"/>
 	<Line Type="TEXT" Name="니치카" Text="하아아아아?!?!" Voice="NKS001019" SpeakerType="1"/>
 	<Line Type="BREAK" Duration="2"/>
 	<Line Type="TRANSITION" Effect="normal"/>
-	<Line Type="BG" Key="bg_office_day"/>
+	<Line Type="BG" ResourceKey="bg_office_day"/>
 	<Line Type="SE" Track="se_tukue" Volume="0.5"/>
 	<Line Type="BREAK" Effect="clean" Duration="1"/>
 	<Line Type="TEXT" Name="니치카" Text="둘이 그런 사이야? 언제부터?" Voice="NKS001020" CG="nichika_normal_2" Position="center" Animation="surp1 face_anger1 lip_anger" SpeakerType="1"/>
@@ -74,7 +74,7 @@
 	<Line Type="SE" Duration="1" Track="se_footstep_slip"/>
 	<Line Type="BREAK" Effect="clean" Duration="1"/>
 	<Line Type="TRANSITION" Effect="normal"/>
-	<Line Type="BG" Key="bg_phone"/>
+	<Line Type="BG" ResourceKey="bg_phone"/>
 	<Line Type="TEXT" Name="니치카" Text="게다가 사진 말고는 아무것도…" Voice="NKS001022" SpeakerType="1"/>
 	<Line Type="SE" Duration="1" Track="se_phone_long"/>
 	<Line Type="BREAK" Duration="1"/>
@@ -93,7 +93,7 @@
 	<Line Type="TEXT" Name="니치카" Text="좋아." Voice="NKS001026" SpeakerType="1"/>
 	<Line Type="BREAK" Duration="1"/>
 	<Line Type="TRANSITION" Effect="normal"/>
-	<Line Type="BG" Key="bg_office_day"/>
+	<Line Type="BG" ResourceKey="bg_office_day"/>
 	<Line Type="TEXT" Name="니치카" Text="수고하셨습니다." Voice="NKS001027" CG="nichika_normal_2" Position="right" Animation="anger2"/>
 	<Line Type="SE" Track="se_door_sime"/>
 	<Line Type="SETCG" CG="nichika_normal_2" Effect="clean"/>
@@ -104,7 +104,7 @@
 	<Line Type="SE" Duration="1" Track="se_footstep_slip"/>
 	<Line Type="BREAK" Effect="clean" Duration="1"/>
 	<Line Type="TRANSITION" Effect="normal"/>
-	<Line Type="BG" Key="bg_phone"/>
+	<Line Type="BG" ResourceKey="bg_phone"/>
 	<Line Type="TEXT" Text="[모든 즐겨찾기를 삭제하시겠습니까?]" SpeakerType="3"/>
 	<Line Type="SE" Duration="0.5" Track="se_phone_long"/>
 	<Line Type="BREAK" Duration="0.5"/>
@@ -114,24 +114,24 @@
 	<Line Type="SE" Track="se_tukue" Volume="0.5"/>
 	<Line Type="BREAK" Duration="0.5"/>
 	<Line Type="TRANSITION" Effect="normal"/>
-	<Line Type="BG" Key="bg_office_day"/>
+	<Line Type="BG" ResourceKey="bg_office_day"/>
 	<Line Type="TEXT" Name="니치카" Text="흥. 자업자득이니까요!" Voice="NKS001028" CG="nichika_normal_2" Position="right" Animation="anger1" SpeakerType="1"/>
 	<Line Type="SE" Track="se_door_sime"/>
 	<Line Type="SETCG" CG="nichika_normal_2" Effect="clean"/>
 	<Line Type="BREAK" Effect="clean" Duration="2"/>
 	<Line Type="TRANSITION" Effect="iris" SE="se_trans_out|se_trans_in"/>
-	<Line Type="BG" Key="bg_office_day"/>
+	<Line Type="BG" ResourceKey="bg_office_day"/>
 	<Line Type="AUDIO" Value="bgm" Track="BGM_100" Volume="0.3"/>
 	<Line Type="BREAK" Effect="clean" Duration="2"/>
 	<Line Type="SE" Track="se_door_ake"/>
 	<Line Type="BREAK" Effect="clean" Duration="0.5"/>
 	<Line Type="TEXT" Name="프로듀서" Text="후우… 아직 창고에 있어서 다행이야." Voice="NKS001029" SpeakerType="2"/>
 	<Line Type="TRANSITION" Effect="normal"/>
-	<Line Type="BG" Position="5" Effect="zoom" Value="1.5" Key="bg_office_day"/>
+	<Line Type="BG" Position="5" Effect="zoom" Value="1.5" ResourceKey="bg_office_day"/>
 	<Line Type="BREAK" Effect="clean" Duration="0.5"/>
 	<Line Type="TEXT" Name="프로듀서" Text="아, 핸드폰 놓고 갔었구나" Voice="NKS001030" SpeakerType="2"/>
 	<Line Type="TRANSITION" Effect="normal"/>
-	<Line Type="BG" Key="bg_office_day"/>
+	<Line Type="BG" ResourceKey="bg_office_day"/>
 	<Line Type="SE" Duration="2" Track="se_phone_vibe"/>
 	<Line Type="BREAK" Effect="clean" Duration="2"/>
 	<Line Type="TEXT" Name="프로듀서" Text="나나쿠사 하즈키…" Voice="NKS001031" SpeakerType="2"/>
@@ -157,7 +157,7 @@
 	<Line Type="BREAK" Effect="clean" Duration="1"/>
 	<Line Type="TEXT" Name="프로듀서" Text="뭔가 이상한데…" Voice="NKS001047" SpeakerType="2"/>
 	<Line Type="TRANSITION" Effect="normal"/>
-	<Line Type="BG" Key="bg_phone"/>
+	<Line Type="BG" ResourceKey="bg_phone"/>
 	<Line Type="TEXT" Name="프로듀서" Text="전화번호부가…" Voice="NKS001048" SpeakerType="2"/>
 	<Line Type="TEXT" Text="연락처" SpeakerType="3"/>
 	<Line Type="TEXT" Text="[즐겨찾기 목록 1/1] \n니치카" SpeakerType="3"/>
@@ -167,11 +167,11 @@
 	<Line Type="TEXT" Name="프로듀서" Text="나, 니치카한테 미움받을 만한 짓을 했나…?" Voice="NKS001053" Effect="normal" SpeakerType="2"/>
 	<Line Type="BREAK" Duration="1"/>
 	<Line Type="TRANSITION" Effect="normal"/>
-	<Line Type="BG" Key="bg_intersection"/>
+	<Line Type="BG" ResourceKey="bg_intersection"/>
 	<Line Type="TEXT" Name="니치카" Text="…" CG="nichika_normal_2" Position="center" Animation="anger2" SpeakerType="1"/>
 	<Line Type="BREAK" Duration="2"/>
 	<Line Type="TRANSITION" Effect="normal"/>
-	<Line Type="BG" Key="bg_seashore"/>
+	<Line Type="BG" ResourceKey="bg_seashore"/>
 	<Line Type="AUDIO" Value="1" Track="se_namioto" Volume="0.3"/>
 	<Line Type="TEXT" Name="하즈키" Text="…" CG="hazuki_6" Position="center" Animation="sad1 face_anger" SpeakerType="3"/>
 	<Line Type="BREAK" Duration="2"/>
@@ -182,4 +182,4 @@
 	<Line Type="TEXT" Name="니치카, 하즈키" Text="이 둔감한 남자…" Voice="NKS001051, NKS001052"/>
 	<Line Type="BREAK" Effect="clean" Duration="2"/>
 	<Line Type="TRANSITION" Effect="normal"/>
-</Scene>
+</Act>

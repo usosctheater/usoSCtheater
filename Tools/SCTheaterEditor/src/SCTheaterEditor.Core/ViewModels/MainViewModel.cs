@@ -22,6 +22,9 @@ public sealed class MainViewModel
         Download = new DownloadViewModel(settings, library, units, dialogs, catalogFactory, downloaderFactory, saveSettings, log);
         Resource = new ResourceViewModel(settings, library, units, dialogs, saveSettings, messenger, log);
         Script = new ScriptViewModel(settings, library, backgrounds, stage, LipRules.LoadEmbedded(), messenger, saveSettings, log);
+        // 추가(4-1): 스크립트 표 (스크립트 탭 아래쪽)
+        Editor = new ActEditorViewModel(settings, library, dialogs, ui, saveSettings, log);
+        Script.Editor = Editor;
     }
 
     public AppSettings Settings { get; }
@@ -31,6 +34,13 @@ public sealed class MainViewModel
     public ResourceViewModel Resource { get; }
     public ScriptViewModel Script { get; }
 
-    /// <summary>창이 뜬 뒤 1회: 저장된 목록 읽기 (매니페스트 v2 이전 포함)</summary>
-    public void Initialize() => Download.LoadSavedSnapshot();
+    /// <summary>추가(4-1): 스크립트 표 (막 열기·편집·저장)</summary>
+    public ActEditorViewModel Editor { get; }
+
+    /// <summary>창이 뜬 뒤 1회: 저장된 목록 읽기 (매니페스트 v2 이전 포함) + 마지막 막·라인 다시 열기</summary>
+    public void Initialize()
+    {
+        Download.LoadSavedSnapshot();
+        Editor.Initialize();   // 추가(4-1)
+    }
 }

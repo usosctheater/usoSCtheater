@@ -1,0 +1,185 @@
+<UserControl x:Class="SCTheaterEditor.Views.ActEditorView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             PreviewKeyDown="Root_PreviewKeyDown">
+    <!-- 스크립트 표 (변경: 종류별 팔레트). DataContext = ActEditorViewModel
+         행 = # · 종류(드롭다운) · 그 종류의 속성 칸들(LineTypes.xml) · 기타(팔레트에 없는 속성, 읽기 전용)
+         제목 줄 = 선택한 줄의 종류 기준. 경계선을 드래그하면 그 종류의 칸 폭이 바뀌고 설정에 저장
+         칸 입력: 클릭해서 바로 입력, Enter 확정 · Esc 취소 · ↑/↓ 위아래 줄의 같은 칸 · Ctrl+↑/↓ 맨 위/맨 아래 줄 · Tab 다음 칸
+         줄 조작: 번호(#) 쪽을 클릭해 줄 선택 → Delete 삭제 · Alt+↑/↓ 이동 (Ctrl+S·O·Z·Y는 ScriptView에서) -->
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+
+        <!-- 칸 입력 상자: 평소에는 테두리 없이, 포커스가 있으면 흰 바탕 + 파란 테두리 -->
+        <Style x:Key="CellBox" TargetType="TextBox">
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Padding" Value="2,0"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="BorderBrush" Value="#FFC8C8C8"/>
+                </Trigger>
+                <Trigger Property="IsKeyboardFocused" Value="True">
+                    <Setter Property="BorderBrush" Value="#FF3C7FB1"/>
+                    <Setter Property="Background" Value="White"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- 행의 속성 칸 1개 -->
+        <DataTemplate x:Key="FieldCellTemplate">
+            <Grid Width="{Binding Def.Width}" Margin="0,0,1,0">
+                <TextBox x:Name="Box" Style="{StaticResource CellBox}" Tag="{Binding Def.Attr}" ToolTip="{Binding ToolTip}"
+                         Text="{Binding Value, UpdateSourceTrigger=LostFocus}"/>
+                <!-- 빈 칸: 흐린 글씨로 칸 이름 (변경: 선택한 줄과 같은 종류의 줄에서만) -->
+                <TextBlock Text="{Binding Def.Label}" Foreground="#FFBDBDBD" Margin="5,0,0,0" VerticalAlignment="Center"
+                           IsHitTestVisible="False" TextTrimming="CharacterEllipsis"
+                           Visibility="{Binding ShowHint, Converter={StaticResource BoolToVis}}"/>
+            </Grid>
+            <DataTemplate.Triggers>
+                <DataTrigger Binding="{Binding Warning}" Value="True">
+                    <Setter TargetName="Box" Property="Foreground" Value="#FFC62828"/>
+                </DataTrigger>
+            </DataTemplate.Triggers>
+        </DataTemplate>
+
+        <!-- 제목 줄의 칸 1개: 이름 + 오른쪽 경계선(드래그로 폭 조절) -->
+        <DataTemplate x:Key="HeaderCellTemplate">
+            <Grid Width="{Binding Width}" Margin="0,0,1,0" ToolTip="{Binding ToolTip}">
+                <TextBlock Text="{Binding Label}" FontWeight="SemiBold" Margin="5,0,6,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                <Thumb HorizontalAlignment="Right" Width="7" Margin="0,0,-4,0" Cursor="SizeWE"
+                       DragDelta="HeaderThumb_DragDelta" DragCompleted="HeaderThumb_DragCompleted"
+                       ToolTip="드래그: 칸 폭 조절 (이 종류의 모든 줄에 적용, 설정에 저장)">
+                    <Thumb.Template>
+                        <ControlTemplate TargetType="Thumb">
+                            <Border Background="Transparent">
+                                <Rectangle Width="1" Fill="#FFBDBDBD" HorizontalAlignment="Center"/>
+                            </Border>
+                        </ControlTemplate>
+                    </Thumb.Template>
+                </Thumb>
+            </Grid>
+        </DataTemplate>
+
+        <ItemsPanelTemplate x:Key="HorizontalPanel">
+            <StackPanel Orientation="Horizontal"/>
+        </ItemsPanelTemplate>
+    </UserControl.Resources>
+
+    <DockPanel>
+        <!-- 1줄: 막 열기·저장 + 제목 -->
+        <DockPanel DockPanel.Dock="Top" Margin="0,4,0,4">
+            <StackPanel DockPanel.Dock="Left" Orientation="Horizontal">
+                <Button Content="폴더 지정…" Padding="8,1" Command="{Binding PickFolderCommand}" ToolTip="{Binding FolderText}"/>
+                <TextBlock Text="막:" VerticalAlignment="Center" Margin="8,0,4,0"/>
+                <ComboBox ItemsSource="{Binding ActEntries}" SelectedItem="{Binding SelectedEntry}" DisplayMemberPath="Display"
+                          MinWidth="130" IsTextSearchEnabled="True" ToolTip="{Binding FolderText}"/>
+                <Button Content="↻" Padding="6,1" Margin="2,0,0,0" Command="{Binding RefreshListCommand}" ToolTip="시나리오 폴더 다시 읽기"/>
+                <Button Content="파일 열기…" Padding="8,1" Margin="6,0,0,0" Command="{Binding OpenFileCommand}" ToolTip="막 XML 파일을 직접 골라 열기 (Ctrl+O)"/>
+                <Button Content="저장" Padding="10,1" Margin="4,0,0,0" Command="{Binding SaveCommand}" ToolTip="열었던 경로에 저장, 직전 파일은 백업 폴더에 (Ctrl+S)"/>
+                <TextBlock Text="제목:" VerticalAlignment="Center" Margin="14,0,4,0"/>
+                <TextBox Width="150" VerticalContentAlignment="Center" IsEnabled="{Binding HasDocument}" KeyDown="Commit_KeyDown"
+                         Text="{Binding MainTitle, UpdateSourceTrigger=LostFocus}" ToolTip="막 XML 루트의 mainTitle (Enter로 확정)"/>
+                <TextBlock Text="부제:" VerticalAlignment="Center" Margin="8,0,4,0"/>
+                <TextBox Width="150" VerticalContentAlignment="Center" IsEnabled="{Binding HasDocument}" KeyDown="Commit_KeyDown"
+                         Text="{Binding SubTitle, UpdateSourceTrigger=LostFocus}" ToolTip="막 XML 루트의 subTitle (Enter로 확정)"/>
+            </StackPanel>
+            <TextBlock Text="{Binding DocumentTitle}" FontWeight="Bold" VerticalAlignment="Center" Margin="12,0,0,0"
+                       TextTrimming="CharacterEllipsis" ToolTip="{Binding DocumentPath}"/>
+        </DockPanel>
+
+        <!-- 2줄: 줄 조작 + 상태 -->
+        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,4">
+            <StackPanel DockPanel.Dock="Left" Orientation="Horizontal">
+                <Button Content="줄 추가" Padding="8,1" Command="{Binding AddTextCommand}" ToolTip="선택한 줄 아래에 TEXT 줄 추가 (선택이 없으면 맨 끝). 종류는 드롭다운으로 변경"/>
+                <Button Content="삭제" Padding="8,1" Margin="4,0,0,0" Command="{Binding DeleteRowsCommand}" ToolTip="선택한 줄 삭제 (Delete)"/>
+                <Button Content="▲" Padding="8,1" Margin="4,0,0,0" Command="{Binding MoveUpCommand}" ToolTip="위로 (Alt+↑)"/>
+                <Button Content="▼" Padding="8,1" Margin="2,0,0,0" Command="{Binding MoveDownCommand}" ToolTip="아래로 (Alt+↓)"/>
+                <Button Content="↶ 되돌리기" Padding="8,1" Margin="10,0,0,0" Command="{Binding UndoCommand}" ToolTip="Ctrl+Z"/>
+                <Button Content="↷ 다시 하기" Padding="8,1" Margin="2,0,0,0" Command="{Binding RedoCommand}" ToolTip="Ctrl+Y"/>
+                <Button Content="칸 폭 초기화" Padding="8,1" Margin="10,0,0,0" Command="{Binding ResetFieldWidthsCommand}" ToolTip="모든 종류의 칸 폭을 기본값으로"/>
+                <TextBlock Text="{Binding UnknownCgText}" Foreground="#FFC62828" VerticalAlignment="Center" Margin="12,0,0,0"/>
+            </StackPanel>
+            <TextBlock Text="{Binding StatusText}" Foreground="Gray" VerticalAlignment="Center" Margin="12,0,0,0" TextTrimming="CharacterEllipsis"/>
+        </DockPanel>
+
+        <!-- 제목 줄: 선택한 줄의 종류 기준 (행과 같은 열 구성: 40 · 110 · 팔레트 · 기타) -->
+        <Border DockPanel.Dock="Top" BorderBrush="#FFD0D0D0" BorderThickness="1,1,1,0" Background="#FFF0F0F0" Height="24">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="40"/>
+                    <ColumnDefinition Width="110"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="#" FontWeight="SemiBold" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                <TextBlock Grid.Column="1" FontWeight="SemiBold" VerticalAlignment="Center" Margin="5,0,0,0"
+                           Text="{Binding HeaderTitle, StringFormat=종류 ({0})}" ToolTip="제목 줄은 선택한 줄의 종류 기준"/>
+                <ItemsControl Grid.Column="2" ItemsSource="{Binding HeaderType.Fields}" ItemTemplate="{StaticResource HeaderCellTemplate}"
+                              ItemsPanel="{StaticResource HorizontalPanel}" Focusable="False"/>
+                <TextBlock Grid.Column="3" Text="기타 (이 종류에 없는 속성 · 읽기 전용)" FontWeight="SemiBold" Foreground="Gray"
+                           VerticalAlignment="Center" Margin="6,0,0,0" TextTrimming="CharacterEllipsis"/>
+            </Grid>
+        </Border>
+
+        <ListBox x:Name="LineList" ItemsSource="{Binding Rows}" SelectionMode="Extended" BorderBrush="#FFD0D0D0" Padding="0"
+                 ScrollViewer.HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch"
+                 VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
+                 VirtualizingPanel.ScrollUnit="Item" KeyboardNavigation.TabNavigation="Continue"
+                 SelectionChanged="LineList_SelectionChanged" PreviewKeyDown="LineList_PreviewKeyDown">
+            <ListBox.ItemContainerStyle>
+                <Style TargetType="ListBoxItem">
+                    <Setter Property="Padding" Value="0"/>
+                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                    <Setter Property="Background" Value="White"/>
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <!-- 선택 강조는 포커스가 다른 곳에 있어도 그대로 보이게 -->
+                            <ControlTemplate TargetType="ListBoxItem">
+                                <Border x:Name="Bd" Background="{TemplateBinding Background}" BorderBrush="#FFEDEDED" BorderThickness="0,0,0,1">
+                                    <ContentPresenter/>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsSelected" Value="True">
+                                        <Setter TargetName="Bd" Property="Background" Value="#FFCDE6FA"/>
+                                        <Setter TargetName="Bd" Property="BorderBrush" Value="#FF8DBFE8"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                    <Style.Triggers>
+                        <!-- 종류별 바탕: BG 연한 파랑, TEXT 외 나머지 연한 회색 -->
+                        <DataTrigger Binding="{Binding Kind}" Value="Background">
+                            <Setter Property="Background" Value="#FFF0F6FC"/>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Kind}" Value="Other">
+                            <Setter Property="Background" Value="#FFF6F6F6"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </ListBox.ItemContainerStyle>
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <Grid Height="24">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="40"/>
+                            <ColumnDefinition Width="110"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{Binding Number}" Foreground="Gray" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <ComboBox Grid.Column="1" Margin="1,1,4,1" ItemsSource="{Binding TypeOptions}" SelectedItem="{Binding Type}"
+                                  ToolTip="종류 — 바꾸면 칸 구성이 새 종류의 팔레트로 바뀜 (다른 속성은 지우지 않고 기타에)"/>
+                        <ItemsControl Grid.Column="2" ItemsSource="{Binding Fields}" ItemTemplate="{StaticResource FieldCellTemplate}"
+                                      ItemsPanel="{StaticResource HorizontalPanel}" Focusable="False"/>
+                        <TextBlock Grid.Column="3" Text="{Binding Others}" Foreground="#FF8A8A8A" VerticalAlignment="Center" Margin="6,0,4,0"
+                                   TextTrimming="CharacterEllipsis" ToolTip="{Binding OthersToolTip}"/>
+                    </Grid>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+    </DockPanel>
+</UserControl>

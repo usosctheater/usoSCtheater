@@ -280,7 +280,7 @@ public class ScriptViewModelTests
         // 게임 방식: face_ 애니메이션은 트랙 1로, 전체 다시 재생
         c.Vm.ApplyAnimCommand.Execute(c.Vm.AnimItems[1]);
         Assert.Equal(new[] { "wait", "face_anger" }, c.Stage.Last<PlayAnims>().Anims);
-        Assert.Equal("wait, face_anger", a.AnimationText);
+        Assert.Equal("wait face_anger", a.AnimationText);
     }
 
     [Fact]
@@ -364,6 +364,8 @@ public class ScriptViewModelTests
         var a = c.Vm.Actors[0];
         c.Load(a);
         c.Vm.BonesExpanded = true;
+        Assert.False(c.Stage.Last<WatchBones>().On);   // 변경: 설정 영역이 접혀 있으면 보이지 않으므로 갱신 안 함
+        c.Vm.SettingsExpanded = true;
         Assert.True(c.Stage.Last<WatchBones>().On);
         c.Stage.Raise(new ActorState(a.Id, [null, null, null, null], false, 0.5, 2, null, [new BoneDelta("head", 5, 0, 0, 0, 0)]));
         Assert.Single(c.Vm.Bones);

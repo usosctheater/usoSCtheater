@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Scene MainTitle="아사히가 수상한 시계를 주워왔다" SubTitle="수상한 시계" >
-	<Line Type="BG" Key="bg_office_day"/>
+	<Line Type="BG" ResourceKey="bg_office_day"/>
 	<Line Type="AUDIO" Value="bgm" Track="BGM_2" Volume="0.4"/>
 	<Line Type="BREAK" Effect="clean"/>
 	<Line Type="TEXT" Name="아사히" Text="안녕하심까." Voice="SCS001001" CG="asahi_normal_1" Position="right" Animation="wait1 lip_surp" SpeakerType="1"/>
@@ -10,12 +10,12 @@
 	<Line Type="TEXT" Name="프로듀서" Text="조금 있다가 후유코가 오는 것 외에는 정해진 스케쥴이 없네." Voice="SCS001005" SpeakerType="2"/>
 	<Line Type="TEXT" Name="아사히" Text="그렇슴까." Voice="SCS001006" CG="asahi_normal_1" Position="right" Animation="think1" SpeakerType="1"/>
 	<Line Type="TRANSITION" Effect="normal"/>
-	<Line Type="BG" Position="5" Effect="zoom" Value="1.7" Key="bg_office_day"/>
+	<Line Type="BG" Position="5" Effect="zoom" Value="1.7" ResourceKey="bg_office_day"/>
 	<Line Type="SE" Duration="1" Track="se_footstep_slip" Volume="1"/>
 	<Line Type="BREAK" Effect="clean"/>
 	<Line Type="TEXT" Name="아사히" Text="아 그러고보니…" Voice="SCS001007" CG="asahi_normal_1" Position="left" Animation="surp4" SpeakerType="1"/>
 	<Line Type="TEXT" Name="아사히" Text="프로듀서 님 이게 뭔지 암까?" Voice="SCS001008" SpeakerType="1"/>
-	<Line Type="IMAGE" Duration="8" Key="stopwatch"/>
+	<Line Type="IMAGE" Duration="8" ResourceKey="stopwatch"/>
 	<Line Type="SE" Duration="1" Track="se_oku" Volume="0.5"/>
 	<Line Type="BREAK" Effect="clean"/>
 	<Line Type="TEXT" Name="프로듀서" Text="에에?" Voice="SCS001009" SpeakerType="2"/>
@@ -31,19 +31,19 @@
 	<Line Type="TEXT" Name="프로듀서" Text="자, 잠깐만 아사히!" Voice="SCS001019" SpeakerType="2"/>
 	<Line Type="TEXT" Name="프로듀서" Text="어떤 일이 발생할 지 모르니까, 우선은 신중하게…" Voice="SCS001020" SpeakerType="2"/>
 	<Line Type="TRANSITION" Effect="normal"/>
-	<Line Type="BG" Position="6" Effect="zoom" Value="1.7" Key="bg_office_day"/>
+	<Line Type="BG" Position="6" Effect="zoom" Value="1.7" ResourceKey="bg_office_day"/>
 	<Line Type="SE" Track="se_door_ake"/>
 	<Line Type="TEXT" Name="후유코" Text="수고하십니다~" Voice="SCS001021" CG="fuyuko_normal_sr1" Position="right" Animation="smile2" SpeakerType="1"/>
 	<Line Type="BREAK" Duration="0.5"/>
 	<Line Type="TEXT" Name="아사히" Text="아, 후유코쨩! 마침 잘 왔슴다!" Voice="SCS001022" CG="asahi_normal_1" Position="left" Animation="smile1 lip_surp" SpeakerType="1"/>
 	<Line Type="TEXT" Name="후유코" Text="엥? 그게 무슨…" Voice="SCS001023" CG="fuyuko_normal_sr1" Position="right" Animation="surp3" SpeakerType="1"/>
 	<Line Type="SETCG" CG="none"/>
-	<Line Type="IMAGE" Key="stopwatch"/>
+	<Line Type="IMAGE" ResourceKey="stopwatch"/>
 	<Line Type="SE" Duration="1" Track="se_botan" Volume="1"/>
 	<Line Type="TRANSITION" Effect="normal"/>
 	<Line Type="AUDIO" Effect="stop" Value="bgm"/>
 	<Line Type="AUDIO" Value="bgm" Track="BGM_10" Volume="0.4"/>
-	<Line Type="BG" Key="bg_office_day"/>
+	<Line Type="BG" ResourceKey="bg_office_day"/>
 	<Line Type="BREAK" Effect="clean" Duration="0.5"/>
 	<Line Type="TEXT" Name="프로듀서" Text="엥?" Voice="SCS001024" SpeakerType="2"/>
 	<Line Type="TEXT" Name="후유코" Text="여기 어디야? 언니랑 아저… 오빠는 누구?" Voice="SCS001025" CG="fuyuko_pre" Position="right" Animation="surp1" SpeakerType="1"/>
@@ -144,7 +144,7 @@
 	<Line Type="TEXT" Name="아사히" Text="갑자기 왜 그럼까 둘이?" Voice="SCS001104" CG="asahi_normal_1" Position="left" Animation="why" SpeakerType="1"/>
 	<Line Type="TEXT" Name="후유코" Text="후유도 몰라! 이런 거, 혹시라도 누가 보면…!" Voice="SCS001105" CG="fuyuko_normal_sr1" Position="center" Animation="anger3" SpeakerType="1"/>
 	<Line Type="TRANSITION" Effect="normal"/>
-	<Line Type="BG" Position="6" Key="bg_office_day"/>
+	<Line Type="BG" Position="6" ResourceKey="bg_office_day"/>
 	<Line Type="SE" Track="se_door_ake"/>
 	<Line Type="TEXT" Name="니치카" Text="수고하십니ㄷ…" Voice="SCS001106" CG="nichika_normal_sr1" Position="right" Animation="smile2" SpeakerType="1"/>
 	<Line Type="TEXT" Name="니치카" Text="아." Voice="SCS001107" CG="nichika_normal_sr1" Position="right" Animation="shy1" SpeakerType="1"/>

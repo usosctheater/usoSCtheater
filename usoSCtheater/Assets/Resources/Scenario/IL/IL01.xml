@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Scene MainTitle="InertiaLucis" SubTitle="힘의 법칙" >
 	<Line Type="AUDIO" Value="bgm" Track="BGM_2" Volume="0.4"/>
-	<Line Type="BG" Key="bg_rouka"/>
+	<Line Type="BG" ResourceKey="bg_rouka"/>
 	<Line Type="SE" Track="se_jihannki"/>
 	<Line Type="TEXT" Name="메이" Text="아 후유코쨩, 그거 들었어?" Voice="s001001" CG="mei_idol_3" Position="left" Animation="wait1" SpeakerType="1"/>
 	<Line Type="TEXT" Name="후유코" Text="그거?" Voice="s001002" CG="fuyuko_idol_3" Position="right" Animation="wait1" SpeakerType="1"/>
@@ -10,7 +10,7 @@
 	<Line Type="TEXT" Name="메이" Text="이번에는 유닛 별로 종목을 고를 수 있대~" Voice="s001005" CG="mei_idol_3" Position="left" Animation="smile2" SpeakerType="1"/>
 	<Line Type="TEXT" Name="메이" Text="후유코쨩은 뭐 나가고 싶어?" Voice="s001006" SpeakerType="1"/>
 	<Line Type="TRANSITION" Effect="normal"/>
-	<Line Type="BG" Effect="zoom" Value="1.5" Key="bg_rouka"/>
+	<Line Type="BG" Effect="zoom" Value="1.5" ResourceKey="bg_rouka"/>
 	<Line Type="SE" Track="se_tansan" Volume="0.3"/>
 	<Line Type="TEXT" Name="후유코" Text="음… 그러네…" Voice="s001007" CG="fuyuko_idol_3" Position="right" Animation="think" SpeakerType="1"/>
 	<Line Type="TEXT" Name="메이" Text="계주라던가, 어때?" Voice="s001008" CG="mei_idol_3" Position="left" Animation="wait1" SpeakerType="1"/>
@@ -29,12 +29,12 @@
 	<Line Type="TEXT" Name="메이" Text="후유코쨩?" Voice="s001018" CG="mei_idol_3" Position="left" Animation="wait1 face_surp" SpeakerType="1"/>
 	<Line Type="TEXT" Name="후유코" Text="왠지 불길한 기분이 들어… 빨리 돌아가자." Voice="s001019" CG="fuyuko_idol_3" Position="right" Animation="wait4 face_jito lip_anger" SpeakerType="1"/>
 	<Line Type="TRANSITION" Effect="normal"/>
-	<Line Type="BG" Position="4" Key="bg_rouka"/>
+	<Line Type="BG" Position="4" ResourceKey="bg_rouka"/>
 	<Line Type="SE" Duration="1" Track="se_rouka_run"/>
 	<Line Type="TEXT" Name="메이" Text="자, 잠깐만 후유코쨩!" Voice="s001020" CG="mei_idol_3" Position="left" Animation="surp1" SpeakerType="1"/>
 	<Line Type="TRANSITION" Effect="iris" SE="se_trans_out|se_trans_in"/>
 	<Line Type="AUDIO" Value="bgm" Track="BGM_101" Volume="0.4"/>
-	<Line Type="BG" Key="bg_hikaesitu"/>
+	<Line Type="BG" ResourceKey="bg_hikaesitu"/>
 	<Line Type="BREAK" Effect="clean"/>
 	<Line Type="TEXT" CG="asahi_idol_3" Position="center" Animation="wait1 face_smile" SpeakerType="0"/>
 	<Line Type="TEXT" Name="방송 PD" Text="와하하! 좋네, 그거!" Voice="s001021" SpeakerType="3"/>
@@ -55,7 +55,7 @@
 	<Line Type="TEXT" Name="아사히" Text="빨리 승부하고 싶슴다!" Voice="s001036" SpeakerType="1"/>
 	<Line Type="TEXT" Name="방송 PD" Text="아쉽게도 다음 달 대여 예정이라서" Voice="s001037" SpeakerType="3"/>
 	<Line Type="TRANSITION" Effect="normal"/>
-	<Line Type="BG" Key="bg_hikaesitu"/>
+	<Line Type="BG" ResourceKey="bg_hikaesitu"/>
 	<Line Type="SE" Track="se_door_ake"/>
 	<Line Type="BREAK" Effect="clean"/>
 	<Line Type="TEXT" Name="후유코" Text="수고하십니다~" Voice="s001038" CG="fuyuko_idol_3" Position="left" Animation="smile1" SpeakerType="1"/>
@@ -78,7 +78,7 @@
 	<Line Type="BREAK"/>
 	<Line Type="TRANSITION" Effect="iris" SE="se_trans_out|se_trans_in"/>
 	<Line Type="AUDIO" Value="bgm" Track="BGM_77" Volume="0.4"/>
-	<Line Type="BG" Key="bg_hikaesitu"/>
+	<Line Type="BG" ResourceKey="bg_hikaesitu"/>
 	<Line Type="BREAK" Effect="clean"/>
 	<Line Type="TEXT" Name="메이" Text="후유코쨩, 정말 괜찮아?" Voice="s001054" CG="mei_idol_3" Position="left" Animation="wait1 face_serious lip_anger2" SpeakerType="1"/>
 	<Line Type="TEXT" Name="후유코" Text="괜찮을 리가 없잖아." Voice="s001055" CG="fuyuko_idol_3" Position="right" Animation="shrug2 lip_anger" SpeakerType="1"/>
@@ -98,7 +98,7 @@
 	<Line Type="TEXT" Name="아사히" Text="후유코쨩." Voice="s001068" CG="none" SpeakerType="1"/>
 	<Line Type="TEXT" Name="아사히" Text="하기 싫은데 억지로 나가는 건, 이상함다." Voice="s001069" CG="asahi_idol_3" Position="right" Animation="wait1 face_serious lip_surp" SpeakerType="1"/>
 	<Line Type="TEXT" Name="아사히" Text="그런 거, 전혀 재미있지 않슴다…" Voice="s001070" SpeakerType="1"/>
-	<Line Type="BG" Position="2" Effect="zoom" Value="1.5" Key="bg_hikaesitu"/>
+	<Line Type="BG" Position="2" Effect="zoom" Value="1.5" ResourceKey="bg_hikaesitu"/>
 	<Line Type="TEXT" Name="아사히" Text="후유코쨩이 하기 싫은 거라면…" Voice="s001071" CG="none" SpeakerType="1"/>
 	<Line Type="BREAK" Duration="0.5"/>
 	<Line Type="TEXT" Name="후유코" Text="바보네." Voice="s001072" CG="fuyuko_idol_3" Position="left" Animation="wait4" SpeakerType="1"/>

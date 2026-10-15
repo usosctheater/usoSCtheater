@@ -16,7 +16,7 @@
         Track = ""
         Volume = ""
         SE = ""
-        Key= ""
+        ResourceKey= ""
     />
     <Line
         Type = ""
@@ -33,6 +33,6 @@
         Track = ""
         Volume = ""
         SE = ""
-        Key= ""
+        ResourceKey= ""
     />
 </Scene>

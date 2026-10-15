@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  스크립트 표의 종류(Line Type)별 속성 팔레트.
+  원본: resource\Script\ScriptManual.xlsx 의 ScriptManual 시트 (2026-10-15 기준) — 매뉴얼을 고치면 여기도 같이 고침 (도구 독립 규칙: TE 안 복사본)
+  - Type Id: XML의 Type 값 (드롭다운 순서 = 이 파일 순서)
+  - Field: Attr = XML 속성 이름, Label = 칸 이름(제목 줄·빈 칸 안내), Width = 기본 칸 폭(px, 제목 줄 경계선 드래그로 바꾼 폭은 설정에 저장), Hint = 툴팁 설명
+  - 팔레트에 없는 속성은 표의 '기타' 칸에 읽기 전용으로 표시 (파일에는 그대로 남음)
+-->
+<LineTypes>
+  <Type Id="TEXT">
+    <Field Attr="Name" Label="이름" Width="90" Hint="화자 이름. CGGROUP 화자명과 글자 그대로 같아야 립 재사용 대상"/>
+    <Field Attr="Text" Label="대사" Width="520" Hint="대사. \n은 줄바꿈"/>
+    <Field Attr="Voice" Label="보이스 키" Width="90" Hint="보이스 키. 여러 개는 공백(쉼표)으로 구분해 동시 출력 (CGGroup과 함께)"/>
+    <Field Attr="CG" Label="스파인 키" Width="170" Hint="스파인 키 또는 CGGroup 그룹명. none = 모든 스파인 내림"/>
+    <Field Attr="Position" Label="위치" Width="90" Hint="3분할 left / center / right, 5분할 wide_far_left / wide_left / wide_center / wide_right / wide_far_right"/>
+    <Field Attr="Animation" Label="애니메이션" Width="220" Hint="트랙 4개(Base / Face / Lip / Arm), 공백 구분 (예: wait3 face_anger)"/>
+    <Field Attr="Effect" Label="이펙트" Width="70" Hint="zoom만 지원"/>
+    <Field Attr="Value" Label="이펙트 수치" Width="75" Hint="zoom 배율 (미입력 시 1)"/>
+    <Field Attr="Duration" Label="이펙트 시간" Width="75" Hint="zoom 시간 (미입력 시 1)"/>
+    <Field Attr="SpeakerType" Label="화자 타입" Width="70" Hint="1 아이돌 / 2 프로듀서 / 3 기타 / 0 DialogBox 숨김 — 반드시 입력"/>
+  </Type>
+  <Type Id="BG">
+    <Field Attr="ResourceKey" Label="이미지 키" Width="200" Hint="배경 이미지 키 (Resources/BG 파일명)"/>
+    <Field Attr="Effect" Label="이펙트" Width="80" Hint="zoom / flashback (flashback은 BG 교체 시 자동 해제)"/>
+    <Field Attr="Position" Label="줌인 기준점" Width="80" Hint="zoom 기준점: 키패드 1~9 방향 (기본 5)"/>
+    <Field Attr="Value" Label="줌인 배율" Width="75" Hint="zoom 배율"/>
+  </Type>
+  <Type Id="AUDIO">
+    <Field Attr="Value" Label="트랙 분류" Width="80" Hint="bgm = BGM 전용 트랙, 그 외 트랙은 1부터 시작하는 숫자"/>
+    <Field Attr="Track" Label="파일 키" Width="200" Hint="오디오 파일 키"/>
+    <Field Attr="Volume" Label="볼륨" Width="60" Hint="볼륨"/>
+    <Field Attr="Effect" Label="이펙트" Width="70" Hint="loop / stop (트랙 정지)"/>
+  </Type>
+  <Type Id="SE">
+    <Field Attr="Track" Label="파일 키" Width="200" Hint="SE 파일 키"/>
+    <Field Attr="Volume" Label="볼륨" Width="60" Hint="볼륨"/>
+    <Field Attr="Duration" Label="재생 시간" Width="75" Hint="입력하면 해당 시간(초)만 재생하고 끊음, 미입력 시 끝까지"/>
+  </Type>
+  <Type Id="TRANSITION">
+    <Field Attr="Effect" Label="트랜지션 종류" Width="100" Hint="fade / iris / wipe_left / normal (normal은 바로 전환, BGM 유지)"/>
+    <Field Attr="SE" Label="SE" Width="240" Hint="out|in SE (1개 또는 | 로 2개)"/>
+  </Type>
+  <Type Id="BREAK">
+    <Field Attr="Duration" Label="대기 시간" Width="75" Hint="멈출 시간(초), 미입력 시 기본 대기 시간"/>
+    <Field Attr="Effect" Label="이펙트" Width="70" Hint="clean = 대기하는 동안 DialogBox 숨김"/>
+  </Type>
+  <Type Id="SETCG">
+    <Field Attr="CG" Label="스파인 키" Width="170" Hint="스파인 키 또는 CGGroup 그룹명. none = 모든 스파인 내림"/>
+    <Field Attr="Position" Label="위치" Width="90" Hint="3분할 / 5분할 위치"/>
+    <Field Attr="Animation" Label="애니메이션" Width="220" Hint="공백 구분 트랙 애니메이션"/>
+    <Field Attr="Effect" Label="이펙트" Width="70" Hint="clean = 이 스파인만 내림 / zoom"/>
+    <Field Attr="Value" Label="이펙트 수치" Width="75" Hint="zoom 배율"/>
+    <Field Attr="Duration" Label="이펙트 시간" Width="75" Hint="zoom 시간"/>
+  </Type>
+  <Type Id="CGGROUP">
+    <Field Attr="Name" Label="그룹명" Width="160" Hint="그룹명, 화자명 (첫 쉼표만 구분자). 같은 그룹명끼리 묶임 (최대 5명)"/>
+    <Field Attr="CG" Label="스파인 키" Width="170" Hint="그룹에 넣을 스파인 키"/>
+    <Field Attr="Position" Label="위치" Width="90" Hint="3분할 / 5분할 위치"/>
+    <Field Attr="Animation" Label="애니메이션" Width="220" Hint="공백 구분 트랙 애니메이션"/>
+  </Type>
+  <Type Id="IMAGE">
+    <Field Attr="ResourceKey" Label="이미지 키" Width="200" Hint="Resources/Image 파일명"/>
+    <Field Attr="Duration" Label="표시 시간" Width="75" Hint="표시 시간(초), 미입력 시 1초"/>
+  </Type>
+</LineTypes>

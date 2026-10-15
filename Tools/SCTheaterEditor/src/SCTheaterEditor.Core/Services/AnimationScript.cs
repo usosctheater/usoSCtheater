@@ -1,7 +1,7 @@
 namespace SCTheaterEditor.Services;
 
 /// <summary>
-/// 막 XML의 Animation 속성 값(예: "anger1, face_anger, arm_down")과 트랙 배치 사이의 변환.
+/// 막 XML의 Animation 속성 값(예: "anger1 face_anger arm_down" — 공백 구분, 2026-10-15 통일)과 트랙 배치 사이의 변환.
 /// 게임(CGManager)과 같은 규칙을 한곳에 모아 둔 것 — 뷰어 재생, 이후 씬 구성 탭의 스크립트 라인 내보내기에서 함께 사용.
 /// </summary>
 public static class AnimationScript
@@ -46,12 +46,12 @@ public static class AnimationScript
         return 0;
     }
 
-    /// <summary>트랙 배치 → Animation 값 (트랙 0→3 순서, 쉼표 구분, 빈 트랙 제외)</summary>
+    /// <summary>트랙 배치 → Animation 값 (트랙 0→3 순서, 공백 구분, 빈 트랙 제외) — 변경: 쉼표 → 공백 (기존 막 파일과 통일)</summary>
     public static string Build(IEnumerable<string?> tracks) =>
-        string.Join(", ", tracks.Where(a => !string.IsNullOrEmpty(a)));
+        string.Join(" ", tracks.Where(a => !string.IsNullOrEmpty(a)));
 
     /// <summary>
-    /// Animation 값 → 트랙 배치. 구분자는 CGManager와 같이 공백·쉼표, 같은 트랙에 여러 개면 뒤의 것이 남음
+    /// Animation 값 → 트랙 배치. 쓰는 구분자는 공백이지만 읽기는 CGManager와 같이 공백·쉼표 모두, 같은 트랙에 여러 개면 뒤의 것이 남음
     /// (게임에서도 같은 트랙에 SetAnimation을 다시 하므로 마지막 것이 재생됨)
     /// </summary>
     public static string?[] Parse(string? animation)

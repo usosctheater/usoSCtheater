@@ -73,6 +73,9 @@ public sealed partial class ScriptViewModel : ObservableObject
         _initializing = false;
     }
 
+    /// <summary>추가(4-1): 스크립트 표 (MainViewModel이 연결, 4-2에서 무대와 연동)</summary>
+    public ActEditorViewModel? Editor { get; set; }
+
     public ObservableCollection<StageActor> Actors { get; } = new();
 
     [ObservableProperty] public partial StageActor? SelectedActor { get; set; }
@@ -111,6 +114,9 @@ public sealed partial class ScriptViewModel : ObservableObject
     [ObservableProperty] public partial IReadOnlyList<string> Bones { get; private set; }
     [ObservableProperty] public partial string BonesHeader { get; private set; }
     [ObservableProperty] public partial bool BonesExpanded { get; set; }
+
+    /// <summary>추가: 선택 캐릭터 패널의 [설정] 영역 펼침 (트랙 교체 방식·스킨·립·본 목록, 기본은 접힘)</summary>
+    [ObservableProperty] public partial bool SettingsExpanded { get; set; }
 
     /// <summary>바꾼 트랙만 교체 (디버그 씬 방식). 끄면 게임 방식</summary>
     public bool SingleTrackMode
@@ -526,12 +532,19 @@ public sealed partial class ScriptViewModel : ObservableObject
     [RelayCommand]
     private void RefreshBones()
     {
-        if (BonesExpanded && SelectedActor is { IsLoaded: true } a) Send(new RequestBones(a.Id));
+        if (BonesVisible && SelectedActor is { IsLoaded: true } a) Send(new RequestBones(a.Id));
     }
 
-    partial void OnBonesExpandedChanged(bool value)
+    /// <summary>변경: 본 목록이 실제로 보이는지 = 설정 영역과 본 목록을 모두 펼침 (보이는 동안만 무대에서 실시간 갱신)</summary>
+    public bool BonesVisible => SettingsExpanded && BonesExpanded;
+
+    partial void OnBonesExpandedChanged(bool value) => OnBonesVisibilityChanged();
+
+    partial void OnSettingsExpandedChanged(bool value) => OnBonesVisibilityChanged();
+
+    private void OnBonesVisibilityChanged()
     {
-        Send(new WatchBones(value));   // 추가: 펼쳐 둔 동안 재생 중에도 본 목록 갱신
+        Send(new WatchBones(BonesVisible));   // 펼쳐 둔 동안 재생 중에도 본 목록 갱신
         RefreshBones();
     }
 
@@ -591,7 +604,7 @@ public sealed partial class ScriptViewModel : ObservableObject
         _stageReady = true;
         Send(new StageConfig(AnimationScript.TrackCount, StageLayout.ScreenWidth, StageLayout.ScreenHeight, StageLayout.UnitScale));
         SendBackground();
-        Send(new WatchBones(BonesExpanded));   // 변경: 무대 전체 일시정지 대신 (캐릭터별 일시정지는 불러온 뒤 OnActorLoaded에서)
+        Send(new WatchBones(BonesVisible));   // 변경: 무대 전체 일시정지 대신 (캐릭터별 일시정지는 불러온 뒤 OnActorLoaded에서)
         foreach (var a in Actors)
         {
             a.IsLoaded = false;

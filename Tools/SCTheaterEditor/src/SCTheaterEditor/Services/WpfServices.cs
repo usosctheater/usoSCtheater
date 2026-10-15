@@ -32,4 +32,36 @@ public sealed class WpfDialogService : IDialogService
         string args = File.Exists(path) ? $"/select,\"{path}\"" : $"\"{path}\"";
         Process.Start(new ProcessStartInfo("explorer.exe", args) { UseShellExecute = true });
     }
+
+    // 추가(4-1): 막 열기·저장용
+
+    public SaveChoice AskSave(string title, string message) =>
+        Show(message, title, MessageBoxButton.YesNoCancel, MessageBoxImage.Warning) switch
+        {
+            MessageBoxResult.Yes => SaveChoice.Save,
+            MessageBoxResult.No => SaveChoice.Discard,
+            _ => SaveChoice.Cancel,
+        };
+
+    public string? PickFolder(string title, string? initialFolder)
+    {
+        var dialog = new Microsoft.Win32.OpenFolderDialog { Title = title };
+        if (Directory.Exists(initialFolder)) dialog.InitialDirectory = initialFolder;
+        bool? ok = Owner != null ? dialog.ShowDialog(Owner) : dialog.ShowDialog();
+        return ok == true ? dialog.FolderName : null;
+    }
+
+    public string? PickFile(string title, string filter, string? initialFolder)
+    {
+        var dialog = new Microsoft.Win32.OpenFileDialog { Title = title, Filter = filter, CheckFileExists = true };
+        if (Directory.Exists(initialFolder)) dialog.InitialDirectory = initialFolder;
+        bool? ok = Owner != null ? dialog.ShowDialog(Owner) : dialog.ShowDialog();
+        return ok == true ? dialog.FileName : null;
+    }
+
+    public void ShowError(string title, string message) =>
+        Show(message, title, MessageBoxButton.OK, MessageBoxImage.Error);
+
+    private static MessageBoxResult Show(string message, string title, MessageBoxButton buttons, MessageBoxImage image) =>
+        Owner != null ? MessageBox.Show(Owner, message, title, buttons, image) : MessageBox.Show(message, title, buttons, image);
 }

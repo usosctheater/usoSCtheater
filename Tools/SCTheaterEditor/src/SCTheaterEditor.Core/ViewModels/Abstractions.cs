@@ -20,7 +20,22 @@ public interface IDialogService
 
     /// <summary>탐색기 열기 (파일이면 선택한 상태로)</summary>
     void OpenInExplorer(string path);
+
+    /// <summary>추가(4-1): 저장하지 않은 변경 — 저장 / 저장 안 함 / 취소</summary>
+    SaveChoice AskSave(string title, string message);
+
+    /// <summary>추가(4-1): 폴더 고르기 (취소면 null)</summary>
+    string? PickFolder(string title, string? initialFolder);
+
+    /// <summary>추가(4-1): 파일 고르기 (filter 예: "막 XML (*.xml)|*.xml", 취소면 null)</summary>
+    string? PickFile(string title, string filter, string? initialFolder);
+
+    /// <summary>추가(4-1): 오류 알림</summary>
+    void ShowError(string title, string message);
 }
+
+/// <summary>추가(4-1): 저장 확인 결과</summary>
+public enum SaveChoice { Save, Discard, Cancel }
 
 /// <summary>
 /// 탭 사이 메시지: 이 Spine 세트를 스크립트 탭 무대에 올려 달라 (리소스 탭 → 스크립트 탭).

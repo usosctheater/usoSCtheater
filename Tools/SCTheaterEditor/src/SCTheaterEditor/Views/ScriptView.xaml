@@ -3,169 +3,172 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
              xmlns:conv="clr-namespace:SCTheaterEditor.Converters"
+             xmlns:local="clr-namespace:SCTheaterEditor.Views"
              Focusable="True" FocusVisualStyle="{x:Null}"
              PreviewKeyDown="Root_PreviewKeyDown">
-    <!-- 스크립트 탭 (3회차 1차: 무대). DataContext = ScriptViewModel
-         배치: 왼쪽 위 무대 · 왼쪽 아래 스크립트 표(4회차) · 오른쪽 선택 캐릭터 패널 -->
+    <!-- 스크립트 탭. DataContext = ScriptViewModel
+         변경(4-1 확인 후): 배치 = 위쪽 [무대 | 선택 캐릭터 패널] · 아래쪽 스크립트 표(가로 전체).
+         선택 캐릭터 패널은 무대 영역 높이만 쓰고, 아래쪽은 모두 스크립트 표가 씀 -->
     <UserControl.Resources>
         <conv:EqualsConverter x:Key="Equals"/>
         <conv:NotNullToBoolConverter x:Key="NotNull"/>
     </UserControl.Resources>
 
     <Grid Margin="6">
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*"/>
-            <ColumnDefinition Width="5"/>
-            <ColumnDefinition Width="350"/>
-        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <!-- 무대 영역 (무대 + 재생 제어 | 선택 캐릭터 패널) -->
+            <RowDefinition Height="3*" MinHeight="240"/>
+            <RowDefinition Height="8"/>
+            <!-- 스크립트 표 (경계선 드래그로 크기 조절) -->
+            <RowDefinition Height="2*" MinHeight="150"/>
+        </Grid.RowDefinitions>
 
-        <!-- ===== 왼쪽: 무대 + 스크립트 표 ===== -->
-        <Grid Grid.Column="0">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <!-- 변경: 무대 + 재생 제어를 한 행으로 묶음 (가운데 경계선을 드래그하면 무대 영역 ↔ 스크립트 표 크기 조절) -->
-                <RowDefinition Height="3*" MinHeight="240"/>
-                <RowDefinition Height="8"/>
-                <RowDefinition Height="*" MinHeight="60"/>
-            </Grid.RowDefinitions>
+        <!-- 상단: 배경 / 분할 / 상태 -->
+        <DockPanel Grid.Row="0" Margin="0,0,0,6">
+            <StackPanel DockPanel.Dock="Left" Orientation="Horizontal">
+                <TextBlock Text="배경:" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                <ComboBox ItemsSource="{Binding BackgroundOptions}" SelectedItem="{Binding SelectedBackground}" MinWidth="200"
+                          IsTextSearchEnabled="True" ToolTip="exe 옆 Backgrounds 폴더의 이미지 (파일 이름 = BG 키)"/>
+                <Button Content="새로 고침" Margin="4,0,0,0" Padding="8,1" Command="{Binding RefreshBackgroundsCommand}"/>
+                <Button Content="폴더 열기" Margin="4,0,0,0" Padding="8,1" Click="OpenBackgroundFolder_Click"/>
+                <TextBlock Text="분할:" VerticalAlignment="Center" Margin="16,0,6,0"/>
+                <RadioButton Content="3분할" VerticalAlignment="Center" Margin="0,0,8,0" Command="{Binding SetSplitCommand}" CommandParameter="3"
+                             IsChecked="{Binding Split, Mode=OneWay, Converter={StaticResource Equals}, ConverterParameter=3}"/>
+                <RadioButton Content="5분할" VerticalAlignment="Center" Command="{Binding SetSplitCommand}" CommandParameter="5"
+                             IsChecked="{Binding Split, Mode=OneWay, Converter={StaticResource Equals}, ConverterParameter=5}"
+                             ToolTip="5분할에서 3분할로는 캐릭터가 3명 이하일 때만 바꿀 수 있습니다"/>
+            </StackPanel>
+            <TextBlock Text="{Binding StatusText}" Foreground="Gray" VerticalAlignment="Center" Margin="16,0,0,0" TextTrimming="CharacterEllipsis"
+                       ToolTip="무대: 클릭 = 선택 · 드래그 = 자리 이동(겹치면 교체) · Space = 재생/일시정지 · R = 초기화 · Delete = 내리기 · Enter/Esc = 미리보기 적용/취소"/>
+        </DockPanel>
 
-            <!-- 상단: 배경 / 분할 / 상태 -->
-            <DockPanel Grid.Row="0" Margin="0,0,0,6">
-                <StackPanel DockPanel.Dock="Left" Orientation="Horizontal">
-                    <TextBlock Text="배경:" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                    <ComboBox ItemsSource="{Binding BackgroundOptions}" SelectedItem="{Binding SelectedBackground}" MinWidth="200"
-                              IsTextSearchEnabled="True" ToolTip="exe 옆 Backgrounds 폴더의 이미지 (파일 이름 = BG 키)"/>
-                    <Button Content="새로 고침" Margin="4,0,0,0" Padding="8,1" Command="{Binding RefreshBackgroundsCommand}"/>
-                    <Button Content="폴더 열기" Margin="4,0,0,0" Padding="8,1" Click="OpenBackgroundFolder_Click"/>
-                    <TextBlock Text="분할:" VerticalAlignment="Center" Margin="16,0,6,0"/>
-                    <RadioButton Content="3분할" VerticalAlignment="Center" Margin="0,0,8,0" Command="{Binding SetSplitCommand}" CommandParameter="3"
-                                 IsChecked="{Binding Split, Mode=OneWay, Converter={StaticResource Equals}, ConverterParameter=3}"/>
-                    <RadioButton Content="5분할" VerticalAlignment="Center" Command="{Binding SetSplitCommand}" CommandParameter="5"
-                                 IsChecked="{Binding Split, Mode=OneWay, Converter={StaticResource Equals}, ConverterParameter=5}"
-                                 ToolTip="5분할에서 3분할로는 캐릭터가 3명 이하일 때만 바꿀 수 있습니다"/>
-                </StackPanel>
-                <TextBlock Text="{Binding StatusText}" Foreground="Gray" VerticalAlignment="Center" Margin="16,0,0,0" TextTrimming="CharacterEllipsis"/>
+        <!-- ===== 무대 영역: 왼쪽 무대 + 재생 제어 / 오른쪽 선택 캐릭터 패널 ===== -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="5"/>
+                <ColumnDefinition Width="350"/>
+            </Grid.ColumnDefinitions>
+
+            <DockPanel Grid.Column="0">
+                <!-- 재생 제어 (드래그 바는 일시정지 중에만 — SpineDebugScene과 같음) -->
+                <DockPanel DockPanel.Dock="Bottom" Margin="0,6,0,2">
+                    <Button DockPanel.Dock="Left" Width="90" Padding="0,2" Command="{Binding TogglePauseCommand}">
+                        <Button.Style>
+                            <Style TargetType="Button">
+                                <Setter Property="Content" Value="❚❚ 일시정지"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Paused}" Value="True">
+                                        <Setter Property="Content" Value="▶ 재생"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                    <TextBlock DockPanel.Dock="Right" Width="110" TextAlignment="Right" VerticalAlignment="Center" FontFamily="Consolas" Text="{Binding TimeText}"/>
+                    <Slider Minimum="0" Maximum="1" Margin="8,0" VerticalAlignment="Center" Value="{Binding TimeValue}" IsEnabled="{Binding Paused}"
+                            ToolTip="일시정지 중에 드래그하면 그 초로 이동합니다 (선택한 캐릭터, 선택이 없으면 무대 전체). 길이 = 가장 긴 애니메이션"/>
+                </DockPanel>
+
+                <!-- 무대 (WebView2) -->
+                <Border BorderBrush="LightGray" BorderThickness="1">
+                    <wv2:WebView2 x:Name="StageWeb"/>
+                </Border>
             </DockPanel>
 
-            <!-- 추가: 무대 영역 (재생 제어는 아래 고정, 무대가 남은 높이를 채움) -->
-            <DockPanel Grid.Row="1">
-            <!-- 재생 제어 (드래그 바는 일시정지 중에만 — SpineDebugScene과 같음) -->
-            <DockPanel DockPanel.Dock="Bottom" Margin="0,6,0,2">
-                <Button DockPanel.Dock="Left" Width="90" Padding="0,2" Command="{Binding TogglePauseCommand}">
-                    <Button.Style>
-                        <Style TargetType="Button">
-                            <Setter Property="Content" Value="❚❚ 일시정지"/>
+            <GridSplitter Grid.Column="1" HorizontalAlignment="Stretch"/>
+
+            <!-- ===== 선택 캐릭터 패널 (변경: 기본 = 정보 · 버튼 · 트랙/애니메이션 목록 · 트랙 상태, 나머지는 [설정]을 펼치면) ===== -->
+            <DockPanel Grid.Column="2" Margin="6,0,0,0">
+                <TextBlock DockPanel.Dock="Top" Text="{Binding InfoText}" TextWrapping="Wrap" Margin="0,0,0,6"/>
+
+                <!-- 미리보기 적용/취소, 내리기 -->
+                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
+                    <Button Content="미리보기 적용 (Enter)" Padding="8,1" Margin="0,0,6,0" Command="{Binding ConfirmPreviewCommand}"/>
+                    <Button Content="취소 (Esc)" Padding="8,1" Margin="0,0,6,0" Command="{Binding CancelPreviewCommand}"/>
+                    <Button Content="내리기 (Delete)" Padding="8,1" Command="{Binding RemoveSelectedCommand}"
+                            IsEnabled="{Binding SelectedActor, Converter={StaticResource NotNull}}"/>
+                </StackPanel>
+
+                <DockPanel DockPanel.Dock="Top" Margin="0,0,0,4">
+                    <Button DockPanel.Dock="Right" Content="초기화 (R)" Padding="8,1" Command="{Binding ResetSelectedCommand}"/>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <RadioButton GroupName="Track" Content="0 기본" Margin="0,0,8,0"
+                                     IsChecked="{Binding SelectedTrack, Converter={StaticResource Equals}, ConverterParameter=0}"/>
+                        <RadioButton GroupName="Track" Content="1 face" Margin="0,0,8,0"
+                                     IsChecked="{Binding SelectedTrack, Converter={StaticResource Equals}, ConverterParameter=1}"/>
+                        <RadioButton GroupName="Track" Content="2 lip" Margin="0,0,8,0"
+                                     IsChecked="{Binding SelectedTrack, Converter={StaticResource Equals}, ConverterParameter=2}"/>
+                        <RadioButton GroupName="Track" Content="3 arm"
+                                     IsChecked="{Binding SelectedTrack, Converter={StaticResource Equals}, ConverterParameter=3}"/>
+                    </StackPanel>
+                </DockPanel>
+
+                <!-- 아래쪽부터: [설정] 접는 영역 / 트랙 상태 (애니메이션 목록이 남은 높이를 채움) -->
+                <Expander DockPanel.Dock="Bottom" Header="설정" Margin="0,6,0,0" IsExpanded="{Binding SettingsExpanded}"
+                          ToolTip="트랙 교체 방식 · 스킨 · 립 재생 규칙 · 본 목록 · 개발자 도구">
+                    <!-- 접혀 있는 동안은 그리지 않고, 본 목록도 펼쳐 둔 동안만 무대에서 갱신 -->
+                    <ScrollViewer MaxHeight="380" VerticalScrollBarVisibility="Auto">
+                        <StackPanel Margin="4">
+                            <CheckBox Content="바꾼 트랙만 교체 (디버그 씬 방식)" IsChecked="{Binding SingleTrackMode}"
+                                      ToolTip="끄면 게임 방식: 애니메이션은 접두어 기준 트랙에 들어가고, 바뀔 때마다 전체 트랙을 처음부터 다시 재생합니다 (CGManager와 동일)"/>
+                            <DockPanel Margin="0,6,0,0">
+                                <TextBlock Text="스킨:" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                <ComboBox ItemsSource="{Binding SkinOptions}" SelectedItem="{Binding SelectedSkin}"
+                                          ToolTip="불러올 때 normal 스킨이 있으면 normal, 없으면 default가 아닌 첫 스킨을 고릅니다"/>
+                            </DockPanel>
+                            <CheckBox Content="립 재생 (게임 규칙)" Margin="0,8,0,0" IsChecked="{Binding LipEnabled}"
+                                      IsEnabled="{Binding SingleTrackMode, Converter={StaticResource Equals}, ConverterParameter=False}"
+                                      ToolTip="Animation에 lip_이 있으면 그 립, 없으면 기본 트랙 애니메이션 이름과 DefaultLipData.xml로 말하는 중/멈춤 립을 정합니다"/>
+                            <StackPanel Orientation="Horizontal" Margin="18,4,0,0" IsEnabled="{Binding LipControlsEnabled}">
+                                <RadioButton GroupName="LipMode" Content="계속 말함" Margin="0,0,12,0" VerticalAlignment="Center" IsChecked="{Binding LipAlways}"/>
+                                <RadioButton GroupName="LipMode" Content="말하다 멈춤:" VerticalAlignment="Center" IsChecked="{Binding LipSeconds}"/>
+                                <TextBox Width="44" Margin="4,0,2,0" TextAlignment="Right" IsEnabled="{Binding LipSecondsEnabled}"
+                                         Text="{Binding LipSecondsText, UpdateSourceTrigger=LostFocus}" KeyDown="LipSeconds_KeyDown"
+                                         ToolTip="보이스 길이 (0.1 ~ 60초, Enter로 확정)"/>
+                                <TextBlock Text="초" VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <Expander Header="{Binding BonesHeader}" Margin="0,8,0,0" IsExpanded="{Binding BonesExpanded}">
+                                <DockPanel>
+                                    <Button DockPanel.Dock="Top" HorizontalAlignment="Left" Content="지금 자세로 갱신" Padding="8,1" Margin="0,4"
+                                            Command="{Binding RefreshBonesCommand}"/>
+                                    <ListBox ItemsSource="{Binding Bones}" Height="140" FontFamily="Consolas"/>
+                                </DockPanel>
+                            </Expander>
+                            <Button Content="개발자 도구" HorizontalAlignment="Left" Padding="8,1" Margin="0,8,0,0"
+                                    Click="DevTools_Click" ToolTip="무대 페이지 오류 확인용 (디버그 빌드에서는 F5로 JS를 다시 읽음)"/>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Expander>
+                <TextBlock DockPanel.Dock="Bottom" Text="{Binding TrackStateText}" FontFamily="Consolas" Margin="0,6,0,0" TextWrapping="Wrap"/>
+
+                <ListBox x:Name="AnimList" ItemsSource="{Binding AnimItems}" SelectedItem="{Binding SelectedAnimItem, Mode=OneWay}"
+                         DisplayMemberPath="Text" FontFamily="Consolas"
+                         VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
+                         PreviewMouseLeftButtonUp="AnimList_PreviewMouseLeftButtonUp" KeyDown="AnimList_KeyDown">
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem">
                             <Style.Triggers>
-                                <DataTrigger Binding="{Binding Paused}" Value="True">
-                                    <Setter Property="Content" Value="▶ 재생"/>
+                                <DataTrigger Binding="{Binding IsSeparator}" Value="True">
+                                    <Setter Property="IsEnabled" Value="False"/>
+                                    <Setter Property="Focusable" Value="False"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding Kind}" Value="None">
+                                    <Setter Property="Foreground" Value="Gray"/>
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
-                    </Button.Style>
-                </Button>
-                <TextBlock DockPanel.Dock="Right" Width="110" TextAlignment="Right" VerticalAlignment="Center" FontFamily="Consolas" Text="{Binding TimeText}"/>
-                <Slider Minimum="0" Maximum="1" Margin="8,0" VerticalAlignment="Center" Value="{Binding TimeValue}" IsEnabled="{Binding Paused}"
-                        ToolTip="일시정지 중에 드래그하면 그 초로 이동합니다 (선택한 캐릭터, 선택이 없으면 무대 전체). 길이 = 가장 긴 애니메이션"/>
+                    </ListBox.ItemContainerStyle>
+                </ListBox>
             </DockPanel>
-
-            <!-- 무대 (WebView2) -->
-            <Border BorderBrush="LightGray" BorderThickness="1">
-                <wv2:WebView2 x:Name="StageWeb"/>
-            </Border>
-            </DockPanel>
-
-            <!-- 변경: 경계선 = 무대 영역(무대 + 재생 제어) ↔ 스크립트 표. 드래그 바와 헷갈리지 않게 회색 줄로 표시 -->
-            <GridSplitter Grid.Row="2" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" ResizeDirection="Rows"
-                          Background="#FFD0D0D0" Cursor="SizeNS" ToolTip="드래그: 무대 영역 / 스크립트 표 크기 조절"/>
-
-            <!-- 스크립트 표 자리 (4회차) -->
-            <Border Grid.Row="3" BorderBrush="LightGray" BorderThickness="1" Background="#FFF7F7F7">
-                <TextBlock Foreground="Gray" Margin="10" TextWrapping="Wrap"
-                           Text="스크립트 표 (4회차): 막·라인 편집, 라인에 적용(Ctrl+Enter), XML 읽기·쓰기가 여기에 들어갑니다.&#10;무대: 클릭 = 선택 · 드래그 = 자리 이동(겹치면 교체) · Space = 재생/일시정지 · R = 초기화 · Delete = 내리기 · Enter/Esc = 미리보기 적용/취소"/>
-            </Border>
         </Grid>
 
-        <GridSplitter Grid.Column="1" HorizontalAlignment="Stretch"/>
+        <!-- 경계선 = 무대 영역 ↔ 스크립트 표 (가로 전체). 드래그 바와 헷갈리지 않게 회색 줄로 표시 -->
+        <GridSplitter Grid.Row="2" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" ResizeDirection="Rows"
+                      Background="#FFD0D0D0" Cursor="SizeNS" ToolTip="드래그: 무대 영역 / 스크립트 표 크기 조절"/>
 
-        <!-- ===== 오른쪽: 선택 캐릭터 패널 ===== -->
-        <DockPanel Grid.Column="2" Margin="6,0,0,0">
-            <TextBlock DockPanel.Dock="Top" Text="{Binding InfoText}" TextWrapping="Wrap" Margin="0,0,0,6"/>
-
-            <!-- 미리보기 적용/취소, 내리기 -->
-            <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
-                <Button Content="미리보기 적용 (Enter)" Padding="8,1" Margin="0,0,6,0" Command="{Binding ConfirmPreviewCommand}"/>
-                <Button Content="취소 (Esc)" Padding="8,1" Margin="0,0,6,0" Command="{Binding CancelPreviewCommand}"/>
-                <Button Content="내리기 (Delete)" Padding="8,1" Command="{Binding RemoveSelectedCommand}"
-                        IsEnabled="{Binding SelectedActor, Converter={StaticResource NotNull}}"/>
-            </StackPanel>
-
-            <GroupBox DockPanel.Dock="Top" Header="설정" Margin="0,0,0,6">
-                <StackPanel Margin="4">
-                    <CheckBox Content="바꾼 트랙만 교체 (디버그 씬 방식)" IsChecked="{Binding SingleTrackMode}"
-                              ToolTip="끄면 게임 방식: 애니메이션은 접두어 기준 트랙에 들어가고, 바뀔 때마다 전체 트랙을 처음부터 다시 재생합니다 (CGManager와 동일)"/>
-                    <DockPanel Margin="0,6,0,0">
-                        <TextBlock Text="스킨:" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                        <ComboBox ItemsSource="{Binding SkinOptions}" SelectedItem="{Binding SelectedSkin}"
-                                  ToolTip="불러올 때 normal 스킨이 있으면 normal, 없으면 default가 아닌 첫 스킨을 고릅니다"/>
-                    </DockPanel>
-                    <CheckBox Content="립 재생 (게임 규칙)" Margin="0,8,0,0" IsChecked="{Binding LipEnabled}"
-                              IsEnabled="{Binding SingleTrackMode, Converter={StaticResource Equals}, ConverterParameter=False}"
-                              ToolTip="Animation에 lip_이 있으면 그 립, 없으면 기본 트랙 애니메이션 이름과 DefaultLipData.xml로 말하는 중/멈춤 립을 정합니다"/>
-                    <StackPanel Orientation="Horizontal" Margin="18,4,0,0" IsEnabled="{Binding LipControlsEnabled}">
-                        <RadioButton GroupName="LipMode" Content="계속 말함" Margin="0,0,12,0" VerticalAlignment="Center" IsChecked="{Binding LipAlways}"/>
-                        <RadioButton GroupName="LipMode" Content="말하다 멈춤:" VerticalAlignment="Center" IsChecked="{Binding LipSeconds}"/>
-                        <TextBox Width="44" Margin="4,0,2,0" TextAlignment="Right" IsEnabled="{Binding LipSecondsEnabled}"
-                                 Text="{Binding LipSecondsText, UpdateSourceTrigger=LostFocus}" KeyDown="LipSeconds_KeyDown"
-                                 ToolTip="보이스 길이 (0.1 ~ 60초, Enter로 확정)"/>
-                        <TextBlock Text="초" VerticalAlignment="Center"/>
-                    </StackPanel>
-                </StackPanel>
-            </GroupBox>
-
-            <DockPanel DockPanel.Dock="Top" Margin="0,0,0,4">
-                <Button DockPanel.Dock="Right" Content="초기화 (R)" Padding="8,1" Command="{Binding ResetSelectedCommand}"/>
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <RadioButton GroupName="Track" Content="0 기본" Margin="0,0,8,0"
-                                 IsChecked="{Binding SelectedTrack, Converter={StaticResource Equals}, ConverterParameter=0}"/>
-                    <RadioButton GroupName="Track" Content="1 face" Margin="0,0,8,0"
-                                 IsChecked="{Binding SelectedTrack, Converter={StaticResource Equals}, ConverterParameter=1}"/>
-                    <RadioButton GroupName="Track" Content="2 lip" Margin="0,0,8,0"
-                                 IsChecked="{Binding SelectedTrack, Converter={StaticResource Equals}, ConverterParameter=2}"/>
-                    <RadioButton GroupName="Track" Content="3 arm"
-                                 IsChecked="{Binding SelectedTrack, Converter={StaticResource Equals}, ConverterParameter=3}"/>
-                </StackPanel>
-            </DockPanel>
-
-            <!-- 아래쪽부터: 개발자 도구 / 본 목록 / 트랙 상태 -->
-            <Button DockPanel.Dock="Bottom" Content="개발자 도구" HorizontalAlignment="Left" Padding="8,1" Margin="0,6,0,0"
-                    Click="DevTools_Click" ToolTip="무대 페이지 오류 확인용 (디버그 빌드에서는 F5로 JS를 다시 읽음)"/>
-            <Expander DockPanel.Dock="Bottom" Header="{Binding BonesHeader}" Margin="0,6,0,0" IsExpanded="{Binding BonesExpanded}">
-                <DockPanel>
-                    <Button DockPanel.Dock="Top" HorizontalAlignment="Left" Content="지금 자세로 갱신" Padding="8,1" Margin="0,4"
-                            Command="{Binding RefreshBonesCommand}"/>
-                    <ListBox ItemsSource="{Binding Bones}" Height="160" FontFamily="Consolas"/>
-                </DockPanel>
-            </Expander>
-            <TextBlock DockPanel.Dock="Bottom" Text="{Binding TrackStateText}" FontFamily="Consolas" Margin="0,6,0,0" TextWrapping="Wrap"/>
-
-            <ListBox x:Name="AnimList" ItemsSource="{Binding AnimItems}" SelectedItem="{Binding SelectedAnimItem, Mode=OneWay}"
-                     DisplayMemberPath="Text" FontFamily="Consolas"
-                     VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
-                     PreviewMouseLeftButtonUp="AnimList_PreviewMouseLeftButtonUp" KeyDown="AnimList_KeyDown">
-                <ListBox.ItemContainerStyle>
-                    <Style TargetType="ListBoxItem">
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding IsSeparator}" Value="True">
-                                <Setter Property="IsEnabled" Value="False"/>
-                                <Setter Property="Focusable" Value="False"/>
-                            </DataTrigger>
-                            <DataTrigger Binding="{Binding Kind}" Value="None">
-                                <Setter Property="Foreground" Value="Gray"/>
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </ListBox.ItemContainerStyle>
-            </ListBox>
-        </DockPanel>
+        <!-- 스크립트 표 (막 열기·편집·저장) — 변경: 가로 전체 -->
+        <local:ActEditorView x:Name="EditorPanel" Grid.Row="3" DataContext="{Binding Editor}"/>
     </Grid>
 </UserControl>

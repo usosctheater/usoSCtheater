@@ -45,7 +45,7 @@ public class AnimationScriptTests
 
     [Fact]
     public void Build_SkipsEmptyTracks() =>
-        Assert.Equal("anger1, lip_a", AnimationScript.Build(new[] { "anger1", null, "lip_a", "" }));
+        Assert.Equal("anger1 lip_a", AnimationScript.Build(new[] { "anger1", null, "lip_a", "" }));   // 변경(4-1): 공백 구분
 
     [Fact]
     public void Parse_SpacesAndCommas_LastWinsOnSameTrack()

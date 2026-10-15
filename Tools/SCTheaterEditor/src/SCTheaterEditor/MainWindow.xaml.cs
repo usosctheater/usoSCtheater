@@ -26,11 +26,23 @@ public partial class MainWindow : Window
         InitializeComponent();
         DataContext = vm;
 
+        // 변경: 기본 크기 1920×1080 (에디터 작업용). 화면(작업 영역)보다 크면 화면에 맞춤
+        var area = SystemParameters.WorkArea;
+        if (Width > area.Width) Width = area.Width;
+        if (Height > area.Height) Height = area.Height;
+
         LicenseBox.Text = LoadEmbeddedText("THIRD-PARTY-NOTICES.txt");
 
         // 탭 사이 메시지: 이 탭으로 (스크립트 탭 미리보기 → Esc → 리소스 탭 복귀 등)
         WeakReferenceMessenger.Default.Register<ShowTabMessage>(this, (_, m) => ShowTab(m.Tab));
         Closed += (_, _) => WeakReferenceMessenger.Default.UnregisterAll(this);
+
+        // 추가(4-1): 저장 안 된 막이 있으면 닫기 전에 저장 / 저장 안 함 / 취소
+        Closing += (_, e) =>
+        {
+            Views.ActEditorView.CommitFocusedBox();   // 변경: 입력 중인 칸도 변경으로 쳐서 물음
+            if (!_vm.Editor.ConfirmDiscard()) e.Cancel = true;
+        };
 
         // 저장된 목록은 창이 뜬 뒤 읽음 (매니페스트 v2 이전 포함)
         Loaded += (_, _) => _vm.Initialize();

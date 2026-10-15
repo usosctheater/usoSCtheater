@@ -29,8 +29,12 @@ public partial class ScriptView : UserControl
 
     private void Root_PreviewKeyDown(object sender, KeyEventArgs e)
     {
-        if (Vm == null || Keyboard.Modifiers != ModifierKeys.None) return;
+        if (Vm == null) return;
+        // 추가(4-1): 스크립트 표 단축키는 탭 어디서나 (무대에 포커스가 있어도)
+        if (Vm.Editor is { } editor && HandleEditorShortcut(e, editor)) { e.Handled = true; return; }
+        if (Keyboard.Modifiers != ModifierKeys.None) return;
         if (e.OriginalSource is TextBox or ComboBox or ComboBoxItem) return;   // 글자 입력·드롭다운에서는 무시
+        if (IsInside(e.OriginalSource as DependencyObject, EditorPanel)) return;   // 추가(4-1): 표 안의 키(Delete·Space·Enter 등)는 표가 처리
         // 애니메이션 목록에서 Enter는 "이 애니메이션 적용" (목록이 직접 처리)
         if (e.Key == Key.Enter && IsInside(e.OriginalSource as DependencyObject, AnimList)) return;
         string? key = e.Key switch
@@ -43,6 +47,32 @@ public partial class ScriptView : UserControl
             _ => null,
         };
         if (key != null && Vm.HandleKey(key)) e.Handled = true;
+    }
+
+    /// <summary>
+    /// 추가(4-1): Ctrl+S 저장 · Ctrl+O 파일 열기 · Ctrl+Z 되돌리기 · Ctrl+Y(Ctrl+Shift+Z) 다시 하기. 처리했으면 true
+    /// 변경: 표의 칸이 모두 입력 상자가 되어, 확정 전 글자가 있는 상자에서만 Ctrl+Z·Y를 그 상자에 맡기고 나머지는 표 되돌리기.
+    /// 저장·열기 전에는 입력 중인 칸을 먼저 확정
+    /// </summary>
+    private static bool HandleEditorShortcut(KeyEventArgs e, ActEditorViewModel editor)
+    {
+        var mods = Keyboard.Modifiers;
+        if ((mods & ModifierKeys.Control) == 0 || (mods & ModifierKeys.Alt) != 0) return false;
+        bool shift = (mods & ModifierKeys.Shift) != 0;
+        bool typing = e.OriginalSource is TextBox tb && tb.GetBindingExpression(TextBox.TextProperty) is { IsDirty: true };
+        System.Windows.Input.ICommand? cmd = e.Key switch
+        {
+            Key.S when !shift => editor.SaveCommand,
+            Key.O when !shift => editor.OpenFileCommand,
+            Key.Z or Key.Y when typing => null,
+            Key.Z => shift ? editor.RedoCommand : editor.UndoCommand,
+            Key.Y when !shift => editor.RedoCommand,
+            _ => null,
+        };
+        if (cmd == null) return false;
+        if (cmd == editor.SaveCommand || cmd == editor.OpenFileCommand) ActEditorView.CommitFocusedBox();
+        if (cmd.CanExecute(null)) cmd.Execute(null);
+        return true;
     }
 
     /// <summary>항목 클릭(같은 항목을 다시 눌러도) → 적용</summary>

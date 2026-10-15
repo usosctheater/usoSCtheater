@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Scene MainTitle="InertiaLucis" SubTitle="빛의 관성">
-	<Line Type="BG" Key="bg_hikaesitu2"/>
+	<Line Type="BG" ResourceKey="bg_hikaesitu2"/>
 	<Line Type="AUDIO" Value="bgm" Track="bgm_101" Volume="0.4"/>
 	<Line Type="BREAK" Effect="clean"/>
 	<Line Type="TEXT" Name="후유코" Text="아사히." Voice="S003001" CG="fuyuko_sports_2" Position="left" Animation="wait3 face_serious lip_sad" SpeakerType="1"/>
@@ -18,7 +18,7 @@
 	<Line Type="TEXT" Name="메이" Text="에, 진심? 그럼 좀 위험한 거 아냐?" Voice="S003012" CG="mei_sports_2" Position="center" Animation="surp1" SpeakerType="1"/>
 	<Line Type="TEXT" Name="후유코" Text="객관적으로 봤을 때, 우리가 1등을 할 수 있을 확률이…" Voice="S003013" CG="fuyuko_sports_2" Position="left" Animation="anger1 face_serious lip_sad" SpeakerType="1"/>
 	<Line Type="TRANSITION" Effect="normal"/>
-	<Line Type="BG" Effect="zoom" Value="1.5" Key="bg_hikaesitu2"/>
+	<Line Type="BG" Effect="zoom" Value="1.5" ResourceKey="bg_hikaesitu2"/>
 	<Line Type="SE" Duration="1" Track="se_rouka_run"/>
 	<Line Type="TEXT" Name="후유코" Text="잠깐, 아사히?!" Voice="S003014" CG="fuyuko_sports_2" Position="left" Animation="surp2" SpeakerType="1"/>
 	<Line Type="TEXT" Name="아사히" Text="잠깐 다른 팀들 좀 보고 오겠슴다!" Voice="S003015" SpeakerType="1"/>
@@ -28,20 +28,20 @@
 	<Line Type="SE" Track="se_door_sime"/>
 	<Line Type="BREAK"/>
 	<Line Type="TRANSITION" Effect="normal"/>
-	<Line Type="BG" Key="bg_hikaesitu2"/>
+	<Line Type="BG" ResourceKey="bg_hikaesitu2"/>
 	<Line Type="BREAK" Effect="clean"/>
 	<Line Type="TEXT" Name="후유코" Text="원래부터 목적은 두 사람을 돋보이게 하는 거였으니까…" Voice="S003019" SpeakerType="1"/>
 	<Line Type="TEXT" Name="후유코" Text="후유는 적당히 달리다가, 아사히한테 넘겨주면 돼." Voice="S003020" SpeakerType="1"/>
 	<Line Type="TEXT" Name="후유코" Text="1등같은 건…" Voice="S003021" SpeakerType="1"/>
 	<Line Type="TRANSITION" Effect="iris" SE="se_trans_out|se_trans_in"/>
-	<Line Type="BG" Key="bg_runninTrack_1"/>
+	<Line Type="BG" ResourceKey="bg_runninTrack_1"/>
 	<Line Type="AUDIO" Value="bgm" Track="bgm_121" Volume="0.4"/>
 	<Line Type="AUDIO" Effect="loop" Value="1" Track="se_zawa" Volume="0.4"/>
 	<Line Type="BREAK" Effect="clean"/>
 	<Line Type="TEXT" Name="캐스터" Text="자, 그룹 대항 이어달리기!" Voice="S003022" SpeakerType="3"/>
 	<Line Type="SE" Track="se_startpistol" Volume="0.8"/>
 	<Line Type="TRANSITION" Effect="normal"/>
-	<Line Type="BG" Position="1" Effect="zoom" Value="1.5" Key="bg_runninTrack_1"/>
+	<Line Type="BG" Position="1" Effect="zoom" Value="1.5" ResourceKey="bg_runninTrack_1"/>
 	<Line Type="TEXT" Name="캐스터" Text="선수들 일제히 달려나가기 시작합니다." Voice="S003023" SpeakerType="3"/>
 	<Line Type="TEXT" Name="해설" Text="코너를 지나면서 선두 그룹이 치고 나왔네요." Voice="S003024" SpeakerType="3"/>
 	<Line Type="TEXT" Name="캐스터" Text="가장 앞에 있는 선수는…" Voice="S003025" SpeakerType="3"/>
@@ -53,7 +53,7 @@
 	<Line Type="TEXT" Name="캐스터" Text="말씀드리는 순간, 선두 그룹이 직선 코스에 진입!" Voice="S003031" SpeakerType="3"/>
 	<Line Type="TEXT" Name="캐스터" Text="조금 떨어진 곳에서 두번째 주자들이 몸을 푸는 모습이 보입니다." Voice="S003032" SpeakerType="3"/>
 	<Line Type="TRANSITION" Effect="normal"/>
-	<Line Type="BG" Key="bg_runninTrack_1"/>
+	<Line Type="BG" ResourceKey="bg_runninTrack_1"/>
 	<Line Type="AUDIO" Effect="stop" Value="bgm"/>
 	<Line Type="AUDIO" Value="bgm" Track="bgm_75" Volume="0.4"/>
 	<Line Type="BREAK" Effect="clean"/>
@@ -75,24 +75,24 @@
 	<Line Type="AUDIO" Effect="stop" Value="bgm"/>
 	<Line Type="AUDIO" Effect="stop" Value="1"/>
 	<Line Type="TRANSITION" Effect="normal"/>
-	<Line Type="BG" Effect="flashback" Key="bg_car_sunset"/>
+	<Line Type="BG" Effect="flashback" ResourceKey="bg_car_sunset"/>
 	<Line Type="BREAK" Effect="clean" Duration="0.5"/>
 	<Line Type="TEXT" Name="아사히" Text="1등을 하는 건 최강이라는 검다." Voice="S002110" SpeakerType="1"/>
 	<Line Type="TEXT" Name="아사히" Text="그리고 스트레이라이트는 항상 최강을 목표로 함다." Voice="S002111" SpeakerType="1"/>
 	<Line Type="TEXT" Name="아사히" Text="그러니까, 저는 항상 1등을 하고 싶슴다. 스트레이라이트니까요." Voice="S002112" SpeakerType="1"/>
 	<Line Type="TRANSITION" Effect="normal"/>
-	<Line Type="BG" Effect="flashback" Key="bg_hasisita_sunset"/>
+	<Line Type="BG" Effect="flashback" ResourceKey="bg_hasisita_sunset"/>
 	<Line Type="BREAK" Effect="clean" Duration="0.5"/>
 	<Line Type="TEXT" Name="메이" Text="그럼, 내가 후유코쨩이 진심으로 달리지 않아도 될 만큼\n엄~청 빠르게 달리면 된다는 거잖아?" Voice="S002077" SpeakerType="1"/>
 	<Line Type="TEXT" Name="메이" Text="우리는 한 팀이니까!" Voice="S002078" SpeakerType="1"/>
 	<Line Type="TRANSITION" Effect="normal"/>
-	<Line Type="BG" Effect="flashback" Key="bg_hasisita_day"/>
+	<Line Type="BG" Effect="flashback" ResourceKey="bg_hasisita_day"/>
 	<Line Type="BREAK" Effect="clean" Duration="0.5"/>
 	<Line Type="TEXT" Name="프로듀서" Text="후유코는 이미 충분히 열심히 하고 있으니까." Voice="S002036" SpeakerType="2"/>
 	<Line Type="TEXT" Name="프로듀서" Text="가끔은 자신에게 솔직해져도 된다고 생각해." Voice="S002037" SpeakerType="2"/>
 	<Line Type="BREAK" Effect="clean"/>
 	<Line Type="TRANSITION" Effect="normal"/>
-	<Line Type="BG" Key="bg_runninTrack_1"/>
+	<Line Type="BG" ResourceKey="bg_runninTrack_1"/>
 	<Line Type="BREAK" Effect="clean"/>
 	<Line Type="TEXT" Name="후유코" Text="뭘 이미 졌다는 얼굴을 하고 있는 거야." Voice="S003101" SpeakerType="1"/>
 	<Line Type="BREAK" Duration="0.5"/>
@@ -109,7 +109,7 @@
 	<Line Type="AUDIO" Value="bgm" Track="bgm_80" Volume="0.6"/>
 	<Line Type="AUDIO" Effect="loop" Value="1" Track="se_zawa" Volume="0.8"/>
 	<Line Type="SE" Track="se_kansei" Volume="0.4"/>
-	<Line Type="BG" Key="bg_runninTrack_1"/>
+	<Line Type="BG" ResourceKey="bg_runninTrack_1"/>
 	<Line Type="BREAK" Effect="clean"/>
 	<Line Type="TEXT" Name="캐스터" Text="바통은 두 팀 모두 거의 동시에 넘겨받았습니다." Voice="S003045" SpeakerType="3"/>
 	<Line Type="TEXT" Name="캐스터" Text="두번째 주자 모두 달려나갑니다!" Voice="S003046" SpeakerType="3"/>
@@ -135,7 +135,7 @@
 	<Line Type="TEXT" Name="아사히" Text="이 정도면 충분하니까." Voice="S003066" CG="asahi_sports_2" Position="center" Animation="skill1 face_serious lip_surp" SpeakerType="1"/>
 	<Line Type="SE" Track="se_baton" Volume="0.8"/>
 	<Line Type="TRANSITION" Effect="normal"/>
-	<Line Type="BG" Key="bg_runninTrack_1"/>
+	<Line Type="BG" ResourceKey="bg_runninTrack_1"/>
 	<Line Type="BREAK" Effect="clean"/>
 	<Line Type="TEXT" Name="후유코" Text="하아… 하아…" Voice="S003067" SpeakerType="1"/>
 	<Line Type="TEXT" Name="후유코" Text="뒤는 맡길게, 아사히…" Voice="S003068" SpeakerType="1"/>
@@ -149,7 +149,7 @@
 	<Line Type="TEXT" Name="후유코" Text="결국 바보가 옮아버렸잖아." Voice="S003100" SpeakerType="1"/>
 	<Line Type="BREAK"/>
 	<Line Type="TRANSITION" Effect="iris" SE="se_trans_out|se_trans_in"/>
-	<Line Type="BG" Key="bg_hikaesitu2"/>
+	<Line Type="BG" ResourceKey="bg_hikaesitu2"/>
 	<Line Type="AUDIO" Value="bgm" Track="BGM_101" Volume="0.4"/>
 	<Line Type="BREAK" Effect="clean"/>
 	<Line Type="TEXT" Name="아사히" Text="SNS에서 후유코쨩이 좋은 얼굴을 하고 있다고 화제가 되고 있슴다." Voice="S003073" CG="asahi_sports_2" Position="left" Animation="surp4 face_serious" SpeakerType="1"/>
@@ -173,7 +173,7 @@
 	<Line Type="TEXT" Name="프로듀서" Text="네…" Voice="S003091" SpeakerType="2"/>
 	<Line Type="SE" Track="se_door_sime"/>
 	<Line Type="TRANSITION" Effect="normal"/>
-	<Line Type="BG" Key="bg_hikaesitu2"/>
+	<Line Type="BG" ResourceKey="bg_hikaesitu2"/>
 	<Line Type="BREAK" Effect="clean"/>
 	<Line Type="TEXT" Name="메이" Text="가버렸네." Voice="S003092" CG="mei_sports_2" Position="left" Animation="anger2 face_serious lip_smile1" SpeakerType="1"/>
 	<Line Type="TEXT" Name="아사히" Text="가버렸슴다." Voice="S003093" CG="asahi_sports_2" Position="right" Animation="wait3 face_surp lip_surp" SpeakerType="1"/>
