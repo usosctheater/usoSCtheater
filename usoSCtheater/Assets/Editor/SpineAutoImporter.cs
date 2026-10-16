@@ -44,6 +44,9 @@ public class SpineAutoImporter : EditorWindow
     private const string CGMANAGER_NAME = "CGManager";
     private const string SORTING_LAYER = "CG";
     private const int ORDER_IN_LAYER = 1;
+    // [E-004] 셰이더를 Straight Alpha로 바꾼 뒤 InstantiateSkeletonAnimation을 부르면 spine-unity가 PMA Vertex Colors를 끔
+    //         (셰이더 이름에 "Spine/Skeleton"이 없으면 끄는 규칙) → 직접 만든 오브젝트(기본값 켜짐)와 같게 항상 켬
+    private const bool PMA_VERTEX_COLORS = true;
 
     // ─────────────────────────────────────────────────────────────────────
     [MenuItem("Tools/Spine Auto Setup")]
@@ -297,6 +300,7 @@ public class SpineAutoImporter : EditorWindow
             Debug.LogError($"[SpineAutoSetup] SkeletonAnimation 생성 실패: {c.spineName}");
             return false;
         }
+        skelAnim.pmaVertexColors = PMA_VERTEX_COLORS;   // [E-004] 추가
 
         GameObject spineObj = skelAnim.gameObject;
         spineObj.name = c.spineName;

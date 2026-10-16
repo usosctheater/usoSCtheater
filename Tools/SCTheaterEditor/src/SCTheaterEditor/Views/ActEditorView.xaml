@@ -101,6 +101,9 @@
                 <Button Content="↶ 되돌리기" Padding="8,1" Margin="10,0,0,0" Command="{Binding UndoCommand}" ToolTip="Ctrl+Z"/>
                 <Button Content="↷ 다시 하기" Padding="8,1" Margin="2,0,0,0" Command="{Binding RedoCommand}" ToolTip="Ctrl+Y"/>
                 <Button Content="칸 폭 초기화" Padding="8,1" Margin="10,0,0,0" Command="{Binding ResetFieldWidthsCommand}" ToolTip="모든 종류의 칸 폭을 기본값으로"/>
+                <!-- 추가: 이 막의 Spine을 게임에 내보내기 -->
+                <Button Content="Spine 게임에 내보내기" Padding="8,1" Margin="10,0,0,0" Command="{Binding ExportActSpinesCommand}"
+                        ToolTip="이 막에서 쓰는 Spine 세트를 게임 Resources\Spine에 복사 (없으면 복사, 같으면 건너뜀, 다르면 물어봄). 등록은 Unity의 Tools &gt; Spine Auto Setup"/>
                 <TextBlock Text="{Binding UnknownCgText}" Foreground="#FFC62828" VerticalAlignment="Center" Margin="12,0,0,0"/>
             </StackPanel>
             <TextBlock Text="{Binding StatusText}" Foreground="Gray" VerticalAlignment="Center" Margin="12,0,0,0" TextTrimming="CharacterEllipsis"/>

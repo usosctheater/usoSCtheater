@@ -296,7 +296,7 @@ public class ResourceViewModelTests
         vm.SearchText = "";
         vm.Filter.VisibleMembers.Single(m => m.Id == 21).IsChecked = false;
         Assert.Single(vm.Items.OfType<ResourceAssetItem>());
-        Assert.Equal("세트 1 / 3개", vm.SummaryText);
+        Assert.Equal("◎ 0 · 세트 1 / 3개", vm.SummaryText);   // 변경: 앞에 게임 보유(◎) 개수
     }
 
     [Fact]

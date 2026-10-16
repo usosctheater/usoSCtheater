@@ -209,6 +209,9 @@ public sealed class EditorSettings
     /// <summary>추가(4-1): 막 목록을 읽을 시나리오 폴더 (게임 Assets\Resources\Scenario — 도구 독립 규칙상 코드에 경로를 두지 않고 사용자가 지정)</summary>
     public string? ScenarioFolder { get; set; }
 
+    /// <summary>추가: 게임으로 내보내기 대상 = 게임 Assets\Resources\Spine (도구 독립 규칙상 사용자가 지정, 아래 {nickName} 폴더에 씀)</summary>
+    public string? GameSpineFolder { get; set; }
+
     /// <summary>추가(4-1): 막별로 남길 저장 전 백업 수</summary>
     public int BackupCount { get; set; } = 10;
 

@@ -1,0 +1,17 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a6b194f808b1af6499c93410e504af42, type: 3}
+  m_Name: fuyuko_stand_1050180010_Atlas
+  m_EditorClassIdentifier: Assembly-CSharp::Spine.Unity.AtlasAsset
+  atlasFile: {fileID: 4900000, guid: 0a3ee255955a9a7408f62dc35e95188b, type: 3}
+  materials:
+  - {fileID: 2100000, guid: 2236fc318d74f2842ab9ce1da13c30df, type: 2}
