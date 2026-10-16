@@ -6,7 +6,7 @@ using UnitySceneManager = UnityEngine.SceneManagement.SceneManager;
 
 namespace UsoSCTheater.SceneFlow
 {
-    /// <summary>게임에서 전환 대상이 되는 Unity 씬. (SpineDebugScene 같은 개발용 씬은 제외)</summary>
+    /// <summary>게임에서 전환 대상이 되는 Unity 씬. (개발용 씬은 제외)</summary>
     public enum SceneId
     {
         ScenarioSelect,
