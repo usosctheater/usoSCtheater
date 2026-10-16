@@ -381,7 +381,7 @@ public sealed partial class ScriptViewModel : ObservableObject
         RefreshAnimList();
     }
 
-    /// <summary>선택한 트랙 기준 목록: (None) → 우선 그룹(SpineDebugManager 규칙) → 구분선 → 나머지</summary>
+    /// <summary>선택한 트랙 기준 목록: (None) → 우선 그룹(예전 게임 SpineDebugManager에서 가져온 규칙) → 구분선 → 나머지</summary>
     private void RefreshAnimList()
     {
         var a = SelectedActor;

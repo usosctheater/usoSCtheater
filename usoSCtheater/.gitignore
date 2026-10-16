@@ -104,3 +104,11 @@ InitTestScene*.unity*
 
 # Auto-generated cache in Assets folder
 /[Aa]ssets/[Ss]ceneDependencyCache*
+
+# Unity 비정상 종료 후 복구 씬 (2026-10-16 추가)
+/[Aa]ssets/_Recovery/
+/[Aa]ssets/_Recovery.meta
+
+# TE 테스트용 막 (게임 재생 테스트를 위해 Scenario 폴더에 두지만 커밋하지 않음, 2026-10-16 추가)
+/[Aa]ssets/Resources/Scenario/TEMP/
+/[Aa]ssets/Resources/Scenario/TEMP.meta

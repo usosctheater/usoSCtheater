@@ -25,6 +25,8 @@ public sealed partial class ResourceViewModel : ObservableObject
     private readonly IMessenger _messenger;
     private readonly AppLog _log;
     private string _idolSignature = "";
+    private readonly GameSpineExporter _exporter;   // 추가: 게임으로 내보내기
+    private HashSet<string> _gameKeys = new(StringComparer.OrdinalIgnoreCase);   // 추가: 게임에 있는 CG 키 (◎ 표시)
 
     public ResourceViewModel(AppSettings settings, SpineLibrary library, IReadOnlyList<IdolUnit> units, IDialogService dialogs,
                              Action saveSettings, IMessenger messenger, AppLog log)
@@ -36,11 +38,13 @@ public sealed partial class ResourceViewModel : ObservableObject
         _saveSettings = saveSettings;
         _messenger = messenger;
         _log = log;
+        _exporter = new GameSpineExporter(library);   // 추가
 
         Items = [];
         SearchText = "";
         SummaryText = "";
         InfoText = "";
+        ExportText = "";   // 추가
 
         Filter.Changed += () =>
         {
@@ -54,6 +58,7 @@ public sealed partial class ResourceViewModel : ObservableObject
             _saveSettings();
         };
         _library.Changed += OnLibraryChanged;
+        _gameKeys = GameSpineExporter.ScanGameKeys(_settings.Editor.GameSpineFolder);   // 추가: 첫 목록 전에 게임 보유 확인
         OnLibraryChanged();
     }
 
@@ -64,7 +69,7 @@ public sealed partial class ResourceViewModel : ObservableObject
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(SelectedAsset))]
-    [NotifyCanExecuteChangedFor(nameof(OpenCommand), nameof(AddImmediatelyCommand), nameof(OpenFolderCommand))]
+    [NotifyCanExecuteChangedFor(nameof(OpenCommand), nameof(AddImmediatelyCommand), nameof(OpenFolderCommand), nameof(ExportToGameCommand))]
     public partial ResourceItem? SelectedItem { get; set; }
 
     public SpineAsset? SelectedAsset => (SelectedItem as ResourceAssetItem)?.Asset;
@@ -72,6 +77,9 @@ public sealed partial class ResourceViewModel : ObservableObject
     [ObservableProperty] public partial string SearchText { get; set; }
     [ObservableProperty] public partial string SummaryText { get; private set; }
     [ObservableProperty] public partial string InfoText { get; private set; }
+
+    /// <summary>추가: 게임 내보내기 결과 (버튼 아래 표시)</summary>
+    [ObservableProperty] public partial string ExportText { get; private set; }
 
     /// <summary>미리보기할 텍스처 경로 (없으면 null)</summary>
     [ObservableProperty] public partial string? PreviewPath { get; private set; }
@@ -106,9 +114,42 @@ public sealed partial class ResourceViewModel : ObservableObject
         catch (Exception ex) { _log.Error("탐색기 열기 실패", ex); }
     }
 
-    /// <summary>파일이 지워졌을 수 있으므로 매니페스트와 실제 파일을 다시 확인 (서버 요청 없음)</summary>
+    /// <summary>추가: 선택한 세트를 게임 Resources/Spine/{nickName}/에 내보내기 (등록은 Unity SpineAutoImporter)</summary>
+    [RelayCommand(CanExecute = nameof(HasAsset))]
+    private void ExportToGame()
+    {
+        if (SelectedAsset is not { } a) return;
+        string? folder = GameExportFlow.EnsureFolder(_settings, _dialogs, _saveSettings);
+        if (folder == null) return;
+        ExportText = GameExportFlow.Summary(GameExportFlow.Run(_exporter, folder, [a], _dialogs, _log));
+        RefreshGameKeys();   // 변경: ◎ 갱신
+    }
+
+    /// <summary>추가: 게임 Spine 폴더 다시 지정</summary>
     [RelayCommand]
-    private void Refresh() => _library.Rebuild();
+    private void PickGameFolder()
+    {
+        if (GameExportFlow.EnsureFolder(_settings, _dialogs, _saveSettings, forcePick: true) is { } f)
+        {
+            ExportText = $"게임 Spine 폴더: {f}";
+            RefreshGameKeys();   // 변경: ◎ 갱신
+        }
+    }
+
+    /// <summary>파일이 지워졌을 수 있으므로 매니페스트와 실제 파일을 다시 확인 (서버 요청 없음). 변경: 게임 보유(◎)도 다시 확인</summary>
+    [RelayCommand]
+    private void Refresh()
+    {
+        _gameKeys = GameSpineExporter.ScanGameKeys(_settings.Editor.GameSpineFolder);
+        _library.Rebuild();   // Changed → 목록 다시 그림
+    }
+
+    /// <summary>추가: 게임 폴더 다시 훑기 → 목록 다시 그림 (선택 유지)</summary>
+    private void RefreshGameKeys()
+    {
+        _gameKeys = GameSpineExporter.ScanGameKeys(_settings.Editor.GameSpineFolder);
+        RebuildItems();
+    }
 
     // ------------------------------------------------------------------ 목록
 
@@ -146,10 +187,12 @@ public sealed partial class ResourceViewModel : ObservableObject
         foreach (var group in shown.GroupBy(a => a.DressType))   // Assets가 의상 종류 순으로 정렬돼 있어 순서 유지
         {
             items.Add(new ResourceSeparator($"── {group.Key} ({group.Count()}) ──"));
-            items.AddRange(group.Select(a => new ResourceAssetItem(a)));
+            items.AddRange(group.Select(a => new ResourceAssetItem(a, _gameKeys.Contains(a.CgKey))));   // 변경: 게임 보유 여부
         }
         Items = items;
-        SummaryText = shown.Count == _library.Count ? $"세트 {_library.Count}개" : $"세트 {shown.Count} / {_library.Count}개";
+        // 변경: 앞에 ◎(게임 보유) 개수 — 보이는 목록 기준
+        int inGame = shown.Count(a => _gameKeys.Contains(a.CgKey));
+        SummaryText = shown.Count == _library.Count ? $"◎ {inGame} · 세트 {_library.Count}개" : $"◎ {inGame} · 세트 {shown.Count} / {_library.Count}개";
         SelectedItem = selectedSource == null ? null
             : items.OfType<ResourceAssetItem>().FirstOrDefault(i => i.Asset.SourcePath == selectedSource);
     }
@@ -206,9 +249,10 @@ public sealed class ResourceSeparator(string title) : ResourceItem
 }
 
 /// <summary>세트 1개: 의상명 · 타입 · CG 키</summary>
-public sealed class ResourceAssetItem(SpineAsset asset) : ResourceItem
+public sealed class ResourceAssetItem(SpineAsset asset, bool inGame = false) : ResourceItem
 {
     public SpineAsset Asset { get; } = asset;
+    public bool InGame { get; } = inGame;   // 추가: 게임 Resources\Spine에 있음 → ◎
     public string Title => Asset.DressName;
     public string Detail => $"{Asset.SpineType}  ·  {Asset.CgKey}";
 }

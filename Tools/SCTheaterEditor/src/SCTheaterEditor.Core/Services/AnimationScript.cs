@@ -17,7 +17,7 @@ public static class AnimationScript
     /// <summary>알려진 접두어 (트랙 0의 우선 그룹 = 이 접두어가 없는 것)</summary>
     public static readonly string[] KnownPrefixes = { "face_", "lip_", "arm_", "eye_" };
 
-    /// <summary>트랙별 우선 표시 접두어 (SpineDebugManager와 동일: 3은 arm_ 다음 eye_)</summary>
+    /// <summary>트랙별 우선 표시 접두어 (예전 게임 SpineDebugManager에서 가져온 규칙: 3은 arm_ 다음 eye_)</summary>
     private static readonly Dictionary<int, string[]> TrackPriorityPrefixes = new()
     {
         { 1, new[] { "face_" } },

@@ -7,17 +7,26 @@
     <!-- 리소스 탭: 받은 세트를 세로 목록 하나로 (의상 종류 구분선). DataContext = ResourceViewModel -->
     <UserControl.Resources>
         <conv:PathToImageConverter x:Key="PathToImage"/>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
 
         <!-- 구분선 -->
         <DataTemplate DataType="{x:Type vm:ResourceSeparator}">
             <TextBlock Text="{Binding Title}" FontWeight="Bold" Foreground="#FF5A6E8C" Margin="0,6,0,2"/>
         </DataTemplate>
-        <!-- 세트: 의상명 · 타입 · CG 키 -->
+        <!-- 세트: 의상명 · 타입 · CG 키 + (변경) 오른쪽 끝 ◎ = 게임 Resources\Spine에 있음 -->
         <DataTemplate DataType="{x:Type vm:ResourceAssetItem}">
-            <StackPanel Orientation="Horizontal" Margin="8,1,0,1">
-                <TextBlock Text="{Binding Title}"/>
-                <TextBlock Text="{Binding Detail}" Foreground="Gray" Margin="12,0,0,0"/>
-            </StackPanel>
+            <Grid Margin="8,1,4,1">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="{Binding Title}"/>
+                    <TextBlock Text="{Binding Detail}" Foreground="Gray" Margin="12,0,0,0"/>
+                </StackPanel>
+                <TextBlock Grid.Column="1" Text="◎" Foreground="#FF2E7D32" Margin="8,0,0,0" ToolTip="게임 Resources\Spine에 있음"
+                           Visibility="{Binding InGame, Converter={StaticResource BoolToVis}}"/>
+            </Grid>
         </DataTemplate>
     </UserControl.Resources>
 
@@ -42,7 +51,8 @@
             <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
                 <Button DockPanel.Dock="Left" Content="새로 고침" Padding="10,2" Command="{Binding RefreshCommand}"
                         ToolTip="매니페스트와 실제 파일을 다시 확인합니다 (서버 요청 없음)"/>
-                <TextBlock DockPanel.Dock="Right" Text="{Binding SummaryText}" VerticalAlignment="Center" Margin="8,0,0,0" Foreground="Gray"/>
+                <TextBlock DockPanel.Dock="Right" Text="{Binding SummaryText}" VerticalAlignment="Center" Margin="8,0,0,0" Foreground="Gray"
+                           ToolTip="◎ = 게임 Resources\Spine에 있는 세트 수 (지금 보이는 목록 기준) · 세트 = 보이는 수 / 전체"/>
                 <TextBlock DockPanel.Dock="Left" Text="검색:" VerticalAlignment="Center" Margin="12,0,6,0"/>
                 <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged, Delay=150}" VerticalContentAlignment="Center"
                          ToolTip="의상명·종류·파일명·CG 키·아이돌 이름에서 검색 (공백으로 여러 단어)"/>
@@ -53,6 +63,7 @@
                      MouseDoubleClick="AssetList_MouseDoubleClick" PreviewKeyDown="AssetList_PreviewKeyDown">
                 <ListBox.ItemContainerStyle>
                     <Style TargetType="ListBoxItem">
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>   <!-- 추가: ◎를 오른쪽 끝에 -->
                         <!-- 구분선은 선택·포커스 불가 -->
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding Converter={x:Static views:ResourceView.IsSeparatorConverter}}" Value="True">
@@ -75,7 +86,14 @@
                         ToolTip="세트를 더블클릭하거나 Space를 눌러도 됩니다. 무대에서 Enter = 적용, Esc = 취소하고 이 탭으로"/>
                 <Button Content="바로 추가" Padding="10,2" Margin="6,0,0,0" Command="{Binding AddImmediatelyCommand}"
                         ToolTip="미리보기 없이 무대의 다음 빈자리에 바로 올립니다 (Ctrl+Space)"/>
+                <!-- 추가: 게임으로 내보내기 -->
+                <Button Content="게임으로 내보내기" Padding="10,2" Margin="12,0,0,0" Command="{Binding ExportToGameCommand}"
+                        ToolTip="게임 Resources\Spine\{nickName}\에 {CG 키} 이름으로 복사 (같으면 건너뜀, 다르면 물어봄). 등록은 Unity의 Tools > Spine Auto Setup"/>
+                <Button Content="게임 폴더…" Padding="8,2" Margin="4,0,0,0" Command="{Binding PickGameFolderCommand}"
+                        ToolTip="게임 Assets\Resources\Spine 폴더 지정"/>
             </StackPanel>
+            <!-- 추가: 내보내기 결과 -->
+            <TextBlock DockPanel.Dock="Top" Text="{Binding ExportText}" Foreground="Gray" Margin="0,0,0,6" TextTrimming="CharacterEllipsis"/>
             <TextBox DockPanel.Dock="Top" Text="{Binding InfoText, Mode=OneWay}" Height="250" IsReadOnly="True"
                      VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" TextWrapping="NoWrap" FontFamily="Consolas"/>
             <Border Margin="0,6,0,0" BorderBrush="LightGray" BorderThickness="1" Background="#FFEFEFEF">

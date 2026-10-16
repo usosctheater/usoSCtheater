@@ -27,6 +27,7 @@ public sealed partial class ActEditorViewModel : ObservableObject
     private readonly Func<DateTime> _now;
     private readonly Dictionary<ScriptLine, ScriptRow> _rowOf = new();
     private readonly CharacterData _characters;
+    private readonly GameSpineExporter _exporter;   // 추가: 이 막의 Spine 게임에 내보내기
 
     private bool _switching;                                  // 막 목록 선택을 코드에서 맞추는 중 (다시 열지 않음)
     private IReadOnlyList<ScriptRow> _selection = [];
@@ -46,6 +47,7 @@ public sealed partial class ActEditorViewModel : ObservableObject
         _ui = ui;
         _saveSettings = saveSettings;
         _log = log;
+        _exporter = new GameSpineExporter(library);   // 추가
         _now = now ?? (() => DateTime.Now);
         BackupFolder = backupFolder ?? ActFiles.DefaultBackupFolder;
         ActEntries = [];
@@ -272,6 +274,40 @@ public sealed partial class ActEditorViewModel : ObservableObject
         _log.Info($"막 저장: {path}");
         OnPropertyChanged(nameof(DocumentTitle));
         return true;
+    }
+
+    /// <summary>
+    /// 추가: 이 막에서 쓰는 Spine 세트를 게임에 내보내기 — 없으면 복사, 같으면 건너뜀, 다르면 물어봄.
+    /// SpineData에 없는 키는 상태 줄에 알림
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(CanEdit))]
+    private void ExportActSpines()
+    {
+        if (Document == null) return;
+        var (assets, unknown) = CollectActSpines();
+        if (assets.Count == 0 && unknown.Count == 0) { StatusText = "이 막에는 Spine CG가 없습니다"; return; }
+        string? folder = GameExportFlow.EnsureFolder(_settings, _dialogs, _saveSettings);
+        if (folder == null) return;
+        string text = GameExportFlow.Summary(GameExportFlow.Run(_exporter, folder, assets, _dialogs, _log));
+        if (unknown.Count > 0) text += $" · SpineData에 없음 {unknown.Count}: {string.Join(", ", unknown)}";
+        StatusText = $"게임 내보내기: {text}";
+    }
+
+    /// <summary>추가: 이 막의 CG 키 → 세트 (중복·none·CGGROUP 이름 제외, 나온 순서). SpineData에 없는 키는 Unknown</summary>
+    internal (List<SpineAsset> Assets, List<string> Unknown) CollectActSpines()
+    {
+        var assets = new List<SpineAsset>();
+        var unknown = new List<string>();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (Document == null) return (assets, unknown);
+        foreach (var line in Document.Lines)
+        {
+            if (!IsCgLine(line)) continue;
+            string cg = line.Get("CG").Trim();
+            if (cg.Length == 0 || cg.Equals("none", StringComparison.OrdinalIgnoreCase) || _groupNames.Contains(cg) || !seen.Add(cg)) continue;
+            if (_library.Find(cg) is { } a) assets.Add(a); else unknown.Add(cg);
+        }
+        return (assets, unknown);
     }
 
     /// <summary>저장 안 된 변경이 있으면 저장 / 저장 안 함 / 취소를 물음. 계속해도 되면 true (창 닫기·다른 막 열기 전)</summary>
@@ -527,6 +563,7 @@ public sealed partial class ActEditorViewModel : ObservableObject
     private void NotifyCommands()
     {
         SaveCommand.NotifyCanExecuteChanged();
+        ExportActSpinesCommand.NotifyCanExecuteChanged();   // 추가
         AddTextCommand.NotifyCanExecuteChanged();
         DeleteRowsCommand.NotifyCanExecuteChanged();
         MoveUpCommand.NotifyCanExecuteChanged();
@@ -535,23 +572,26 @@ public sealed partial class ActEditorViewModel : ObservableObject
         RedoCommand.NotifyCanExecuteChanged();
     }
 
-    // ------------------------------------------------------------------ CG 경고 (옛 CG 키 등)
+    // ------------------------------------------------------------------ CG 경고 (SpineData에 없는 키)
 
     /// <summary>
     /// SpineData에 없는 CG 키인지 (TEXT·SETCG·CGGROUP의 CG). 비었거나 none, 이 막의 CGGROUP 이름이면 경고 아님.
-    /// 옛 CG 키(mei_sports_2 등)는 TE 키({nickName}_{파일 이름})와 달라 여기 걸림 — 대응표는 이후 작업
+    /// 오타·아직 받지 않은 세트 검사 (2026-10-16 스파인 데이터 형식 통일로 옛 키는 모두 TE 키로 변환됨)
     /// </summary>
     internal bool IsUnknownCg(ScriptLine line)
     {
-        string type = line.Type;
-        if (!type.Equals("TEXT", StringComparison.OrdinalIgnoreCase) &&
-            !type.Equals("SETCG", StringComparison.OrdinalIgnoreCase) &&
-            !type.Equals("CGGROUP", StringComparison.OrdinalIgnoreCase)) return false;
+        if (!IsCgLine(line)) return false;   // 변경: IsCgLine 사용
         string cg = line.Get("CG").Trim();
         if (cg.Length == 0 || cg.Equals("none", StringComparison.OrdinalIgnoreCase)) return false;
         if (_groupNames.Contains(cg)) return false;
         return _library.Find(cg) == null;
     }
+
+    /// <summary>추가: CG 속성을 쓰는 라인 종류 (TEXT·SETCG·CGGROUP)</summary>
+    private static bool IsCgLine(ScriptLine line) =>
+        line.Type.Equals("TEXT", StringComparison.OrdinalIgnoreCase) ||
+        line.Type.Equals("SETCG", StringComparison.OrdinalIgnoreCase) ||
+        line.Type.Equals("CGGROUP", StringComparison.OrdinalIgnoreCase);
 
     private void RebuildGroupNames()
     {
