@@ -22,8 +22,16 @@ public partial class ActEditorView : UserControl
         InitializeComponent();
         DataContextChanged += (_, e) =>
         {
-            if (e.OldValue is ActEditorViewModel old) old.SelectionRequested -= SelectRows;
-            if (e.NewValue is ActEditorViewModel vm) vm.SelectionRequested += SelectRows;
+            if (e.OldValue is ActEditorViewModel old)
+            {
+                old.SelectionRequested -= SelectRows;
+                old.FocusFieldRequested -= OnFocusFieldRequested;
+            }
+            if (e.NewValue is ActEditorViewModel vm)
+            {
+                vm.SelectionRequested += SelectRows;
+                vm.FocusFieldRequested += OnFocusFieldRequested;   // 추가(4-2): 라인에 적용·줄 추가 뒤 대사 칸으로
+            }
         };
         // 화면이 (다시) 보일 때 ViewModel이 기억한 선택을 적용
         Loaded += (_, _) => Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () =>
@@ -133,6 +141,15 @@ public partial class ActEditorView : UserControl
                 break;
         }
     }
+
+    /// <summary>추가(4-2): ViewModel 요청 — 그 줄의 칸으로 커서 (줄이 막 추가된 경우가 있어 화면 갱신 뒤에)</summary>
+    private void OnFocusFieldRequested(ScriptRow row, string attr) =>
+        Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () =>
+        {
+            if (Vm == null) return;
+            int index = Vm.Rows.IndexOf(row);
+            if (index >= 0) FocusCell(index, attr);
+        });
 
     /// <summary>index번째 줄의 같은 속성 칸으로 (그 줄 종류에 없는 칸이면 줄만 선택)</summary>
     private void FocusCell(int index, string attr)

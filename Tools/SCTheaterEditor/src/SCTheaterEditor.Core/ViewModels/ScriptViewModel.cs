@@ -4,6 +4,7 @@ using System.Text;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
+using SCTheaterEditor.Script;
 using SCTheaterEditor.Services;
 using SCTheaterEditor.Stage;
 
@@ -548,6 +549,141 @@ public sealed partial class ScriptViewModel : ObservableObject
         RefreshBones();
     }
 
+    // ------------------------------------------------------------------ 추가(4-2): 스크립트 ↔ 무대
+
+    /// <summary>동기화로 내린 캐릭터를 바로 지우지 않고 숨겨 두는 수 (다시 올릴 때 Spine을 새로 불러오지 않음)</summary>
+    public const int HiddenCacheSize = 10;
+
+    private readonly List<StageActor> _hidden = new();   // 숨겨 둔 캐릭터 (오래된 것이 앞)
+    private DateTime _lastSync;
+
+    /// <summary>숨겨 둔 캐릭터 수 (테스트·상태 표시용)</summary>
+    public int HiddenCount => _hidden.Count;
+
+    /// <summary>라인에 적용·줄 추가에 쓸 지금 선택한 캐릭터 정보 (선택이 없거나 미리보기면 null)</summary>
+    public StageStamp? CurrentStamp => SelectedActor is { IsPreview: false } a
+        ? new StageStamp(a.Asset.CgKey, a.Position, a.AnimationText, a.Asset.NickName)
+        : null;
+
+    /// <summary>
+    /// [스크립트 → 무대] (F5): 스크립트에서 선택한 줄 시점의 무대 상태(게임과 같은 계산)로 무대를 맞춤.
+    /// 무대 페이지·WPF 양쪽에서 F5가 와도 한 번만 (0.3초 안의 두 번째는 무시)
+    /// </summary>
+    [RelayCommand]
+    private void SyncFromScript()
+    {
+        var now = DateTime.UtcNow;
+        if (now - _lastSync < TimeSpan.FromMilliseconds(300)) return;
+        _lastSync = now;
+        if (Editor?.ComputeSnapshot() is not { } snapshot)
+        {
+            StatusText = "스크립트 표에서 동기화할 줄을 선택하세요";
+            return;
+        }
+        ApplySnapshot(snapshot);
+    }
+
+    /// <summary>무대를 계산 결과로: 배경 · 캐릭터(같은 세트는 그대로 두고 위치·애니메이션만, 없는 캐릭터는 숨겨 두기, 숨겨 둔 캐릭터는 다시 보이기)</summary>
+    public void ApplySnapshot(StageSnapshot snapshot)
+    {
+        CancelPreviewInternal(goBack: false);
+        var skipped = new List<string>();
+
+        // 배경 (TE Backgrounds 폴더에 없으면 배경 없음 + 안내)
+        if (snapshot.Background == null) SelectedBackground = NoBackground;
+        else
+        {
+            string? key = FindBackground(snapshot.Background);
+            if (key == null)
+            {
+                RefreshBackgrounds();   // 폴더에 새로 넣었을 수 있음
+                key = FindBackground(snapshot.Background);
+            }
+            SelectedBackground = key ?? NoBackground;
+            if (key == null) skipped.Add($"배경 {snapshot.Background}");
+        }
+
+        // 올릴 캐릭터 (SpineData에 없는 키는 건너뜀)
+        var desired = new List<(SpineAsset Asset, StageActorState State)>();
+        foreach (var st in snapshot.Actors)
+        {
+            var asset = _library.Find(st.CgKey);
+            if (asset == null) skipped.Add(st.CgKey);
+            else if (!desired.Any(d => d.Asset.SourcePath == asset.SourcePath)) desired.Add((asset, st));
+        }
+
+        foreach (var a in Actors.ToList())
+            if (!desired.Any(d => d.Asset.SourcePath == a.Asset.SourcePath)) HideActor(a);
+
+        foreach (var (asset, st) in desired)
+        {
+            var actor = Actors.FirstOrDefault(a => a.Asset.SourcePath == asset.SourcePath);
+            bool replay = st.Animation != null;
+            if (actor == null && _hidden.FirstOrDefault(a => a.Asset.SourcePath == asset.SourcePath) is { } cached)
+            {
+                _hidden.Remove(cached);
+                Actors.Add(cached);
+                Send(new ShowActor(cached.Id, true));
+                actor = cached;
+                replay = true;
+            }
+            if (actor == null)
+            {
+                actor = new StageActor(++_nextId, asset, st.Position);
+                Actors.Add(actor);
+                Send(new AddActor(actor.Id, StageUrls.SpineFolder(asset.RelativeFolder), asset.JsonFile, asset.AtlasFile, actor.Label, false));
+            }
+            actor.Position = st.Position;
+            if (st.Animation != null)
+            {
+                // 게임 PlayAnimation과 같이 전체 트랙을 새 문자열로
+                Array.Clear(actor.Tracks);
+                var tracks = AnimationScript.Parse(st.Animation);
+                Array.Copy(tracks, actor.Tracks, Math.Min(tracks.Length, actor.Tracks.Length));
+            }
+            if (replay && actor.IsLoaded) PlayAll(actor);   // 아직 불러오는 중이면 OnActorLoaded에서 재생
+        }
+
+        PlaceAll();
+        UpdateSplit();
+        if (SelectedActor != null && !Actors.Contains(SelectedActor)) SelectedActor = null;
+        UpdatePaused();
+
+        string status = $"동기화: {snapshot.LineIndex + 1}번 줄 시점 · 캐릭터 {desired.Count}명 · 배경 {(snapshot.Background ?? "없음")}";
+        if (skipped.Count > 0) status += $" · 올리지 못함: {string.Join(", ", skipped)}";
+        if (snapshot.Notes.Count > 0) status += " · " + string.Join(" / ", snapshot.Notes);
+        StatusText = status;
+    }
+
+    private string? FindBackground(string key) =>
+        _backgrounds.Keys.FirstOrDefault(k => k.Equals(key, StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>캐릭터를 무대에서 내리되 지우지 않고 숨겨 둠 (최근 HiddenCacheSize명, 넘치면 가장 오래된 것부터 지움)</summary>
+    private void HideActor(StageActor actor)
+    {
+        Send(new ShowActor(actor.Id, false));
+        Actors.Remove(actor);
+        if (SelectedActor == actor) SelectedActor = null;
+        _hidden.Add(actor);
+        while (_hidden.Count > HiddenCacheSize)
+        {
+            Send(new RemoveActor(_hidden[0].Id));
+            _hidden.RemoveAt(0);
+        }
+    }
+
+    /// <summary>[라인에 적용] (Ctrl+Enter): 선택한 캐릭터의 CG·위치·애니메이션을 스크립트에서 선택한 줄에</summary>
+    [RelayCommand]
+    private void ApplyToLine()
+    {
+        if (CurrentStamp is not { } stamp)
+        {
+            StatusText = SelectedActor?.IsPreview == true ? "미리보기를 먼저 적용(Enter)하세요" : "무대에서 적용할 캐릭터를 선택하세요";
+            return;
+        }
+        Editor?.ApplyStamp(stamp);
+    }
+
     // ------------------------------------------------------------------ 키
 
     /// <summary>
@@ -563,6 +699,7 @@ public sealed partial class ScriptViewModel : ObservableObject
             case "Enter": if (Preview == null) return false; ConfirmPreview(); return true;
             case "Escape": if (Preview == null) return false; CancelPreview(); return true;
             case "Delete": RemoveSelected(); return true;
+            case "F5": SyncFromScript(); return true;   // 추가(4-2): 무대에 포커스가 있을 때 페이지가 넘겨 줌
             default: return false;
         }
     }
@@ -602,6 +739,7 @@ public sealed partial class ScriptViewModel : ObservableObject
     private void Resync()
     {
         _stageReady = true;
+        _hidden.Clear();   // 추가(4-2): 페이지를 새로 불러오면 숨겨 둔 캐릭터는 페이지에서 사라짐
         Send(new StageConfig(AnimationScript.TrackCount, StageLayout.ScreenWidth, StageLayout.ScreenHeight, StageLayout.UnitScale));
         SendBackground();
         Send(new WatchBones(BonesVisible));   // 변경: 무대 전체 일시정지 대신 (캐릭터별 일시정지는 불러온 뒤 OnActorLoaded에서)
@@ -617,7 +755,9 @@ public sealed partial class ScriptViewModel : ObservableObject
 
     private void OnActorLoaded(ActorLoaded m)
     {
-        if (Actors.FirstOrDefault(a => a.Id == m.Id) is not { } a) return;
+        // 변경(4-2): 불러오는 중에 숨겨 둔 캐릭터도 정보는 채움 (다시 보일 때 바로 쓰도록)
+        if ((Actors.FirstOrDefault(a => a.Id == m.Id) ?? _hidden.FirstOrDefault(a => a.Id == m.Id)) is not { } a) return;
+        if (_hidden.Contains(a)) Send(new ShowActor(a.Id, false));
         a.Animations = m.Animations;
         a.Skins = m.Skins;
         a.Skin = m.Skin;

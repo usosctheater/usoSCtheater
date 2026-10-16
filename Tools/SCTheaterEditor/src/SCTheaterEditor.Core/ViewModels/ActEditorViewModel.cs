@@ -26,6 +26,7 @@ public sealed partial class ActEditorViewModel : ObservableObject
     private readonly AppLog _log;
     private readonly Func<DateTime> _now;
     private readonly Dictionary<ScriptLine, ScriptRow> _rowOf = new();
+    private readonly CharacterData _characters;
 
     private bool _switching;                                  // 막 목록 선택을 코드에서 맞추는 중 (다시 열지 않음)
     private IReadOnlyList<ScriptRow> _selection = [];
@@ -33,8 +34,9 @@ public sealed partial class ActEditorViewModel : ObservableObject
 
     public ActEditorViewModel(AppSettings settings, SpineLibrary library, IDialogService dialogs, IUiDispatcher ui,
                               Action saveSettings, AppLog log, string? backupFolder = null, Func<DateTime>? now = null,
-                              LineTypeCatalog? types = null)
+                              LineTypeCatalog? types = null, CharacterData? characters = null)
     {
+        _characters = characters ?? CharacterData.LoadEmbedded();   // 추가(4-2): 라인에 적용할 때 이름 칸
         // 추가: 종류별 팔레트 (LineTypes.xml) + 저장된 칸 폭
         Types = types ?? LineTypeCatalog.LoadEmbedded();
         Types.ApplyWidths(settings.Editor.FieldWidths);
@@ -357,15 +359,64 @@ public sealed partial class ActEditorViewModel : ObservableObject
         StatusText = "칸 폭을 기본값으로 되돌렸습니다";
     }
 
-    /// <summary>TEXT 라인 추가 (선택한 줄 아래, 선택이 없으면 맨 끝)</summary>
+    // ------------------------------------------------------------------ 추가(4-2): 무대 ↔ 스크립트
+
+    /// <summary>무대에서 지금 선택한 캐릭터 정보 (MainViewModel이 스크립트 탭과 연결, 선택이 없으면 null)</summary>
+    public Func<StageStamp?>? StampProvider { get; set; }
+
+    /// <summary>이 줄의 이 칸으로 입력 커서를 옮겨 달라 (화면이 처리 — 라인에 적용·줄 추가 뒤 대사 칸으로)</summary>
+    public event Action<ScriptRow, string>? FocusFieldRequested;
+
+    /// <summary>[스크립트 → 무대]용: 선택한 첫 줄 시점의 무대 상태 (선택이 없으면 null)</summary>
+    public StageSnapshot? ComputeSnapshot()
+    {
+        if (Document == null || _selection.Count == 0) return null;
+        return StageStateCalculator.Compute(Document.Lines, _selection.Min(r => r.Number) - 1);
+    }
+
+    /// <summary>
+    /// [라인에 적용] (Ctrl+Enter): 선택한 첫 줄(TEXT·SETCG·CGGROUP)에 CG·위치·애니메이션 세 칸을 모두 기록 (되돌리기 1단계).
+    /// TEXT는 이름 칸이 비어 있을 때만 캐릭터 이름(CharacterData Ko)을 넣고, 그 줄의 대사 칸으로 커서 이동
+    /// </summary>
+    public void ApplyStamp(StageStamp stamp)
+    {
+        if (Document == null) return;
+        if (_selection.Count == 0)
+        {
+            StatusText = "스크립트 표에서 적용할 줄을 선택하세요";
+            return;
+        }
+        var row = _selection.MinBy(r => r.Number)!;
+        string type = row.Type.ToUpperInvariant();
+        if (type is not ("TEXT" or "SETCG" or "CGGROUP"))
+        {
+            StatusText = $"{row.Number}번 줄({row.Type})에는 적용할 수 없습니다 — TEXT · SETCG · CGGROUP 줄만";
+            return;
+        }
+        var changes = new List<(string Name, string? Value)> { ("CG", stamp.CgKey), ("Position", stamp.Position), ("Animation", stamp.Animation) };
+        if (type == "TEXT" && row.Get("Name").Length == 0 && _characters.KoreanName(stamp.NickName) is { } name)
+            changes.Insert(0, ("Name", name));
+        Document.SetAttributes(row.Line, changes);
+        StatusText = $"{row.Number}번 줄에 적용: {stamp.CgKey} · {stamp.Position} · {(stamp.Animation.Length > 0 ? stamp.Animation : "(애니메이션 없음)")}";
+        if (type == "TEXT") FocusFieldRequested?.Invoke(row, "Text");
+    }
+
+    /// <summary>
+    /// 줄 추가 (Ctrl+N): 선택한 줄 아래(선택이 없으면 맨 끝)에 TEXT 줄.
+    /// 무대에서 캐릭터를 선택하고 있으면 그 캐릭터의 이름·CG·위치·애니메이션을 채운 줄로. 추가한 줄의 대사 칸으로 커서 이동
+    /// </summary>
     [RelayCommand(CanExecute = nameof(CanEdit))]
     private void AddText()
     {
         var doc = Document!;
         int index = _selection.Count > 0 ? _selection.Max(r => doc.Lines.IndexOf(r.Line)) + 1 : doc.Lines.Count;
-        var line = ScriptLine.Create(("Type", "TEXT"), ("Name", ""), ("Text", ""), ("SpeakerType", "1"));
+        var line = StampProvider?.Invoke() is { } s
+            ? ScriptLine.Create(("Type", "TEXT"), ("Name", _characters.KoreanName(s.NickName) ?? ""), ("Text", ""),
+                                ("CG", s.CgKey), ("Position", s.Position), ("Animation", s.Animation), ("SpeakerType", "1"))
+            : ScriptLine.Create(("Type", "TEXT"), ("Name", ""), ("Text", ""), ("SpeakerType", "1"));
         doc.InsertLines(index, [line]);
         SelectLines([line]);
+        if (_rowOf.TryGetValue(line, out var row)) FocusFieldRequested?.Invoke(row, "Text");
     }
 
     [RelayCommand(CanExecute = nameof(HasSelection))]

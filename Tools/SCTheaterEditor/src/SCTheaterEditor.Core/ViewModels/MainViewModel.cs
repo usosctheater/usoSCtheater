@@ -25,6 +25,7 @@ public sealed class MainViewModel
         // 추가(4-1): 스크립트 표 (스크립트 탭 아래쪽)
         Editor = new ActEditorViewModel(settings, library, dialogs, ui, saveSettings, log);
         Script.Editor = Editor;
+        Editor.StampProvider = () => Script.CurrentStamp;   // 추가(4-2): 줄 추가 때 무대에서 선택한 캐릭터 정보
     }
 
     public AppSettings Settings { get; }

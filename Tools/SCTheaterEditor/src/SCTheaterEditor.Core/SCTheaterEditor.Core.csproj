@@ -18,6 +18,8 @@
     <EmbeddedResource Include="Resources\DefaultLipData.xml" LogicalName="DefaultLipData.xml" />
     <!-- 추가: 스크립트 표 종류별 속성 팔레트 (원본 resource\Script\ScriptManual.xlsx) -->
     <EmbeddedResource Include="Resources\LineTypes.xml" LogicalName="LineTypes.xml" />
+    <!-- 추가(4-2): 캐릭터 이름 (나중에 게임 Data/CharacterData.xml의 복사본으로) -->
+    <EmbeddedResource Include="Resources\CharacterData.xml" LogicalName="CharacterData.xml" />
   </ItemGroup>
 
   <ItemGroup>

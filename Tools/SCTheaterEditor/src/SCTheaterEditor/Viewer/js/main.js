@@ -35,7 +35,7 @@ onMessage((msg) => {
 });
 
 // 무대에 포커스가 있을 때의 단축키는 C#으로 넘겨 같은 곳에서 처리 (Ctrl·Alt 조합은 C#이 직접 받음)
-const FORWARD_KEYS = new Set([" ", "r", "R", "Enter", "Escape", "Delete"]);
+const FORWARD_KEYS = new Set([" ", "r", "R", "Enter", "Escape", "Delete", "F5"]);   // 변경(4-2): F5 스크립트 → 무대
 window.addEventListener("keydown", (e) => {
   if (e.repeat || e.ctrlKey || e.altKey || !FORWARD_KEYS.has(e.key)) return;
   e.preventDefault();

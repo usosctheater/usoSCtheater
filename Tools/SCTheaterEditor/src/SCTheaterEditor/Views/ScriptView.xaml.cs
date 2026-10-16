@@ -31,8 +31,16 @@ public partial class ScriptView : UserControl
     {
         if (Vm == null) return;
         // 추가(4-1): 스크립트 표 단축키는 탭 어디서나 (무대에 포커스가 있어도)
-        if (Vm.Editor is { } editor && HandleEditorShortcut(e, editor)) { e.Handled = true; return; }
+        if (Vm.Editor is { } editor && HandleEditorShortcut(e, editor, Vm)) { e.Handled = true; return; }
         if (Keyboard.Modifiers != ModifierKeys.None) return;
+        // 추가(4-2): F5 스크립트 → 무대 (입력 중인 칸을 먼저 확정)
+        if (e.Key == Key.F5)
+        {
+            ActEditorView.CommitFocusedBox();
+            Vm.SyncFromScriptCommand.Execute(null);
+            e.Handled = true;
+            return;
+        }
         if (e.OriginalSource is TextBox or ComboBox or ComboBoxItem) return;   // 글자 입력·드롭다운에서는 무시
         if (IsInside(e.OriginalSource as DependencyObject, EditorPanel)) return;   // 추가(4-1): 표 안의 키(Delete·Space·Enter 등)는 표가 처리
         // 애니메이션 목록에서 Enter는 "이 애니메이션 적용" (목록이 직접 처리)
@@ -54,12 +62,20 @@ public partial class ScriptView : UserControl
     /// 변경: 표의 칸이 모두 입력 상자가 되어, 확정 전 글자가 있는 상자에서만 Ctrl+Z·Y를 그 상자에 맡기고 나머지는 표 되돌리기.
     /// 저장·열기 전에는 입력 중인 칸을 먼저 확정
     /// </summary>
-    private static bool HandleEditorShortcut(KeyEventArgs e, ActEditorViewModel editor)
+    private static bool HandleEditorShortcut(KeyEventArgs e, ActEditorViewModel editor, ScriptViewModel stage)
     {
         var mods = Keyboard.Modifiers;
         if ((mods & ModifierKeys.Control) == 0 || (mods & ModifierKeys.Alt) != 0) return false;
         bool shift = (mods & ModifierKeys.Shift) != 0;
         bool typing = e.OriginalSource is TextBox tb && tb.GetBindingExpression(TextBox.TextProperty) is { IsDirty: true };
+        // 추가(4-2): Ctrl+Enter 라인에 적용 · Ctrl+N 줄 추가 (입력 중인 칸을 먼저 확정)
+        if (!shift && (e.Key == Key.Enter || e.Key == Key.N))
+        {
+            ActEditorView.CommitFocusedBox();
+            var c = e.Key == Key.Enter ? stage.ApplyToLineCommand : editor.AddTextCommand;
+            if (c.CanExecute(null)) c.Execute(null);
+            return true;
+        }
         System.Windows.Input.ICommand? cmd = e.Key switch
         {
             Key.S when !shift => editor.SaveCommand,

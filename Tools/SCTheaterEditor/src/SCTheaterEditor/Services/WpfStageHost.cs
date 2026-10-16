@@ -46,6 +46,7 @@ public sealed class WpfStageHost : IStageHost
         core.Settings.IsStatusBarEnabled = false;
         core.Settings.AreDefaultContextMenusEnabled = false;
         core.Settings.IsZoomControlEnabled = false;
+        core.Settings.AreBrowserAcceleratorKeysEnabled = false;   // 추가(4-2): F5(새로 고침) 등 브라우저 단축키 끔 — F5는 스크립트 → 무대
 
         Directory.CreateDirectory(dataFolder);
         Directory.CreateDirectory(backgroundFolder);

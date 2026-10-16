@@ -371,4 +371,46 @@ public class ScriptViewModelTests
         Assert.Single(c.Vm.Bones);
         Assert.StartsWith("head", c.Vm.Bones[0]);
     }
+
+    // ---------------------------------------------------------------- 추가(4-2): 스크립트 → 무대
+
+    private static SCTheaterEditor.Script.StageSnapshot Snap(params (string Cg, string Pos, string? Anim)[] actors) =>
+        new(0, null, actors.Select(a => new SCTheaterEditor.Script.StageActorState(a.Cg, a.Pos, a.Anim)).ToList(), []);
+
+    [Fact]
+    public void ApplySnapshot_HidesAndReshowsWithoutReloading()
+    {
+        using var c = new Ctx();
+        string k0 = c.Asset(0).CgKey, k1 = c.Asset(1).CgKey;
+        c.Vm.ApplySnapshot(Snap((k0, "left", "smile1 face_anger"), (k1, "right", null)));
+        Assert.Equal(2, c.Stage.Sent.OfType<AddActor>().Count());
+        Assert.Equal(new[] { "left", "right" }, c.Vm.Actors.Select(a => a.Position));
+        Assert.Equal("smile1 face_anger", c.Vm.Actors[0].AnimationText);
+        var first = c.Vm.Actors[0];
+
+        c.Vm.ApplySnapshot(Snap((k1, "center", null)));             // k0은 숨겨 둠
+        Assert.Equal(k1, Assert.Single(c.Vm.Actors).Asset.CgKey);
+        Assert.Equal(1, c.Vm.HiddenCount);
+        Assert.Equal(new ShowActor(first.Id, false), c.Stage.Last<ShowActor>());
+        Assert.Empty(c.Stage.Sent.OfType<RemoveActor>());
+
+        c.Vm.ApplySnapshot(Snap((k1, "left", null), (k0, "right", null)));   // 다시 올림 → 새로 불러오지 않음
+        Assert.Equal(2, c.Stage.Sent.OfType<AddActor>().Count());
+        Assert.Same(first, c.Vm.Actors[1]);
+        Assert.Equal(new ShowActor(first.Id, true), c.Stage.Last<ShowActor>());
+        Assert.Equal(0, c.Vm.HiddenCount);
+    }
+
+    [Fact]
+    public void ApplySnapshot_EvictsOldestHidden_AndReportsUnknown()
+    {
+        using var c = new Ctx(setCount: 12);
+        for (int i = 0; i < 12; i++) c.Vm.ApplySnapshot(Snap((c.Asset(i).CgKey, "center", null)));
+        Assert.Equal(ScriptViewModel.HiddenCacheSize, c.Vm.HiddenCount);   // 11명 숨김 → 가장 오래된 1명은 지움
+        Assert.Single(c.Stage.Sent.OfType<RemoveActor>());
+
+        c.Vm.ApplySnapshot(Snap(("no_such_key", "left", null)));
+        Assert.Empty(c.Vm.Actors);
+        Assert.Contains("올리지 못함: no_such_key", c.Vm.StatusText);
+    }
 }

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  캐릭터 이름 데이터 (TE 안 임시 원본, 2026-10-15).
+  - 나중에 게임 Assets/Resources/Data/CharacterData.xml을 원본으로 옮기고 TE는 그 복사본을 쓸 예정 (같은 형식 유지 — 도구 독립 규칙)
+  - Id = 캐릭터 ID (소문자 로마자, TE Spine 데이터의 nickName · 게임 ScenarioData.xml의 Character 값과 같음)
+  - Ko / Ja = 언어별 이름 (다국어: 한 문서에 언어 코드 속성). 라인에 적용할 때 TEXT 이름 칸이 비어 있으면 Ko를 넣음
+  - 한국어 이름은 ScriptManual.xlsx VoiceMatch 시트 표기 기준, 일본어 이름은 Spine 목록(idollist) 기준
+-->
+<CharacterData>
+  <Character Id="mano" Ko="마노" Ja="櫻木真乃" />
+  <Character Id="hiori" Ko="히오리" Ja="風野灯織" />
+  <Character Id="meguru" Ko="메구루" Ja="八宮めぐる" />
+  <Character Id="kogane" Ko="코가네" Ja="月岡恋鐘" />
+  <Character Id="mamimi" Ko="마미미" Ja="田中摩美々" />
+  <Character Id="sakuya" Ko="사쿠야" Ja="白瀬咲耶" />
+  <Character Id="yuika" Ko="유이카" Ja="三峰結華" />
+  <Character Id="kiriko" Ko="키리코" Ja="幽谷霧子" />
+  <Character Id="kaho" Ko="카호" Ja="小宮果穂" />
+  <Character Id="chiyoko" Ko="치요코" Ja="園田智代子" />
+  <Character Id="juri" Ko="쥬리" Ja="西城樹里" />
+  <Character Id="rinze" Ko="린제" Ja="杜野凛世" />
+  <Character Id="natsuha" Ko="나츠하" Ja="有栖川夏葉" />
+  <Character Id="amana" Ko="아마나" Ja="大崎甘奈" />
+  <Character Id="tenka" Ko="텐카" Ja="大崎甜花" />
+  <Character Id="chiyuki" Ko="치유키" Ja="桑山千雪" />
+  <Character Id="asahi" Ko="아사히" Ja="芹沢あさひ" />
+  <Character Id="fuyuko" Ko="후유코" Ja="黛冬優子" />
+  <Character Id="mei" Ko="메이" Ja="和泉愛依" />
+  <Character Id="toru" Ko="토오루" Ja="浅倉透" />
+  <Character Id="madoka" Ko="마도카" Ja="樋口円香" />
+  <Character Id="koito" Ko="코이토" Ja="福丸小糸" />
+  <Character Id="hinana" Ko="히나나" Ja="市川雛菜" />
+  <Character Id="nichika" Ko="니치카" Ja="七草にちか" />
+  <Character Id="mikoto" Ko="미코토" Ja="緋田美琴" />
+  <Character Id="luca" Ko="루카" Ja="斑鳩ルカ" />
+  <Character Id="hana" Ko="하나" Ja="鈴木羽那" />
+  <Character Id="haruki" Ko="하루키" Ja="郁田はるき" />
+  <Character Id="hazuki" Ko="하즈키" Ja="七草はづき" />
+</CharacterData>
