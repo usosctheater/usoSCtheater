@@ -140,7 +140,9 @@ public sealed class FieldCell : ObservableObject
     /// 변경: 흐린 글씨 칸 이름은 '제목 줄과 같은 종류(= 선택한 줄의 종류)'의 줄에서만, 빈 칸일 때 표시.
     /// 다른 종류의 줄은 마우스를 올려 툴팁으로 확인 (2026-10-15 사용자 요청)
     /// </summary>
-    public bool ShowHint => IsEmpty && Row.Def != null && Row.Def == Row.Owner.HeaderType;
+    // 변경(E-002): 빈 칸 판단은 화면(입력 상자에 보이는 글자)에서 함 → 여기서는 '선택한 줄과 같은 종류인지'만
+    public bool ShowHint => Row.Def != null && Row.Def == Row.Owner.HeaderType;
+    // (이전) public bool ShowHint => IsEmpty && Row.Def != null && Row.Def == Row.Owner.HeaderType;
 
     internal void RefreshHint() => OnPropertyChanged(nameof(ShowHint));
 

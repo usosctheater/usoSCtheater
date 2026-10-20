@@ -36,6 +36,9 @@ public sealed class UndoStack
     public string? RedoLabel => CanRedo ? _items[_position].Label : null;
     public bool IsDirty => _position != _savedAt;
 
+    /// <summary>추가: 내용이 바뀐 횟수 (기록·되돌리기·다시 하기마다 +1, 저장 표시는 세지 않음) — 자동 백업이 셈</summary>
+    public long EditCount { get; private set; }
+
     /// <summary>기록·위치·저장 상태가 바뀜</summary>
     public event Action? Changed;
 
@@ -55,6 +58,7 @@ public sealed class UndoStack
             _position--;
             _savedAt = _savedAt > 0 ? _savedAt - 1 : -1;
         }
+        EditCount++;   // 추가
         Changed?.Invoke();
     }
 
@@ -63,6 +67,7 @@ public sealed class UndoStack
         if (!CanUndo) return null;
         var a = _items[--_position];
         a.Undo();
+        EditCount++;   // 추가
         Changed?.Invoke();
         return a;
     }
@@ -72,6 +77,7 @@ public sealed class UndoStack
         if (!CanRedo) return null;
         var a = _items[_position++];
         a.Redo();
+        EditCount++;   // 추가
         Changed?.Invoke();
         return a;
     }

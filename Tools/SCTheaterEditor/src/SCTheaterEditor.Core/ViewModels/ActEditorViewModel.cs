@@ -33,6 +33,13 @@ public sealed partial class ActEditorViewModel : ObservableObject
     private IReadOnlyList<ScriptRow> _selection = [];
     private HashSet<string> _groupNames = new(StringComparer.OrdinalIgnoreCase);
 
+    // 추가: 자동 백업 상태 (막을 열 때마다 초기화)
+    private long _backupEditMark;          // 마지막 백업 때의 Undo.EditCount
+    private DateTime _lastBackupAt;        // 마지막 백업 시각 (아직 없으면 막을 연 시각)
+    private byte[]? _lastBackupBytes;      // 마지막 백업(또는 연 시점)의 내용 — 같으면 쓰지 않음
+    private bool _originalBackedUp;        // 이 막을 연 뒤 저장 전 원본을 백업했는지
+    private System.Threading.Timer? _backupTimer;
+
     public ActEditorViewModel(AppSettings settings, SpineLibrary library, IDialogService dialogs, IUiDispatcher ui,
                               Action saveSettings, AppLog log, string? backupFolder = null, Func<DateTime>? now = null,
                               LineTypeCatalog? types = null, CharacterData? characters = null)
@@ -120,6 +127,9 @@ public sealed partial class ActEditorViewModel : ObservableObject
     public void Initialize()
     {
         RefreshList();
+        // 추가: 30초마다 자동 백업 시간 조건 확인 (화면 스레드에서)
+        _backupTimer ??= new System.Threading.Timer(_ => _ui.Post(CheckAutoBackupTime), null,
+                                                    TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
         string? last = _settings.Editor.LastActPath;
         if (!string.IsNullOrEmpty(last) && File.Exists(last)) Open(last, _settings.Editor.LastLine);
     }
@@ -226,6 +236,12 @@ public sealed partial class ActEditorViewModel : ObservableObject
         RebuildGroupNames();
         RefreshCgWarnings();
         NotifyCommands();
+
+        // 추가: 자동 백업 초기화
+        _backupEditMark = doc.Undo.EditCount;
+        _lastBackupAt = _now();
+        _lastBackupBytes = ActXmlFormat.ToBytes(doc);
+        _originalBackedUp = false;
     }
 
     private ScriptRow NewRow(ScriptLine line, int index)
@@ -251,7 +267,8 @@ public sealed partial class ActEditorViewModel : ObservableObject
             if (File.Exists(path))
             {
                 var info = new FileInfo(path);
-                if (info.LastWriteTimeUtc != doc.FileTimeUtc || info.Length != doc.FileLength)
+                bool changedOutside = info.LastWriteTimeUtc != doc.FileTimeUtc || info.Length != doc.FileLength;   // 변경: 변수로
+                if (changedOutside)
                 {
                     if (!_dialogs.Confirm("다른 곳에서 바뀐 파일",
                             $"{path}\n\n연 뒤에 다른 프로그램에서 파일이 바뀌었습니다. 덮어쓸까요?\n(덮어쓰기 전 파일은 백업 폴더에 보관합니다)"))
@@ -260,7 +277,12 @@ public sealed partial class ActEditorViewModel : ObservableObject
                         return false;
                     }
                 }
-                ActFiles.Backup(path, BackupFolder, _settings.Editor.BackupCount, _now());
+                // 변경: 저장 전 파일 백업은 이 막을 연 뒤 첫 저장(원본)과 다른 곳에서 바뀐 파일을 덮어쓸 때만 (그 외는 자동 백업)
+                if (!_originalBackedUp || changedOutside)
+                {
+                    ActFiles.Backup(path, BackupFolder, _settings.Editor.BackupCount, _now());
+                    _originalBackedUp = true;
+                }
             }
             ActXmlFormat.Save(doc, path);
         }
@@ -270,7 +292,7 @@ public sealed partial class ActEditorViewModel : ObservableObject
             _dialogs.ShowError("막 저장 실패", $"{path}\n\n{ex.Message}");
             return false;
         }
-        StatusText = $"저장: {doc.Group} / {doc.ActName} ({_now():HH:mm:ss}, 직전 파일은 백업 폴더에)";
+        StatusText = $"저장: {doc.Group} / {doc.ActName} ({_now():HH:mm:ss})";   // 변경: '직전 파일은 백업 폴더에' 삭제
         _log.Info($"막 저장: {path}");
         OnPropertyChanged(nameof(DocumentTitle));
         return true;
@@ -365,13 +387,15 @@ public sealed partial class ActEditorViewModel : ObservableObject
         Document?.SetAttribute(row.Line, attribute, value);
 
     /// <summary>
-    /// 추가: 종류 변경 (드롭다운). Type 속성만 바꾸고 다른 속성은 그대로 — 새 팔레트에 없는 속성은 기타에 보임. 되돌리기 1단계
+    /// 종류 변경 (드롭다운). 변경(E-003): 새 종류에 없는 빈 속성은 함께 지움 —
+    /// 값이 있는 속성은 그대로 두어 새 팔레트에 없으면 기타에 보임. 되돌리기 1단계
     /// </summary>
     internal void ChangeType(ScriptRow row, string type)
     {
         if (Document == null) return;
         string old = row.Type;
-        Document.SetAttribute(row.Line, "Type", type);
+        var def = Types.Find(type);
+        Document.ChangeType(row.Line, type, name => def?.Has(name) == true);   // 변경 (이전: SetAttribute(row.Line, "Type", type))
         StatusText = $"{row.Number}번 줄 종류: {old} → {type}" + (row.Others.Length > 0 ? " (새 종류에 없는 속성은 기타 칸에)" : "");
     }
 
@@ -544,6 +568,36 @@ public sealed partial class ActEditorViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(DocumentTitle));
         NotifyCommands();
+        // 추가: 편집 N번 → 바로 자동 백업
+        if (Document is { } doc && doc.Undo.EditCount - _backupEditMark >= _settings.Editor.AutoBackupEdits)
+            AutoBackup($"편집 {_settings.Editor.AutoBackupEdits}번");
+    }
+
+    // ------------------------------------------------------------------ 추가: 자동 백업
+
+    /// <summary>시간 조건 — 마지막 백업 뒤 M분이 지났고 그동안 편집이 1번 이상이면 백업 (편집 0번 = 자리 비움 → 하지 않음)</summary>
+    internal void CheckAutoBackupTime()
+    {
+        if (Document is not { } doc || doc.Undo.EditCount == _backupEditMark) return;
+        if (_now() - _lastBackupAt >= TimeSpan.FromMinutes(_settings.Editor.AutoBackupMinutes))
+            AutoBackup($"{_settings.Editor.AutoBackupMinutes:0.#}분");
+    }
+
+    /// <summary>에디터 내용을 백업 폴더에 (저장 여부와 무관, 게임 폴더 파일은 그대로). 마지막 백업과 같은 내용이면 쓰지 않음</summary>
+    private void AutoBackup(string reason)
+    {
+        if (Document is not { FilePath: { } path } doc) return;
+        _backupEditMark = doc.Undo.EditCount;
+        _lastBackupAt = _now();
+        byte[] bytes = ActXmlFormat.ToBytes(doc);
+        if (_lastBackupBytes != null && bytes.AsSpan().SequenceEqual(_lastBackupBytes)) return;
+        try
+        {
+            string target = ActFiles.BackupBytes(path, bytes, BackupFolder, _settings.Editor.BackupCount, _lastBackupAt);
+            _lastBackupBytes = bytes;
+            _log.Info($"자동 백업 ({reason}): {target}");
+        }
+        catch (Exception ex) { _log.Error($"자동 백업 실패: {path}", ex); }
     }
 
     private void OnTitleChanged()

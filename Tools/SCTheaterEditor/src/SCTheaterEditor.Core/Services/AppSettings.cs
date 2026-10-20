@@ -212,8 +212,14 @@ public sealed class EditorSettings
     /// <summary>추가: 게임으로 내보내기 대상 = 게임 Assets\Resources\Spine (도구 독립 규칙상 사용자가 지정, 아래 {nickName} 폴더에 씀)</summary>
     public string? GameSpineFolder { get; set; }
 
-    /// <summary>추가(4-1): 막별로 남길 저장 전 백업 수</summary>
-    public int BackupCount { get; set; } = 10;
+    /// <summary>변경: 막별로 남길 백업 수 (저장 전 원본 + 자동 백업 공용) 10 → 20</summary>
+    public int BackupCount { get; set; } = 20;
+
+    /// <summary>추가: 자동 백업 — 마지막 백업 뒤 편집 N번이면 바로</summary>
+    public int AutoBackupEdits { get; set; } = 30;
+
+    /// <summary>추가: 자동 백업 — 마지막 백업 뒤 M분이 지났고 편집이 1번 이상이면</summary>
+    public double AutoBackupMinutes { get; set; } = 10;
 
     /// <summary>추가(4-1): 마지막으로 연 막 파일과 선택한 라인(0부터) — 재실행 시 다시 엶</summary>
     public string? LastActPath { get; set; }

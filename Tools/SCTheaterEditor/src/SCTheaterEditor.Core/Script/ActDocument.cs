@@ -90,6 +90,24 @@ public sealed class ActDocument
         if (list.Count > 0) Execute(new AttributeEdit(line, list));
     }
 
+    /// <summary>
+    /// 추가(E-003): 종류 변경 — Type을 바꾸고, 값이 빈 속성 중 keepEmpty가 false인 것을 함께 지움 (되돌리기 1단계, 되돌리면 원래 자리로)
+    /// </summary>
+    public void ChangeType(ScriptLine line, string type, Func<string, bool> keepEmpty)
+    {
+        var list = new List<AttrChange>();
+        string? oldType = line.Find("Type");
+        if (oldType != type) list.Add(new AttrChange("Type", oldType, line.IndexOf("Type"), type));
+        // 뒤쪽 속성부터 지움 → 되돌리기(역순)는 앞쪽부터 원래 자리에 넣어 순서가 그대로 돌아옴
+        for (int i = line.Attributes.Count - 1; i >= 0; i--)
+        {
+            var a = line.Attributes[i];
+            if (a.Key != "Type" && a.Value.Length == 0 && !keepEmpty(a.Key))
+                list.Add(new AttrChange(a.Key, "", i, null));
+        }
+        if (list.Count > 0) Execute(new AttributeEdit(line, list));
+    }
+
     public void InsertLines(int index, IReadOnlyList<ScriptLine> lines)
     {
         if (lines.Count == 0) return;

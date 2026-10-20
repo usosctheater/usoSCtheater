@@ -1,5 +1,6 @@
 using System.IO;
 using System.Text.RegularExpressions;
+using SCTheaterEditor.Services;   // 추가: SafeFile
 
 namespace SCTheaterEditor.Script;
 
@@ -38,17 +39,33 @@ public static class ActFiles
         return list;
     }
 
-    /// <summary>파일을 백업 폴더로 복사하고 오래된 백업 정리. 복사한 경로 반환</summary>
-    public static string Backup(string file, string backupRoot, int keep, DateTime now)
+    // 추가: 백업 경로 {root}\{그룹}\{막}_{시각}.xml — Backup·BackupBytes 공용 (기존 Backup 안의 경로 계산을 옮김)
+    private static (string Dir, string Name, string Target) BackupTarget(string file, string backupRoot, DateTime now)
     {
         string full = Path.GetFullPath(file);
         string group = Path.GetFileName(Path.GetDirectoryName(full)) ?? "";
         if (group.Length == 0) group = "_";
         string name = Path.GetFileNameWithoutExtension(full);
         string dir = Path.Combine(backupRoot, group);
+        return (dir, name, Path.Combine(dir, $"{name}_{now:yyyyMMdd-HHmmss-fff}.xml"));
+    }
+
+    /// <summary>파일을 백업 폴더로 복사하고 오래된 백업 정리. 복사한 경로 반환</summary>
+    public static string Backup(string file, string backupRoot, int keep, DateTime now)
+    {
+        var (dir, name, target) = BackupTarget(file, backupRoot, now);   // 변경: 공용 함수 사용
         Directory.CreateDirectory(dir);
-        string target = Path.Combine(dir, $"{name}_{now:yyyyMMdd-HHmmss-fff}.xml");
-        File.Copy(full, target, overwrite: true);
+        File.Copy(Path.GetFullPath(file), target, overwrite: true);
+        Prune(dir, name, keep);
+        return target;
+    }
+
+    /// <summary>추가(자동 백업): 에디터 내용을 백업 폴더에 씀 — 게임 폴더의 막 파일은 건드리지 않음. 같은 이름 규칙이라 정리(최근 N개)도 함께</summary>
+    public static string BackupBytes(string file, byte[] content, string backupRoot, int keep, DateTime now)
+    {
+        var (dir, name, target) = BackupTarget(file, backupRoot, now);
+        Directory.CreateDirectory(dir);
+        SafeFile.WriteAllBytes(target, content);
         Prune(dir, name, keep);
         return target;
     }

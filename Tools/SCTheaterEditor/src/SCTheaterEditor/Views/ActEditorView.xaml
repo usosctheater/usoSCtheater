@@ -33,10 +33,25 @@
             <Grid Width="{Binding Def.Width}" Margin="0,0,1,0">
                 <TextBox x:Name="Box" Style="{StaticResource CellBox}" Tag="{Binding Def.Attr}" ToolTip="{Binding ToolTip}"
                          Text="{Binding Value, UpdateSourceTrigger=LostFocus}"/>
-                <!-- 빈 칸: 흐린 글씨로 칸 이름 (변경: 선택한 줄과 같은 종류의 줄에서만) -->
+                <!-- 빈 칸: 흐린 글씨로 칸 이름 (변경: 선택한 줄과 같은 종류의 줄에서만)
+                     변경(E-002): 입력 상자에 글자가 없을 때만 표시 — 입력을 시작하면 바로 숨고, 다 지우면 다시 보임 -->
                 <TextBlock Text="{Binding Def.Label}" Foreground="#FFBDBDBD" Margin="5,0,0,0" VerticalAlignment="Center"
-                           IsHitTestVisible="False" TextTrimming="CharacterEllipsis"
-                           Visibility="{Binding ShowHint, Converter={StaticResource BoolToVis}}"/>
+                           IsHitTestVisible="False" TextTrimming="CharacterEllipsis">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <MultiDataTrigger>
+                                    <MultiDataTrigger.Conditions>
+                                        <Condition Binding="{Binding ShowHint}" Value="True"/>
+                                        <Condition Binding="{Binding Text.Length, ElementName=Box}" Value="0"/>
+                                    </MultiDataTrigger.Conditions>
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </MultiDataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
             </Grid>
             <DataTemplate.Triggers>
                 <DataTrigger Binding="{Binding Warning}" Value="True">

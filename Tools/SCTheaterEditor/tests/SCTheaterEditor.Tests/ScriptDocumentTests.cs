@@ -266,6 +266,7 @@ public class ActEditorViewModelTests
         public readonly string Scenario;
         public readonly string Backups;
         public readonly List<IReadOnlyList<ScriptRow>> Selected = new();
+        public DateTime Now = new(2026, 10, 15, 12, 0, 0);   // 추가: 자동 백업 시간 시험용 (바꿀 수 있는 시계)
 
         public Env()
         {
@@ -278,7 +279,7 @@ public class ActEditorViewModelTests
             var lib = new SpineLibrary(Path.Combine(Temp.Path, "SpineData"), new SpineManifest());
             lib.Rebuild();
             Vm = new ActEditorViewModel(Settings, lib, Dialogs, new ImmediateDispatcher(), () => { }, new AppLog(), Backups,
-                                        () => new DateTime(2026, 10, 15, 12, 0, 0));
+                                        () => Now);   // 변경: 고정 시각 → Now
             Vm.SelectionRequested += rows => Selected.Add(rows);
         }
 
@@ -458,6 +459,114 @@ public class ActEditorViewModelTests
         Assert.EndsWith(" ", File.ReadAllText(env.Path1));
         env.Dialogs.ConfirmResult = true;
         Assert.True(env.Vm.TrySave());
+    }
+
+    // ------------------------------------------------------------------ 추가: 자동 백업 · 저장 전 원본 백업 · E-003
+
+    private static string[] BackupFiles(Env env) =>
+        Directory.Exists(Path.Combine(env.Backups, "IL")) ? Directory.GetFiles(Path.Combine(env.Backups, "IL")) : [];
+
+    /// <summary>TEXT 줄 대사 칸을 n번 고침 (1초씩 시계를 넘겨 백업 파일 이름이 겹치지 않게)</summary>
+    private static void EditTimes(Env env, int n, string prefix = "대사")
+    {
+        var cell = Cell(env.Vm.Rows[2], "Text");
+        for (int i = 0; i < n; i++)
+        {
+            env.Now = env.Now.AddSeconds(1);
+            cell.Value = $"{prefix} {i}";
+        }
+    }
+
+    [Fact]
+    public void AutoBackup_AfterNEdits_WritesEditorContent()
+    {
+        using var env = new Env();
+        env.Vm.Open(env.Path1);
+        EditTimes(env, env.Settings.Editor.AutoBackupEdits - 1);
+        Assert.Empty(BackupFiles(env));
+        EditTimes(env, 1, "마지막");
+        var file = BackupFiles(env).Single();
+        Assert.Contains("Text=\"마지막 0\"", File.ReadAllText(file));            // 저장 안 한 에디터 내용
+        Assert.Equal(ActXmlFormatTests.Sample, File.ReadAllText(env.Path1));    // 게임 폴더 파일은 그대로
+    }
+
+    [Fact]
+    public void AutoBackup_AfterMinutes_OnlyWhenEdited()
+    {
+        using var env = new Env();
+        var minutes = env.Settings.Editor.AutoBackupMinutes;
+        env.Vm.Open(env.Path1);
+        env.Now = env.Now.AddMinutes(minutes + 1);
+        env.Vm.CheckAutoBackupTime();
+        Assert.Empty(BackupFiles(env));                 // 편집 0번 (자리 비움) → 하지 않음
+
+        EditTimes(env, 1);
+        env.Vm.CheckAutoBackupTime();
+        Assert.Single(BackupFiles(env));                // M분 지남 + 편집 1번
+
+        env.Now = env.Now.AddMinutes(1);
+        EditTimes(env, 1, "다음");
+        env.Vm.CheckAutoBackupTime();
+        Assert.Single(BackupFiles(env));                // 마지막 백업 뒤 아직 M분 안 됨
+
+        env.Now = env.Now.AddMinutes(minutes);
+        env.Vm.CheckAutoBackupTime();
+        Assert.Equal(2, BackupFiles(env).Length);
+
+        env.Now = env.Now.AddMinutes(minutes + 1);
+        env.Vm.CheckAutoBackupTime();
+        Assert.Equal(2, BackupFiles(env).Length);       // 그 뒤 편집 없음
+    }
+
+    [Fact]
+    public void AutoBackup_SkipsSameContent()
+    {
+        using var env = new Env();
+        env.Vm.Open(env.Path1);
+        Cell(env.Vm.Rows[2], "Text").Value = "잠깐";
+        env.Vm.UndoCommand.Execute(null);               // 편집 2번이지만 내용은 연 시점과 같음
+        env.Now = env.Now.AddMinutes(env.Settings.Editor.AutoBackupMinutes + 1);
+        env.Vm.CheckAutoBackupTime();
+        Assert.Empty(BackupFiles(env));
+    }
+
+    [Fact]
+    public void Save_BacksUpOriginalOnlyOnFirstSave_OrExternalChange()
+    {
+        using var env = new Env();
+        env.Vm.Open(env.Path1);
+        Cell(env.Vm.Rows[2], "Text").Value = "1";
+        Assert.True(env.Vm.TrySave());
+        env.Now = env.Now.AddSeconds(1);
+        Cell(env.Vm.Rows[2], "Text").Value = "2";
+        Assert.True(env.Vm.TrySave());
+        Assert.Equal(ActXmlFormatTests.Sample, File.ReadAllText(BackupFiles(env).Single()));   // 두 번째 저장은 복사하지 않음
+
+        env.Now = env.Now.AddSeconds(1);
+        File.WriteAllText(env.Path1, "다른 프로그램이 바꾼 내용");
+        Assert.True(env.Vm.TrySave());
+        Assert.Equal(2, BackupFiles(env).Length);
+        Assert.Contains(BackupFiles(env), f => File.ReadAllText(f) == "다른 프로그램이 바꾼 내용");
+    }
+
+    [Fact]
+    public void ChangeType_RemovesEmptyAttributesNotInNewType_AndUndoRestoresOrder()
+    {
+        using var env = new Env();
+        env.Vm.Open(env.Path1);
+        env.Vm.SetSelection([env.Vm.Rows[1]]);
+        env.Vm.AddTextCommand.Execute(null);            // TEXT Name="" Text="" SpeakerType="1"
+        var row = env.Vm.Rows[2];
+
+        row.Type = "TRANSITION";
+        Assert.Equal("\t<Line Type=\"TRANSITION\" SpeakerType=\"1\"/>", row.Line.ToXmlLine());   // 빈 Name·Text 삭제, 값 있는 속성은 남음
+        Assert.Equal("SpeakerType=1", row.Others);
+
+        env.Vm.UndoCommand.Execute(null);               // 되돌리기 1단계로 원래 자리까지
+        Assert.Equal("\t<Line Type=\"TEXT\" Name=\"\" Text=\"\" SpeakerType=\"1\"/>", row.Line.ToXmlLine());
+
+        row.Type = "CGGROUP";                           // 새 종류에도 있는 빈 속성(Name)은 남음
+        Assert.Equal("\t<Line Type=\"CGGROUP\" Name=\"\" SpeakerType=\"1\"/>", row.Line.ToXmlLine());
     }
 
     [Fact]
