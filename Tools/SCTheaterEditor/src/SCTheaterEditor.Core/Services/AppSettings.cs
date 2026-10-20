@@ -28,6 +28,9 @@ public sealed class AppSettings
     /// <summary>스크립트 탭(에디터) 설정 — 이후 단계에서 채움</summary>
     public EditorSettings Editor { get; set; } = new();
 
+    /// <summary>추가: 로그 창 위치·크기·열림 상태</summary>
+    public LogWindowSettings LogWindow { get; set; } = new();
+
     /// <summary>읽는 중에 생긴 일 (예전 설정 이전, 손상 복구 등). 로그로 알리기 위한 값, 저장하지 않음</summary>
     [JsonIgnore]
     public string? LoadNotice { get; private set; }
@@ -227,4 +230,16 @@ public sealed class EditorSettings
 
     /// <summary>추가: 스크립트 표 칸 폭 (키: 종류.속성, 예: TEXT.Text). 없으면 LineTypes.xml 기본값</summary>
     public Dictionary<string, double> FieldWidths { get; set; } = new();
+}
+
+/// <summary>추가: 로그 창 (위치가 없거나 화면 밖이면 메인 창 가운데)</summary>
+public sealed class LogWindowSettings
+{
+    public double? Left { get; set; }
+    public double? Top { get; set; }
+    public double Width { get; set; } = 800;
+    public double Height { get; set; } = 320;
+
+    /// <summary>끌 때 열려 있었으면 다음 실행 때 다시 엶</summary>
+    public bool Open { get; set; }
 }

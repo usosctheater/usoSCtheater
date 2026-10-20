@@ -19,6 +19,8 @@ namespace SCTheaterEditor;
 public partial class MainWindow : Window
 {
     private readonly MainViewModel _vm;
+    private Views.LogWindow? _logWindow;   // 추가
+    private bool _closingApp;              // 추가: 프로그램을 끄면서 로그 창이 같이 닫힐 때는 '열림' 상태를 유지
 
     public MainWindow(MainViewModel vm)
     {
@@ -42,15 +44,50 @@ public partial class MainWindow : Window
         {
             Views.ActEditorView.CommitFocusedBox();   // 변경: 입력 중인 칸도 변경으로 쳐서 물음
             if (!_vm.Editor.ConfirmDiscard()) e.Cancel = true;
+            else _closingApp = true;   // 추가
         };
 
         // 저장된 목록은 창이 뜬 뒤 읽음 (매니페스트 v2 이전 포함)
-        Loaded += (_, _) => _vm.Initialize();
+        Loaded += (_, _) =>
+        {
+            _vm.Initialize();
+            if (App.Settings.LogWindow.Open) ToggleLog();   // 추가: 지난번에 열어 둔 채 껐으면 다시 엶
+        };
     }
 
     private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
     {
+        // 추가: Ctrl+L 로그 창
+        if (e.Key == Key.L && Keyboard.Modifiers == ModifierKeys.Control)
+        {
+            ToggleLog();
+            e.Handled = true;
+            return;
+        }
         if (HandleTabKeys(e.Key, Keyboard.Modifiers)) e.Handled = true;
+    }
+
+    private void LogButton_Click(object sender, RoutedEventArgs e) => ToggleLog();   // 추가
+
+    /// <summary>추가: 로그 창 열기/닫기 (닫을 때마다 새로 만듦 — 로그 내용은 LogViewModel에 남아 있음)</summary>
+    private void ToggleLog()
+    {
+        if (_logWindow != null)
+        {
+            _logWindow.Close();
+            return;
+        }
+        _logWindow = new Views.LogWindow(_vm.Log, App.Settings.LogWindow) { Owner = this };
+        _logWindow.Closed += (_, _) =>
+        {
+            _logWindow = null;
+            if (_closingApp) return;
+            App.Settings.LogWindow.Open = false;
+            App.SaveSettingsSoon();
+        };
+        _logWindow.Show();
+        App.Settings.LogWindow.Open = true;
+        App.SaveSettingsSoon();
     }
 
     /// <summary>Ctrl+PageUp / Ctrl+PageDown → 이전·다음 탭 (끝에서는 반대쪽 끝으로). 처리했으면 true</summary>
