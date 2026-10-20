@@ -362,6 +362,8 @@ public sealed partial class ActEditorViewModel : ObservableObject
             }
         }
         DeleteRowsCommand.NotifyCanExecuteChanged();
+        CopyLinesCommand.NotifyCanExecuteChanged();   // 추가
+        CutLinesCommand.NotifyCanExecuteChanged();    // 추가
         MoveUpCommand.NotifyCanExecuteChanged();
         MoveDownCommand.NotifyCanExecuteChanged();
         NotifyHeader();
@@ -489,6 +491,51 @@ public sealed partial class ActEditorViewModel : ObservableObject
         StatusText = $"라인 {lines.Count}개 삭제 (Ctrl+Z로 되돌리기)";
         if (doc.Lines.Count > 0) SelectLines([doc.Lines[Math.Min(first, doc.Lines.Count - 1)]]);
         else SetSelection([]);
+    }
+
+    // ------------------------------------------------------------------ 추가: 줄 복사·잘라내기·붙여넣기 (Ctrl+Shift+C / D / V)
+
+    /// <summary>선택한 줄을 막 순서대로 (선택한 순서와 무관)</summary>
+    private List<ScriptLine> SelectedLinesInOrder() =>
+        _selection.Select(r => r.Line).OrderBy(Document!.Lines.IndexOf).ToList();
+
+    [RelayCommand(CanExecute = nameof(HasSelection))]
+    private void CopyLines()
+    {
+        var lines = SelectedLinesInOrder();
+        StatusText = _dialogs.SetClipboardText(LineClipboard.ToText(lines))
+            ? $"줄 {lines.Count}개 복사 (Ctrl+Shift+V로 붙여넣기)"
+            : "클립보드에 쓰지 못했습니다 — 다른 프로그램이 사용 중일 수 있음 (로그 참고)";
+    }
+
+    [RelayCommand(CanExecute = nameof(HasSelection))]
+    private void CutLines()
+    {
+        var lines = SelectedLinesInOrder();
+        if (!_dialogs.SetClipboardText(LineClipboard.ToText(lines)))
+        {
+            StatusText = "클립보드에 쓰지 못해 잘라내지 않았습니다 (로그 참고)";
+            return;
+        }
+        DeleteRows();
+        StatusText = $"줄 {lines.Count}개 잘라내기 (Ctrl+Shift+V로 붙여넣기, Ctrl+Z로 되돌리기)";
+    }
+
+    /// <summary>선택한 줄 중 맨 아래 줄 밑에 (선택이 없으면 막 끝). 붙여넣은 줄을 선택, 되돌리기 1단계</summary>
+    [RelayCommand(CanExecute = nameof(CanEdit))]
+    private void PasteLines()
+    {
+        var doc = Document!;
+        var lines = LineClipboard.Parse(_dialogs.GetClipboardText());
+        if (lines.Count == 0)
+        {
+            StatusText = "클립보드에 붙여넣을 줄(<Line …/>)이 없습니다";
+            return;
+        }
+        int index = _selection.Count > 0 ? _selection.Max(r => doc.Lines.IndexOf(r.Line)) + 1 : doc.Lines.Count;
+        doc.InsertLines(index, lines);
+        SelectLines(lines);
+        StatusText = $"줄 {lines.Count}개 붙여넣기 ({index + 1}번 줄부터, Ctrl+Z로 되돌리기)";
     }
 
     [RelayCommand(CanExecute = nameof(HasSelection))]
@@ -620,6 +667,9 @@ public sealed partial class ActEditorViewModel : ObservableObject
         ExportActSpinesCommand.NotifyCanExecuteChanged();   // 추가
         AddTextCommand.NotifyCanExecuteChanged();
         DeleteRowsCommand.NotifyCanExecuteChanged();
+        CopyLinesCommand.NotifyCanExecuteChanged();    // 추가
+        CutLinesCommand.NotifyCanExecuteChanged();     // 추가
+        PasteLinesCommand.NotifyCanExecuteChanged();   // 추가
         MoveUpCommand.NotifyCanExecuteChanged();
         MoveDownCommand.NotifyCanExecuteChanged();
         UndoCommand.NotifyCanExecuteChanged();

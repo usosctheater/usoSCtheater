@@ -59,6 +59,7 @@ public partial class ScriptView : UserControl
 
     /// <summary>
     /// 추가(4-1): Ctrl+S 저장 · Ctrl+O 파일 열기 · Ctrl+Z 되돌리기 · Ctrl+Y(Ctrl+Shift+Z) 다시 하기. 처리했으면 true
+    /// 추가: Ctrl+Shift+C / D / V 줄 복사·잘라내기·붙여넣기
     /// 변경: 표의 칸이 모두 입력 상자가 되어, 확정 전 글자가 있는 상자에서만 Ctrl+Z·Y를 그 상자에 맡기고 나머지는 표 되돌리기.
     /// 저장·열기 전에는 입력 중인 칸을 먼저 확정
     /// </summary>
@@ -68,6 +69,20 @@ public partial class ScriptView : UserControl
         if ((mods & ModifierKeys.Control) == 0 || (mods & ModifierKeys.Alt) != 0) return false;
         bool shift = (mods & ModifierKeys.Shift) != 0;
         bool typing = e.OriginalSource is TextBox tb && tb.GetBindingExpression(TextBox.TextProperty) is { IsDirty: true };
+        // 추가: Ctrl+Shift+C / D / V 줄 복사·잘라내기·붙여넣기 — 칸에 입력 중이어도 줄 단위 (입력 중인 칸을 먼저 확정)
+        // 잘라내기는 D (Ctrl+Shift+X는 사용자 PC에서 다른 프로그램의 전역 단축키라 TE에 키가 오지 않음, 2026-10-20)
+        if (shift && e.Key is Key.C or Key.D or Key.V)
+        {
+            ActEditorView.CommitFocusedBox();
+            var lc = e.Key switch
+            {
+                Key.C => editor.CopyLinesCommand,
+                Key.D => editor.CutLinesCommand,
+                _ => editor.PasteLinesCommand,
+            };
+            if (lc.CanExecute(null)) lc.Execute(null);
+            return true;
+        }
         // 추가(4-2): Ctrl+Enter 라인에 적용 · Ctrl+N 줄 추가 (입력 중인 칸을 먼저 확정)
         if (!shift && (e.Key == Key.Enter || e.Key == Key.N))
         {

@@ -77,6 +77,17 @@ internal sealed class FakeDialogs : IDialogService
     public string? PickFolder(string title, string? initialFolder) => PickResult;
     public string? PickFile(string title, string filter, string? initialFolder) => PickResult;
     public void ShowError(string title, string message) => Errors.Add(message);
+
+    // 추가: 메모리 클립보드 (ClipboardWritable = false면 쓰기 실패 흉내)
+    public string? ClipboardText { get; set; }
+    public bool ClipboardWritable { get; set; } = true;
+    public string? GetClipboardText() => ClipboardText;
+    public bool SetClipboardText(string text)
+    {
+        if (!ClipboardWritable) return false;
+        ClipboardText = text;
+        return true;
+    }
 }
 
 internal sealed class FakeCatalog(CatalogSnapshot snap) : ICatalogSource

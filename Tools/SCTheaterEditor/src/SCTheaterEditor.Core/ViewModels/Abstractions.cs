@@ -32,6 +32,12 @@ public interface IDialogService
 
     /// <summary>추가(4-1): 오류 알림</summary>
     void ShowError(string title, string message);
+
+    /// <summary>추가: 클립보드 글자 읽기 (없거나 읽지 못하면 null)</summary>
+    string? GetClipboardText();
+
+    /// <summary>추가: 클립보드에 글자 쓰기 (TE를 꺼도 남음). 쓰지 못하면 false</summary>
+    bool SetClipboardText(string text);
 }
 
 /// <summary>추가(4-1): 저장 확인 결과</summary>

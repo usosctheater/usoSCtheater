@@ -109,7 +109,7 @@
         <DockPanel DockPanel.Dock="Top" Margin="0,0,0,4">
             <StackPanel DockPanel.Dock="Left" Orientation="Horizontal">
                 <Button Content="줄 추가 (Ctrl+N)" Padding="8,1" Command="{Binding AddTextCommand}"
-                        ToolTip="선택한 줄 아래에 TEXT 줄 추가 (선택이 없으면 맨 끝). 무대에서 캐릭터를 선택하고 있으면 그 캐릭터의 이름·CG·위치·애니메이션을 채움. 종류는 드롭다운으로 변경"/>
+                        ToolTip="선택한 줄 아래에 TEXT 줄 추가 (선택이 없으면 맨 끝). 무대에서 캐릭터를 선택하고 있으면 그 캐릭터의 이름·CG·위치·애니메이션을 채움. 종류는 드롭다운으로 변경&#x0a;줄 복사 Ctrl+Shift+C · 잘라내기 Ctrl+Shift+D · 붙여넣기 Ctrl+Shift+V (선택한 줄 아래에)"/>
                 <Button Content="삭제" Padding="8,1" Margin="4,0,0,0" Command="{Binding DeleteRowsCommand}" ToolTip="선택한 줄 삭제 (Delete)"/>
                 <Button Content="▲" Padding="8,1" Margin="4,0,0,0" Command="{Binding MoveUpCommand}" ToolTip="위로 (Alt+↑)"/>
                 <Button Content="▼" Padding="8,1" Margin="2,0,0,0" Command="{Binding MoveDownCommand}" ToolTip="아래로 (Alt+↓)"/>

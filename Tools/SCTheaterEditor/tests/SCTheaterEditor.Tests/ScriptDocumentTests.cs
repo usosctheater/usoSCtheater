@@ -569,6 +569,76 @@ public class ActEditorViewModelTests
         Assert.Equal("\t<Line Type=\"CGGROUP\" Name=\"\" SpeakerType=\"1\"/>", row.Line.ToXmlLine());
     }
 
+    // ------------------------------------------------------------------ 추가: 줄 복사·잘라내기·붙여넣기
+
+    [Fact]
+    public void CopyPaste_FileOrder_InsertBelowSelection_SingleUndo()
+    {
+        using var env = new Env();
+        env.Vm.Open(env.Path1);
+        var rows = env.Vm.Rows;
+        env.Vm.SetSelection([rows[2], rows[0]]);                  // 거꾸로 선택해도
+        env.Vm.CopyLinesCommand.Execute(null);
+        var copied = LineClipboard.Parse(env.Dialogs.ClipboardText);
+        Assert.Equal(new[] { "AUDIO", "TEXT" }, copied.Select(l => l.Type));   // 막 순서대로
+
+        env.Vm.SetSelection([env.Vm.Rows[1]]);
+        env.Vm.PasteLinesCommand.Execute(null);
+        Assert.Equal(new[] { "AUDIO", "BG", "AUDIO", "TEXT", "TEXT", "TRANSITION" }, env.Vm.Rows.Select(r => r.Type));
+        Assert.Equal(new[] { 3, 4 }, env.Vm.Selection.Select(r => r.Number).Order());   // 붙여넣은 줄 선택
+        Assert.Equal(env.Vm.Rows[4].Line.Format(), env.Vm.Rows[3].Line.Format());       // 속성까지 같은 줄
+        Assert.NotSame(env.Vm.Rows[4].Line, env.Vm.Rows[3].Line);                       // 다른 객체
+
+        env.Vm.UndoCommand.Execute(null);                           // 되돌리기 1번
+        Assert.Equal(4, env.Vm.Rows.Count);
+        Assert.False(env.Vm.Document!.IsDirty);
+    }
+
+    [Fact]
+    public void Cut_RemovesAndCopies_UndoRestores_AndKeepsWhenClipboardFails()
+    {
+        using var env = new Env();
+        env.Vm.Open(env.Path1);
+        env.Dialogs.ClipboardWritable = false;
+        env.Vm.SetSelection([env.Vm.Rows[1]]);
+        env.Vm.CutLinesCommand.Execute(null);
+        Assert.Equal(4, env.Vm.Rows.Count);                         // 클립보드에 못 쓰면 지우지 않음
+
+        env.Dialogs.ClipboardWritable = true;
+        env.Vm.CutLinesCommand.Execute(null);
+        Assert.Equal(3, env.Vm.Rows.Count);
+        Assert.Equal("BG", LineClipboard.Parse(env.Dialogs.ClipboardText).Single().Type);
+        env.Vm.UndoCommand.Execute(null);
+        Assert.Equal(4, env.Vm.Rows.Count);
+        Assert.Equal("BG", env.Vm.Rows[1].Type);
+    }
+
+    [Fact]
+    public void Paste_WholeActDocument_AndIgnoresNonXml()
+    {
+        using var env = new Env();
+        env.Vm.Open(env.Path1);
+        env.Vm.SetSelection([]);
+        env.Dialogs.ClipboardText = ActXmlFormatTests.Sample;      // <?xml …?> + <Scene> 문서 전체
+        env.Vm.PasteLinesCommand.Execute(null);
+        Assert.Equal(8, env.Vm.Rows.Count);                         // 선택이 없으면 막 끝에 4줄
+
+        foreach (var text in new[] { "그냥 글자", "", "<Line Type=\"TEXT\"", "<Foo/>" })
+        {
+            env.Dialogs.ClipboardText = text;
+            env.Vm.PasteLinesCommand.Execute(null);
+            Assert.Equal(8, env.Vm.Rows.Count);                     // XML이 아니거나 Line이 없으면 그대로
+        }
+    }
+
+    [Fact]
+    public void LineClipboard_RoundTripsSpecialCharacters()
+    {
+        var line = ScriptLine.Create(("Type", "TEXT"), ("Name", "A&B"), ("Text", "\"따옴표\" <꺾쇠> 첫 줄\\n둘째 줄"), ("Future", "x"));
+        var back = LineClipboard.Parse(LineClipboard.ToText([line])).Single();
+        Assert.Equal(line.Attributes, back.Attributes);             // 값·순서·모르는 속성까지 그대로
+    }
+
     [Fact]
     public void SwitchAct_WithChanges_CancelKeepsDocument()
     {

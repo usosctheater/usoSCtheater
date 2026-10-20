@@ -62,6 +62,19 @@ public sealed class WpfDialogService : IDialogService
     public void ShowError(string title, string message) =>
         Show(message, title, MessageBoxButton.OK, MessageBoxImage.Error);
 
+    // 추가: 클립보드 (다른 프로그램이 잡고 있으면 실패할 수 있음 → 로그 + null/false)
+    public string? GetClipboardText()
+    {
+        try { return Clipboard.ContainsText() ? Clipboard.GetText() : null; }
+        catch (Exception ex) { AppLog.Shared.Warn($"클립보드 읽기 실패: {ex.Message}"); return null; }
+    }
+
+    public bool SetClipboardText(string text)
+    {
+        try { Clipboard.SetDataObject(text, copy: true); return true; }
+        catch (Exception ex) { AppLog.Shared.Warn($"클립보드 쓰기 실패: {ex.Message}"); return false; }
+    }
+
     private static MessageBoxResult Show(string message, string title, MessageBoxButton buttons, MessageBoxImage image) =>
         Owner != null ? MessageBox.Show(Owner, message, title, buttons, image) : MessageBox.Show(message, title, buttons, image);
 }
