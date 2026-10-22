@@ -7,26 +7,15 @@ namespace SCTheaterEditor.ViewModels;
 /// <summary>'게임으로 내보내기' 공용 흐름 (리소스 탭·스크립트 표·설정 탭)</summary>
 internal static class GameExportFlow
 {
-    /// <summary>
-    /// 게임 Spine 폴더. 비었거나 없는 폴더면(또는 forcePick) 지정을 요청, 취소면 null.
-    /// 변경: 바꾸면 SettingsChangedMessage(GameSpineFolder) — ◎ 갱신·설정 탭 표시는 알림을 받아서
-    /// </summary>
-    public static string? EnsureFolder(AppSettings settings, IDialogService dialogs, Action saveSettings, IMessenger messenger,
-                                       bool forcePick = false)
+    /// <summary>변경(5회차): 게임 Spine 폴더 = Resources\Spine. 없으면 설정 탭 안내 후 null (이전: 폴더 고르기)</summary>
+    public static string? EnsureFolder(AppSettings settings, IDialogService dialogs)
     {
         string? folder = settings.Editor.GameSpineFolder;
-        if (!forcePick && !string.IsNullOrWhiteSpace(folder) && Directory.Exists(folder)) return folder;
-
-        string? picked = dialogs.PickFolder("게임 Spine 폴더 지정 (게임 Assets\\Resources\\Spine)", folder);
-        if (picked == null) return null;
-        if (!Path.GetFileName(picked.TrimEnd('\\', '/')).Equals("Spine", StringComparison.OrdinalIgnoreCase) &&
-            !dialogs.Confirm("게임 Spine 폴더 확인",
-                $"{picked}\n\n폴더 이름이 'Spine'이 아닙니다. 이 폴더 아래 {{nickName}} 폴더에 내보냅니다. 계속할까요?"))
-            return null;
-        settings.Editor.GameSpineFolder = picked;
-        saveSettings();
-        messenger.Send(new SettingsChangedMessage(SettingsArea.GameSpineFolder));   // 추가
-        return picked;
+        if (folder != null && Directory.Exists(folder)) return folder;
+        dialogs.ShowError("게임 Spine 폴더 없음", folder == null
+            ? "설정 탭 > 경로에서 게임 Resources 폴더를 지정하세요."
+            : $"{folder}\n\nResources 폴더 아래에 Spine 폴더가 없습니다. 설정 탭에서 Resources 폴더를 확인하세요.");
+        return null;
     }
 
     /// <summary>세트마다 내보내기 (다르면 물어봄) + 로그</summary>

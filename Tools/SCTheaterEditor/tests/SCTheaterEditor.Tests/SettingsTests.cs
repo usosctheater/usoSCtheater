@@ -85,46 +85,129 @@ public class SettingsViewModelTests
         Assert.Equal("30", env.Vm.AutoBackupEditsText);
     }
 
-    [Fact]
-    public void ScenarioFolder_FromSettingsTab_RefreshesActList_CancelChangesNothing()
+    // ------------------------------------------------------------------ 변경(5회차): 게임 Resources 폴더 하나
+
+    /// <summary>게임 Resources 폴더 흉내 (Scenario\IL\IL01.xml · Spine\ · BG\bg_a.png)</summary>
+    private static string MakeResources(string parent, string name = "Resources")
     {
-        using var env = new Env();
-        string scenario = Path.Combine(env.Temp.Path, "Scenario");
-        Directory.CreateDirectory(Path.Combine(scenario, "IL"));
-        File.WriteAllText(Path.Combine(scenario, "IL", "IL01.xml"), ActXmlFormatTests.Sample);
-        var editor = new ActEditorViewModel(env.Settings, env.EmptyLibrary(), env.Dialogs, new ImmediateDispatcher(), () => { },
-                                            new AppLog(), Path.Combine(env.Temp.Path, "Backups"), messenger: env.Messenger);
-        Assert.Empty(editor.ActEntries);
-
-        env.Dialogs.PickResult = null;                                     // 취소
-        env.Vm.PickScenarioFolderCommand.Execute(null);
-        Assert.Null(env.Settings.Editor.ScenarioFolder);
-        Assert.Equal(0, env.Saves);
-        Assert.Empty(env.Messages);
-
-        env.Dialogs.PickResult = scenario;
-        env.Vm.PickScenarioFolderCommand.Execute(null);
-        Assert.Equal(scenario, env.Settings.Editor.ScenarioFolder);
-        Assert.Equal("IL / IL01", editor.ActEntries.Single().Display);    // 스크립트 표가 알림을 받아 목록 다시 읽음
-        Assert.Contains(scenario, editor.FolderText);
-        Assert.Equal(scenario, env.Vm.ScenarioFolderText);
-        Assert.Equal(new[] { SettingsArea.ScenarioFolder }, env.Messages);
+        string res = Path.Combine(parent, name);
+        Directory.CreateDirectory(Path.Combine(res, "Scenario", "IL"));
+        File.WriteAllText(Path.Combine(res, "Scenario", "IL", "IL01.xml"), ActXmlFormatTests.Sample);
+        Directory.CreateDirectory(Path.Combine(res, "Spine"));
+        Directory.CreateDirectory(Path.Combine(res, "BG"));
+        File.WriteAllBytes(Path.Combine(res, "BG", "bg_a.png"), [1, 2, 3]);
+        return res;
     }
 
     [Fact]
-    public void GameSpineFolder_FromResourceTab_UpdatesSettingsTab()
+    public void SubFolders_ComputedFromResources()
+    {
+        var e = new EditorSettings();
+        Assert.Null(e.ScenarioFolder);
+        Assert.Null(e.GameSpineFolder);
+        Assert.Null(e.BackgroundFolder);
+        e.GameResourcesFolder = @"D:\game\Assets\Resources";
+        Assert.Equal(@"D:\game\Assets\Resources\Scenario", e.ScenarioFolder);
+        Assert.Equal(@"D:\game\Assets\Resources\Spine", e.GameSpineFolder);
+        Assert.Equal(@"D:\game\Assets\Resources\BG", e.BackgroundFolder);
+    }
+
+    [Fact]
+    public void Save_WritesOnlyResources_OldKeysIgnoredOnLoad()
+    {
+        using var temp = new TempFolder();
+        string path = Path.Combine(temp.Path, "settings.json");
+        var s = new AppSettings();
+        s.Editor.GameResourcesFolder = @"D:\game\Assets\Resources";
+        s.Save(path);
+        string json = File.ReadAllText(path);
+        Assert.Contains("GameResourcesFolder", json);
+        Assert.DoesNotContain("ScenarioFolder", json);                     // 계산 값은 저장하지 않음
+        Assert.DoesNotContain("BackgroundFolder", json);
+
+        // 옛 키가 남은 설정 파일: 문제없이 읽고 옛 값은 무시 (자동 추측하지 않음)
+        File.WriteAllText(path, """{ "Editor": { "ScenarioFolder": "D:\\old\\Scenario", "GameSpineFolder": "D:\\old\\Spine", "BackupCount": 7 } }""");
+        var loaded = AppSettings.Load(path, null);
+        Assert.Null(loaded.LoadNotice);
+        Assert.Null(loaded.Editor.GameResourcesFolder);
+        Assert.Null(loaded.Editor.ScenarioFolder);
+        Assert.Equal(7, loaded.Editor.BackupCount);
+    }
+
+    [Fact]
+    public void ResourcesFolder_FromSettingsTab_UpdatesActList_GameKeys_Backgrounds()
     {
         using var env = new Env();
-        string spine = Path.Combine(env.Temp.Path, "Spine");
-        Directory.CreateDirectory(spine);
-        var resource = new ResourceViewModel(env.Settings, env.EmptyLibrary(), new List<IdolUnit>(), env.Dialogs, () => { },
+        string res = MakeResources(env.Temp.Path);
+        var lib = env.EmptyLibrary();
+        var editor = new ActEditorViewModel(env.Settings, lib, env.Dialogs, new ImmediateDispatcher(), () => { },
+                                            new AppLog(), Path.Combine(env.Temp.Path, "Backups"), messenger: env.Messenger);
+        var resource = new ResourceViewModel(env.Settings, lib, new List<IdolUnit>(), env.Dialogs, () => { },
                                              env.Messenger, new AppLog());
-        Assert.Equal("(지정 안 함)", env.Vm.GameSpineFolderText);
+        var stage = new FakeStage();
+        var bg = new BackgroundLibrary(env.Settings.Editor.BackgroundFolder);
+        var script = new ScriptViewModel(env.Settings, lib, bg, stage, LipRules.LoadEmbedded(), env.Messenger, () => { }, new AppLog());
+        Assert.Empty(editor.ActEntries);
+        Assert.Equal(new[] { ScriptViewModel.NoBackground }, script.BackgroundOptions);
+        Assert.Equal("(지정 안 함)", env.Vm.ResourcesFolderText);
+        Assert.Equal("(Resources 폴더를 지정하세요)", env.Vm.ScenarioFolderText);
 
-        env.Dialogs.PickResult = spine;
-        resource.PickGameFolderCommand.Execute(null);
-        Assert.Equal(spine, env.Settings.Editor.GameSpineFolder);
-        Assert.Equal(spine, env.Vm.GameSpineFolderText);                  // 설정 탭 표시도 같은 값
-        Assert.Equal(new[] { SettingsArea.GameSpineFolder }, env.Messages);
+        env.Dialogs.PickResult = null;                                     // 취소
+        env.Vm.PickResourcesFolderCommand.Execute(null);
+        Assert.Null(env.Settings.Editor.GameResourcesFolder);
+        Assert.Equal(0, env.Saves);
+        Assert.Empty(env.Messages);
+
+        env.Dialogs.PickResult = res;
+        env.Vm.PickResourcesFolderCommand.Execute(null);
+        Assert.Equal(res, env.Settings.Editor.GameResourcesFolder);
+        Assert.Equal(1, env.Saves);
+        Assert.Equal(new[] { SettingsArea.ResourcesFolder }, env.Messages);
+        Assert.Equal("IL / IL01", editor.ActEntries.Single().Display);    // 스크립트 표가 알림을 받아 목록 다시 읽음
+        Assert.Contains(Path.Combine(res, "Scenario"), editor.FolderText);
+        Assert.Equal(Path.Combine(res, "BG"), bg.Folder);                  // 무대 배경도 같은 알림으로
+        Assert.Contains("bg_a", script.BackgroundOptions);
+        Assert.Equal(res, env.Vm.ResourcesFolderText);
+        Assert.Equal(Path.Combine(res, "Spine"), env.Vm.GameSpineFolderText);
+        Assert.Equal(Path.Combine(res, "BG"), env.Vm.BackgroundFolderText);
+    }
+
+    [Fact]
+    public void ResourcesFolder_NotNamedResources_ConfirmCancelChangesNothing()
+    {
+        using var env = new Env();
+        string other = MakeResources(env.Temp.Path, "Other");
+        env.Dialogs.PickResult = other;
+        env.Dialogs.ConfirmResult = false;
+        env.Vm.PickResourcesFolderCommand.Execute(null);
+        Assert.Null(env.Settings.Editor.GameResourcesFolder);
+        Assert.Equal(0, env.Saves);
+        Assert.Empty(env.Messages);
+
+        env.Dialogs.ConfirmResult = true;                                  // 확인하면 그대로 씀
+        env.Vm.PickResourcesFolderCommand.Execute(null);
+        Assert.Equal(other, env.Settings.Editor.GameResourcesFolder);
+    }
+
+    [Fact]
+    public void SubFolderMissing_ShownAsMissing()
+    {
+        using var env = new Env();
+        string res = Path.Combine(env.Temp.Path, "Resources");
+        Directory.CreateDirectory(res);                                    // 하위 폴더 없음
+        env.Dialogs.PickResult = res;
+        env.Vm.PickResourcesFolderCommand.Execute(null);
+        Assert.EndsWith("(폴더 없음)", env.Vm.ScenarioFolderText);
+        Assert.False(Directory.Exists(Path.Combine(res, "BG")));          // 게임 폴더를 만들지 않음
+    }
+
+    [Fact]
+    public void ExportToGame_WithoutResources_ShowsErrorOnly()
+    {
+        using var env = new Env();
+        Assert.Null(GameExportFlow.EnsureFolder(env.Settings, env.Dialogs));
+        Assert.Contains("설정 탭", env.Dialogs.Errors.Single());
+        Assert.Equal(0, env.Saves);
+        Assert.Empty(env.Messages);
     }
 }

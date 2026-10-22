@@ -136,8 +136,15 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     // ------------------------------------------------------------------ 경로
 
-    public string ScenarioFolderText => ShowPath(_settings.Editor.ScenarioFolder);
-    public string GameSpineFolderText => ShowPath(_settings.Editor.GameSpineFolder);
+    // 변경(5회차): Resources 폴더 하나만 지정, 나머지는 그 아래에서 찾음 (보기만)
+    public string ResourcesFolderText => ShowPath(_settings.Editor.GameResourcesFolder);
+    public string ScenarioFolderText => ShowSub(_settings.Editor.ScenarioFolder);
+    public string GameSpineFolderText => ShowSub(_settings.Editor.GameSpineFolder);
+    public string BackgroundFolderText => ShowSub(_settings.Editor.BackgroundFolder);
+
+    /// <summary>추가: 하위 폴더 표시 — 지정 전이면 안내, 폴더가 없으면 (폴더 없음)</summary>
+    private static string ShowSub(string? path) =>
+        path == null ? "(Resources 폴더를 지정하세요)" : Directory.Exists(path) ? path : $"{path}   (폴더 없음)";
 
     /// <summary>Spine 데이터 폴더 (보기만 — 바꾸면 Spine 목록·무대·로그 위치가 모두 바뀌어 재시작 필요)</summary>
     public string SpineDataFolderText => _settings.SaveFolder;
@@ -150,12 +157,12 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     private static string ShowPath(string? path) => string.IsNullOrWhiteSpace(path) ? "(지정 안 함)" : path;
 
+    // 변경(5회차): Resources 폴더만 지정 (이전: PickScenarioFolder · PickGameSpineFolder)
     [RelayCommand]
-    private void PickScenarioFolder() => SettingsFlow.PickScenarioFolder(_settings, _dialogs, _saveSettings, _messenger);
+    private void PickResourcesFolder() => SettingsFlow.PickResourcesFolder(_settings, _dialogs, _saveSettings, _messenger);
 
-    [RelayCommand]
-    private void PickGameSpineFolder() => GameExportFlow.EnsureFolder(_settings, _dialogs, _saveSettings, _messenger, forcePick: true);
-
+    [RelayCommand] private void OpenResourcesFolder() => OpenFolder(_settings.Editor.GameResourcesFolder);   // 추가
+    [RelayCommand] private void OpenBackgroundFolder() => OpenFolder(_settings.Editor.BackgroundFolder);     // 추가
     [RelayCommand] private void OpenScenarioFolder() => OpenFolder(_settings.Editor.ScenarioFolder);
     [RelayCommand] private void OpenGameSpineFolder() => OpenFolder(_settings.Editor.GameSpineFolder);
     [RelayCommand] private void OpenSpineDataFolder() => OpenFolder(_settings.SaveFolder);
@@ -183,11 +190,12 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     private void OnSettingsChanged(SettingsChangedMessage m)
     {
-        switch (m.Area)
-        {
-            case SettingsArea.ScenarioFolder: OnPropertyChanged(nameof(ScenarioFolderText)); break;
-            case SettingsArea.GameSpineFolder: OnPropertyChanged(nameof(GameSpineFolderText)); break;
-        }
+        if (m.Area != SettingsArea.ResourcesFolder) return;   // 변경(5회차)
+        PathNote = "";
+        OnPropertyChanged(nameof(ResourcesFolderText));
+        OnPropertyChanged(nameof(ScenarioFolderText));
+        OnPropertyChanged(nameof(GameSpineFolderText));
+        OnPropertyChanged(nameof(BackgroundFolderText));
     }
 }
 

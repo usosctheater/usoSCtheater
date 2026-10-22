@@ -89,8 +89,7 @@
                 <!-- 추가: 게임으로 내보내기 -->
                 <Button Content="게임으로 내보내기" Padding="10,2" Margin="12,0,0,0" Command="{Binding ExportToGameCommand}"
                         ToolTip="게임 Resources\Spine\{nickName}\에 {CG 키} 이름으로 복사 (같으면 건너뜀, 다르면 물어봄). 등록은 Unity의 Tools > Spine Auto Setup"/>
-                <Button Content="게임 폴더…" Padding="8,2" Margin="4,0,0,0" Command="{Binding PickGameFolderCommand}"
-                        ToolTip="게임 Assets\Resources\Spine 폴더 지정"/>
+                <!-- (삭제, 5회차) [게임 폴더…] — 설정 탭에서 게임 Resources 폴더 지정 -->
             </StackPanel>
             <!-- 추가: 내보내기 결과 -->
             <TextBlock DockPanel.Dock="Top" Text="{Binding ExportText}" Foreground="Gray" Margin="0,0,0,6" TextTrimming="CharacterEllipsis"/>

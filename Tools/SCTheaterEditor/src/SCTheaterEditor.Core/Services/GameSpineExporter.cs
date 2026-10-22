@@ -85,7 +85,11 @@ public sealed class GameSpineExporter(SpineLibrary library)
         {
             var files = Prepare(a);
             string folder = TargetFolder(gameSpineFolder, a);
-            var differs = files.Where(f => !SameBytes(Path.Combine(folder, f.Name), f.Bytes)).Select(f => f.Name).ToList();
+            // 변경(5회차): atlas는 줄바꿈(CRLF/LF) 차이를 무시 — git 체크아웃(core.autocrlf)이 CRLF로 바꿔 둔 같은 파일을 "다름"으로 보지 않도록
+            var differs = files.Where(f => !(f.Name.EndsWith(SpineNaming.AtlasExt, StringComparison.OrdinalIgnoreCase)
+                                                 ? SameText(Path.Combine(folder, f.Name), f.Bytes)
+                                                 : SameBytes(Path.Combine(folder, f.Name), f.Bytes)))
+                               .Select(f => f.Name).ToList();
             if (differs.Count == 0) return new(a, GameExportStatus.Same);
 
             bool existed = files.Any(f => File.Exists(Path.Combine(folder, f.Name)));
@@ -120,4 +124,10 @@ public sealed class GameSpineExporter(SpineLibrary library)
 
     private static bool SameBytes(string path, byte[] bytes) =>
         File.Exists(path) && new FileInfo(path).Length == bytes.Length && File.ReadAllBytes(path).AsSpan().SequenceEqual(bytes);
+
+    /// <summary>추가(5회차): 글자 파일 비교 — CR을 빼고 비교 (줄바꿈 CRLF/LF만 다르면 같음)</summary>
+    private static bool SameText(string path, byte[] bytes) =>
+        File.Exists(path) && WithoutCr(File.ReadAllBytes(path)).AsSpan().SequenceEqual(WithoutCr(bytes));
+
+    private static byte[] WithoutCr(byte[] bytes) => Array.FindAll(bytes, b => b != (byte)'\r');
 }

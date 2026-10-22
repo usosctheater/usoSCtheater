@@ -63,6 +63,28 @@ public class GameExportTests
         Assert.Equal(GameExportStatus.Same, r.Status);
     }
 
+    /// <summary>추가(5회차): git 체크아웃이 atlas 줄바꿈을 CRLF로 바꿔 둔 경우 — 같음으로 보고 파일을 건드리지 않음. 글자가 다르면 그대로 "다름"</summary>
+    [Fact]
+    public void Export_AtlasCrlfOnly_IsSame_ButRealChangeDiffers()
+    {
+        using var t = new TempFolder();
+        var (lib, a) = MakeSet(t);
+        var exporter = new GameSpineExporter(lib);
+        exporter.Export(GameFolder(t), a, (_, _) => true);
+        string atlas = Path.Combine(GameFolder(t), "fuyuko", "fuyuko_stand_3000180060.atlas.txt");
+        string crlf = File.ReadAllText(atlas).Replace("\n", "\r\n");
+        File.WriteAllText(atlas, crlf);
+
+        var r = exporter.Export(GameFolder(t), a, (_, _) => throw new InvalidOperationException("묻지 않아야 함"));
+        Assert.Equal(GameExportStatus.Same, r.Status);
+        Assert.Equal(crlf, File.ReadAllText(atlas));                     // 덮어쓰지 않음
+
+        File.WriteAllText(atlas, crlf.Replace("size: 1024,1024", "size: 512,512"));
+        IReadOnlyList<string>? asked = null;
+        exporter.Export(GameFolder(t), a, (_, files) => { asked = files; return false; });
+        Assert.Equal(new[] { "fuyuko_stand_3000180060.atlas.txt" }, asked);
+    }
+
     [Fact]
     public void Export_Different_AsksThenSkipsOrOverwrites()
     {

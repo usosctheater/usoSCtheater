@@ -67,6 +67,11 @@ public sealed partial class ScriptViewModel : ObservableObject
 
         _host.EventReceived += OnStageEvent;
         messenger.Register<ScriptViewModel, OpenSpineMessage>(this, (r, m) => r.Open(m.Asset, m.Immediate));
+        // 추가(5회차): Resources 폴더가 바뀌면 배경 목록 다시 읽기
+        messenger.Register<ScriptViewModel, SettingsChangedMessage>(this, static (r, m) =>
+        {
+            if (m.Area == SettingsArea.ResourcesFolder) r.OnResourcesFolderChanged();
+        });
 
         RefreshBackgrounds();
         string? saved = settings.Editor.Background;
@@ -337,6 +342,20 @@ public sealed partial class ScriptViewModel : ObservableObject
         string current = SelectedBackground;
         BackgroundOptions = [NoBackground, .. _backgrounds.Keys];
         SelectedBackground = BackgroundOptions.Contains(current) ? current : NoBackground;
+        // 추가(5회차): 게임 폴더를 아직 모르면 안내
+        if (!_initializing && _backgrounds.Folder == null) StatusText = "배경: 설정 탭에서 게임 Resources 폴더를 지정하세요";
+    }
+
+    /// <summary>추가(5회차): Resources 폴더가 바뀜 → 배경 폴더(Resources\BG)를 바꿔 목록 다시 읽고, 저장된 배경을 다시 고르고, 무대에 다시 보냄</summary>
+    private void OnResourcesFolderChanged()
+    {
+        _backgrounds.SetFolder(_settings.Editor.BackgroundFolder);
+        RefreshBackgrounds();
+        string? saved = _settings.Editor.Background;
+        if (SelectedBackground == NoBackground && saved != null &&
+            _backgrounds.Keys.FirstOrDefault(k => k.Equals(saved, StringComparison.OrdinalIgnoreCase)) is { } key)
+            SelectedBackground = key;
+        SendBackground();   // 같은 키라도 파일이 다른 폴더로 바뀌었을 수 있음
     }
 
     partial void OnSelectedBackgroundChanged(string value)
@@ -589,7 +608,7 @@ public sealed partial class ScriptViewModel : ObservableObject
         CancelPreviewInternal(goBack: false);
         var skipped = new List<string>();
 
-        // 배경 (TE Backgrounds 폴더에 없으면 배경 없음 + 안내)
+        // 배경 (게임 Resources\BG에 없으면 배경 없음 + 안내)   변경(5회차): 주석만
         if (snapshot.Background == null) SelectedBackground = NoBackground;
         else
         {

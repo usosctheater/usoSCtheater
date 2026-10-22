@@ -20,7 +20,7 @@ public partial class ScriptView : UserControl
         InitializeComponent();
         Loaded += async (_, _) =>
         {
-            try { await App.Stage.AttachAsync(StageWeb, App.Settings.SaveFolder, App.Backgrounds.Folder); }
+            try { await App.Stage.AttachAsync(StageWeb, App.Settings.SaveFolder, () => App.Backgrounds.Folder); }   // 변경(5회차): 지금 배경 폴더
             catch (Exception ex) { AppLog.Shared.Error("무대(WebView2)를 시작하지 못했습니다 — WebView2 런타임 설치 여부를 확인하세요", ex); }
         };
     }
@@ -131,10 +131,18 @@ public partial class ScriptView : UserControl
 
     private void OpenBackgroundFolder_Click(object sender, RoutedEventArgs e)
     {
+        // 변경(5회차): 게임 Resources\BG — 없으면 만들지 않고 안내만
+        string? folder = App.Backgrounds.Folder;
+        if (folder == null || !System.IO.Directory.Exists(folder))
+        {
+            AppLog.Shared.Warn(folder == null
+                ? "배경 폴더: 설정 탭에서 게임 Resources 폴더를 지정하세요"
+                : $"배경 폴더가 없습니다: {folder}");
+            return;
+        }
         try
         {
-            System.IO.Directory.CreateDirectory(App.Backgrounds.Folder);
-            Process.Start(new ProcessStartInfo("explorer.exe", $"\"{App.Backgrounds.Folder}\"") { UseShellExecute = true });
+            Process.Start(new ProcessStartInfo("explorer.exe", $"\"{folder}\"") { UseShellExecute = true });
         }
         catch (Exception ex) { AppLog.Shared.Error("배경 폴더 열기 실패", ex); }
     }

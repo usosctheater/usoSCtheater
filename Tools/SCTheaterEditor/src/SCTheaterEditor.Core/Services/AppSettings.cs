@@ -209,11 +209,23 @@ public sealed class EditorSettings
     /// <summary>추가: 무대에 마지막으로 고른 배경 키 (없으면 null)</summary>
     public string? Background { get; set; }
 
-    /// <summary>추가(4-1): 막 목록을 읽을 시나리오 폴더 (게임 Assets\Resources\Scenario — 도구 독립 규칙상 코드에 경로를 두지 않고 사용자가 지정)</summary>
-    public string? ScenarioFolder { get; set; }
+    /// <summary>
+    /// 추가(5회차): 게임 Assets\Resources — TE가 게임 파일을 찾는 단 하나의 경로 (설정 탭에서 지정).
+    /// 아래 폴더는 게임 규칙대로 이 안에서 찾음 (도구 독립 규칙: 코드에 게임 경로를 박지 않음)
+    /// </summary>
+    public string? GameResourcesFolder { get; set; }
 
-    /// <summary>추가: 게임으로 내보내기 대상 = 게임 Assets\Resources\Spine (도구 독립 규칙상 사용자가 지정, 아래 {nickName} 폴더에 씀)</summary>
-    public string? GameSpineFolder { get; set; }
+    /// <summary>변경(5회차): Resources\Scenario — 저장하지 않고 Resources 폴더에서 계산 (이전: 따로 지정)</summary>
+    [JsonIgnore] public string? ScenarioFolder => Sub("Scenario");
+
+    /// <summary>변경(5회차): Resources\Spine (게임으로 내보내기 대상, 아래 {nickName} 폴더에 씀)</summary>
+    [JsonIgnore] public string? GameSpineFolder => Sub("Spine");
+
+    /// <summary>추가(5회차): Resources\BG (무대 배경 — 이전: exe 옆 Backgrounds\)</summary>
+    [JsonIgnore] public string? BackgroundFolder => Sub("BG");
+
+    private string? Sub(string name) =>
+        string.IsNullOrWhiteSpace(GameResourcesFolder) ? null : Path.Combine(GameResourcesFolder, name);
 
     /// <summary>변경: 막별로 남길 백업 수 (저장 전 원본 + 자동 백업 공용) 10 → 20</summary>
     public int BackupCount { get; set; } = 20;

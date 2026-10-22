@@ -72,7 +72,7 @@
                 </StackPanel>
             </GroupBox>
 
-            <!-- 경로 (④: 게임 Resources 폴더 추가 예정) -->
+            <!-- 경로 -->
             <GroupBox Header="경로">
                 <Grid>
                     <Grid.ColumnDefinitions>
@@ -85,31 +85,44 @@
                         <RowDefinition/>
                         <RowDefinition/>
                         <RowDefinition/>
+                        <RowDefinition/>
+                        <RowDefinition/>
                     </Grid.RowDefinitions>
 
-                    <TextBlock Grid.Row="0" Text="시나리오 폴더" VerticalAlignment="Center" Margin="0,3,10,3"
-                               ToolTip="막 목록을 읽고 저장하는 게임 Assets\Resources\Scenario"/>
-                    <TextBox Grid.Row="0" Grid.Column="1" Style="{StaticResource PathBox}" Text="{Binding ScenarioFolderText, Mode=OneWay}"/>
+                    <!-- 변경(5회차): 게임 Resources 폴더 하나만 지정, 아래 3개는 그 안에서 찾음 (보기만) -->
+                    <TextBlock Grid.Row="0" Text="게임 Resources 폴더" VerticalAlignment="Center" Margin="0,3,10,3"
+                               ToolTip="게임 Assets\Resources — 시나리오·Spine·배경을 이 아래에서 찾음"/>
+                    <TextBox Grid.Row="0" Grid.Column="1" Style="{StaticResource PathBox}" Text="{Binding ResourcesFolderText, Mode=OneWay}"/>
                     <StackPanel Grid.Row="0" Grid.Column="2" Orientation="Horizontal" Margin="0,3">
-                        <Button Content="변경…" Padding="8,1" Command="{Binding PickScenarioFolderCommand}"/>
-                        <Button Content="열기" Padding="8,1" Margin="4,0,0,0" Command="{Binding OpenScenarioFolderCommand}"/>
+                        <Button Content="변경…" Padding="8,1" Command="{Binding PickResourcesFolderCommand}"/>
+                        <Button Content="열기" Padding="8,1" Margin="4,0,0,0" Command="{Binding OpenResourcesFolderCommand}"/>
                     </StackPanel>
 
-                    <TextBlock Grid.Row="1" Text="게임 Spine 폴더" VerticalAlignment="Center" Margin="0,3,10,3"
-                               ToolTip="게임으로 내보내기 대상 = 게임 Assets\Resources\Spine"/>
-                    <TextBox Grid.Row="1" Grid.Column="1" Style="{StaticResource PathBox}" Text="{Binding GameSpineFolderText, Mode=OneWay}"/>
-                    <StackPanel Grid.Row="1" Grid.Column="2" Orientation="Horizontal" Margin="0,3">
-                        <Button Content="변경…" Padding="8,1" Command="{Binding PickGameSpineFolderCommand}"/>
-                        <Button Content="열기" Padding="8,1" Margin="4,0,0,0" Command="{Binding OpenGameSpineFolderCommand}"/>
-                    </StackPanel>
+                    <TextBlock Grid.Row="1" Text="  └ 시나리오" VerticalAlignment="Center" Margin="0,3,10,3"
+                               ToolTip="Resources\Scenario — 막 목록을 읽고 저장"/>
+                    <TextBox Grid.Row="1" Grid.Column="1" Style="{StaticResource PathBox}" Text="{Binding ScenarioFolderText, Mode=OneWay}"/>
+                    <Button Grid.Row="1" Grid.Column="2" Content="열기" Padding="8,1" Margin="0,3" HorizontalAlignment="Right"
+                            Command="{Binding OpenScenarioFolderCommand}"/>
 
-                    <TextBlock Grid.Row="2" Text="Spine 데이터 폴더" VerticalAlignment="Center" Margin="0,3,10,3"
-                               ToolTip="TE가 받은 Spine 세트 (보기만 — 바꾸려면 TE 재시작이 필요해 지금은 지원하지 않음)"/>
-                    <TextBox Grid.Row="2" Grid.Column="1" Style="{StaticResource PathBox}" Text="{Binding SpineDataFolderText, Mode=OneWay}"/>
+                    <TextBlock Grid.Row="2" Text="  └ 게임 Spine" VerticalAlignment="Center" Margin="0,3,10,3"
+                               ToolTip="Resources\Spine — 게임으로 내보내기 대상"/>
+                    <TextBox Grid.Row="2" Grid.Column="1" Style="{StaticResource PathBox}" Text="{Binding GameSpineFolderText, Mode=OneWay}"/>
                     <Button Grid.Row="2" Grid.Column="2" Content="열기" Padding="8,1" Margin="0,3" HorizontalAlignment="Right"
+                            Command="{Binding OpenGameSpineFolderCommand}"/>
+
+                    <TextBlock Grid.Row="3" Text="  └ 배경" VerticalAlignment="Center" Margin="0,3,10,3"
+                               ToolTip="Resources\BG — 스크립트 탭 무대 배경"/>
+                    <TextBox Grid.Row="3" Grid.Column="1" Style="{StaticResource PathBox}" Text="{Binding BackgroundFolderText, Mode=OneWay}"/>
+                    <Button Grid.Row="3" Grid.Column="2" Content="열기" Padding="8,1" Margin="0,3" HorizontalAlignment="Right"
+                            Command="{Binding OpenBackgroundFolderCommand}"/>
+
+                    <TextBlock Grid.Row="4" Text="Spine 데이터 폴더" VerticalAlignment="Center" Margin="0,3,10,3"
+                               ToolTip="TE가 받은 Spine 세트 (보기만 — 바꾸려면 TE 재시작이 필요해 지금은 지원하지 않음)"/>
+                    <TextBox Grid.Row="4" Grid.Column="1" Style="{StaticResource PathBox}" Text="{Binding SpineDataFolderText, Mode=OneWay}"/>
+                    <Button Grid.Row="4" Grid.Column="2" Content="열기" Padding="8,1" Margin="0,3" HorizontalAlignment="Right"
                             Command="{Binding OpenSpineDataFolderCommand}"/>
 
-                    <TextBlock Grid.Row="3" Grid.ColumnSpan="3" Text="{Binding PathNote}" Foreground="#FFC62828" Margin="0,4,0,0"/>
+                    <TextBlock Grid.Row="5" Grid.ColumnSpan="3" Text="{Binding PathNote}" Foreground="#FFC62828" Margin="0,4,0,0"/>
                 </Grid>
             </GroupBox>
 

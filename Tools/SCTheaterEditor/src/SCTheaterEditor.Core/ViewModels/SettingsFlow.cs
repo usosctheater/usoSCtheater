@@ -1,3 +1,4 @@
+using System.IO;
 using CommunityToolkit.Mvvm.Messaging;
 using SCTheaterEditor.Services;
 
@@ -9,14 +10,21 @@ namespace SCTheaterEditor.ViewModels;
 /// </summary>
 internal static class SettingsFlow
 {
-    /// <summary>시나리오 폴더 지정 (스크립트 표 [폴더 지정…]·설정 탭). 바꿨으면 그 폴더, 취소면 null</summary>
-    public static string? PickScenarioFolder(AppSettings settings, IDialogService dialogs, Action saveSettings, IMessenger messenger)
+    /// <summary>
+    /// 변경(5회차): 게임 Resources 폴더 지정 (설정 탭에서만, 이전: 시나리오 폴더 지정).
+    /// 이름이 Resources가 아니면 한 번 확인. 바꿨으면 그 폴더, 취소면 null
+    /// </summary>
+    public static string? PickResourcesFolder(AppSettings settings, IDialogService dialogs, Action saveSettings, IMessenger messenger)
     {
-        string? folder = dialogs.PickFolder("시나리오 폴더 지정 (게임 Assets\\Resources\\Scenario)", settings.Editor.ScenarioFolder);
-        if (folder == null) return null;
-        settings.Editor.ScenarioFolder = folder;
+        string? picked = dialogs.PickFolder("게임 Resources 폴더 지정 (게임 Assets\\Resources)", settings.Editor.GameResourcesFolder);
+        if (picked == null) return null;
+        if (!Path.GetFileName(picked.TrimEnd('\\', '/')).Equals("Resources", StringComparison.OrdinalIgnoreCase) &&
+            !dialogs.Confirm("게임 Resources 폴더 확인",
+                $"{picked}\n\n폴더 이름이 'Resources'가 아닙니다. 이 폴더 아래의 Scenario · Spine · BG 폴더를 씁니다. 계속할까요?"))
+            return null;
+        settings.Editor.GameResourcesFolder = picked;
         saveSettings();
-        messenger.Send(new SettingsChangedMessage(SettingsArea.ScenarioFolder));
-        return folder;
+        messenger.Send(new SettingsChangedMessage(SettingsArea.ResourcesFolder));
+        return picked;
     }
 }

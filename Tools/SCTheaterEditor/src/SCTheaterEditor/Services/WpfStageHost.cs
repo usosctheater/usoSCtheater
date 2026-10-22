@@ -13,7 +13,7 @@ namespace SCTheaterEditor.Services;
 /// - https://viewer.scsm/      무대 페이지(stage.html·js·lib). 배포 exe는 내장 리소스, 디버그 빌드는 소스 폴더(Viewer\)에서 바로 읽음
 ///                              → JS를 고친 뒤 다시 빌드하지 않고 개발자 도구에서 새로 고침만 하면 됨
 /// - https://spinedata.scsm/   Spine 저장 루트 (캐시 금지, 저장 루트 밖 경로 차단)
-/// - https://backgrounds.scsm/ 배경 폴더 (exe 옆 Backgrounds\)
+/// - https://backgrounds.scsm/ 배경 폴더 (변경(5회차): 게임 Resources\BG — 요청마다 지금 폴더를 물어 Resources 폴더를 바꿔도 재시작 불필요)
 /// 키: Ctrl·Alt 조합은 WPF WebView2 컨트롤이 WPF 키 이벤트로 넘겨 줌(창의 PreviewKeyDown), 그 밖의 단축키는 페이지가 key 메시지로 넘김
 /// </summary>
 public sealed class WpfStageHost : IStageHost
@@ -25,18 +25,19 @@ public sealed class WpfStageHost : IStageHost
     private Task? _init;
     private bool _ready;
     private string _dataRoot = "";
-    private string _bgRoot = "";
+    private Func<string?> _bgFolder = () => null;   // 변경(5회차): 고정 경로 → 지금 배경 폴더를 알려 주는 함수
     private string? _sourceViewerFolder;
 
     public event Action<StageEvent>? EventReceived;
 
-    /// <summary>WebView2 연결·초기화 (처음 1회). WebView2 런타임이 없으면 예외</summary>
-    public Task AttachAsync(WebView2 web, string dataFolder, string backgroundFolder) =>
+    /// <summary>WebView2 연결·초기화 (처음 1회). WebView2 런타임이 없으면 예외. 변경(5회차): backgroundFolder = 지금 배경 폴더(없으면 null)</summary>
+    public Task AttachAsync(WebView2 web, string dataFolder, Func<string?> backgroundFolder) =>
         _init ??= InitAsync(web, dataFolder, backgroundFolder);
 
-    private async Task InitAsync(WebView2 web, string dataFolder, string backgroundFolder)
+    private async Task InitAsync(WebView2 web, string dataFolder, Func<string?> backgroundFolder)
     {
         _web = web;
+        _bgFolder = backgroundFolder;
         string userData = Path.Combine(AppSettings.LocalDataFolder, "WebView2");
         var options = new CoreWebView2EnvironmentOptions($"--disk-cache-size={DiskCacheBytes}");
         var env = await CoreWebView2Environment.CreateAsync(null, userData, options);
@@ -49,9 +50,8 @@ public sealed class WpfStageHost : IStageHost
         core.Settings.AreBrowserAcceleratorKeysEnabled = false;   // 추가(4-2): F5(새로 고침) 등 브라우저 단축키 끔 — F5는 스크립트 → 무대
 
         Directory.CreateDirectory(dataFolder);
-        Directory.CreateDirectory(backgroundFolder);
+        // (삭제, 5회차) Directory.CreateDirectory(backgroundFolder) — 게임 폴더는 만들지 않음
         _dataRoot = Root(dataFolder);
-        _bgRoot = Root(backgroundFolder);
         _sourceViewerFolder = FindSourceViewerFolder();
         if (_sourceViewerFolder != null) AppLog.Shared.Info($"[디버그] 무대 페이지를 소스 폴더에서 읽음: {_sourceViewerFolder}");
 
@@ -99,7 +99,7 @@ public sealed class WpfStageHost : IStageHost
         if (uri.Host.Equals(StageUrls.DataHost, StringComparison.OrdinalIgnoreCase))
             bytes = ReadUnder(_dataRoot, path);
         else if (uri.Host.Equals(StageUrls.BackgroundHost, StringComparison.OrdinalIgnoreCase))
-            bytes = ReadUnder(_bgRoot, path);
+            bytes = _bgFolder() is { Length: > 0 } bg && Directory.Exists(bg) ? ReadUnder(Root(bg), path) : null;   // 변경(5회차)
         else
             bytes = ReadPage(path);
 

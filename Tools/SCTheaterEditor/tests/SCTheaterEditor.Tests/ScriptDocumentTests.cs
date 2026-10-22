@@ -270,12 +270,14 @@ public class ActEditorViewModelTests
 
         public Env()
         {
-            Scenario = Path.Combine(Temp.Path, "Scenario");
+            // 변경(5회차): 게임 Resources 폴더를 지정하면 그 아래 Scenario
+            string resources = Path.Combine(Temp.Path, "Resources");
+            Scenario = Path.Combine(resources, "Scenario");
             Backups = Path.Combine(Temp.Path, "Backups");
             Directory.CreateDirectory(Path.Combine(Scenario, "IL"));
             File.WriteAllText(Path.Combine(Scenario, "IL", "IL01.xml"), ActXmlFormatTests.Sample);
             File.WriteAllText(Path.Combine(Scenario, "IL", "IL02.xml"), ActXmlFormatTests.Sample);
-            Settings.Editor.ScenarioFolder = Scenario;
+            Settings.Editor.GameResourcesFolder = resources;
             var lib = new SpineLibrary(Path.Combine(Temp.Path, "SpineData"), new SpineManifest());
             lib.Rebuild();
             Vm = new ActEditorViewModel(Settings, lib, Dialogs, new ImmediateDispatcher(), () => { }, new AppLog(), Backups,

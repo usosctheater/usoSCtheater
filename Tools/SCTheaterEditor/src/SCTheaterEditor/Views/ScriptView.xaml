@@ -32,7 +32,7 @@
                         ToolTip="스크립트 표에서 선택한 줄 시점의 배경·캐릭터·위치·애니메이션으로 무대를 맞춤 (게임과 같은 계산). 스크립트에 없는 캐릭터는 내림"/>
                 <TextBlock Text="배경:" VerticalAlignment="Center" Margin="0,0,6,0"/>
                 <ComboBox ItemsSource="{Binding BackgroundOptions}" SelectedItem="{Binding SelectedBackground}" MinWidth="200"
-                          IsTextSearchEnabled="True" ToolTip="exe 옆 Backgrounds 폴더의 이미지 (파일 이름 = BG 키)"/>
+                          IsTextSearchEnabled="True" ToolTip="게임 Resources\BG 폴더의 이미지 (파일 이름 = BG 키)"/>
                 <Button Content="새로 고침" Margin="4,0,0,0" Padding="8,1" Command="{Binding RefreshBackgroundsCommand}"/>
                 <Button Content="폴더 열기" Margin="4,0,0,0" Padding="8,1" Click="OpenBackgroundFolder_Click"/>
                 <TextBlock Text="분할:" VerticalAlignment="Center" Margin="16,0,6,0"/>

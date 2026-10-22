@@ -18,8 +18,8 @@ public partial class App : Application
     /// <summary>스크립트 탭 무대(WebView2) 연결 — ScriptView가 WebView2를 붙이고, MainWindow가 단축키를 연결</summary>
     public static WpfStageHost Stage { get; } = new();
 
-    /// <summary>배경 이미지 목록 (exe 옆 Backgrounds\)</summary>
-    public static BackgroundLibrary Backgrounds { get; private set; } = new(BackgroundLibrary.DefaultFolder);
+    /// <summary>배경 이미지 목록 (변경(5회차): 게임 Resources\BG — 설정을 읽은 뒤 만듦)</summary>
+    public static BackgroundLibrary Backgrounds { get; private set; } = new(null);
 
     private const string MutexName = @"Local\SCTheaterEditor.SingleInstance";
     private Mutex? _singleInstance;
@@ -54,6 +54,7 @@ public partial class App : Application
 
         // 3) 설정 (예전 SCSpineManager 설정 이전·손상 복구 결과는 로그로 알림)
         Settings = AppSettings.Load();
+        Backgrounds = new BackgroundLibrary(Settings.Editor.BackgroundFolder);   // 추가(5회차)
         AppLog.Shared.SetFileFolder(Settings.MetaFolder);
         if (Settings.LoadNotice != null)
         {

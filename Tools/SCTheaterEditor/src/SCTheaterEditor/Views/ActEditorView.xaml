@@ -89,8 +89,8 @@
         <!-- 1줄: 막 열기·저장 + 제목 -->
         <DockPanel DockPanel.Dock="Top" Margin="0,4,0,4">
             <StackPanel DockPanel.Dock="Left" Orientation="Horizontal">
-                <Button Content="폴더 지정…" Padding="8,1" Command="{Binding PickFolderCommand}" ToolTip="{Binding FolderText}"/>
-                <TextBlock Text="막:" VerticalAlignment="Center" Margin="8,0,4,0"/>
+                <!-- (삭제, 5회차) [폴더 지정…] — 설정 탭에서 게임 Resources 폴더 지정 -->
+                <TextBlock Text="막:" VerticalAlignment="Center" Margin="0,0,4,0"/>
                 <ComboBox ItemsSource="{Binding ActEntries}" SelectedItem="{Binding SelectedEntry}" DisplayMemberPath="Display"
                           MinWidth="130" IsTextSearchEnabled="True" ToolTip="{Binding FolderText}"/>
                 <Button Content="↻" Padding="6,1" Margin="2,0,0,0" Command="{Binding RefreshListCommand}" ToolTip="시나리오 폴더 다시 읽기"/>

@@ -65,7 +65,7 @@ public sealed partial class ActEditorViewModel : ObservableObject
         BackupFolder = backupFolder ?? ActFiles.DefaultBackupFolder;
         ActEntries = [];
         Rows = new();
-        StatusText = "[폴더 지정]으로 시나리오 폴더를 고르거나 [파일 열기]로 막 XML을 엽니다";
+        StatusText = "설정 탭에서 게임 Resources 폴더를 지정하거나 [파일 열기]로 막 XML을 엽니다";   // 변경(5회차)
         library.Changed += () => _ui.Post(RefreshCgWarnings);   // 다운로드로 세트가 늘면 경고 다시 계산
         GuideSlots = BuildSlots();   // 추가: 조합키 슬롯
     }
@@ -100,9 +100,9 @@ public sealed partial class ActEditorViewModel : ObservableObject
 
     public bool HasDocument => Document != null;
 
-    public string FolderText => string.IsNullOrWhiteSpace(_settings.Editor.ScenarioFolder)
-        ? "시나리오 폴더: (지정 안 함)"
-        : $"시나리오 폴더: {_settings.Editor.ScenarioFolder}";
+    public string FolderText => _settings.Editor.ScenarioFolder is { } f
+        ? $"시나리오 폴더: {f}"
+        : "시나리오 폴더: (설정 탭에서 게임 Resources 폴더를 지정하세요)";   // 변경(5회차)
 
     public string DocumentTitle => Document == null
         ? "열린 막 없음"
@@ -144,20 +144,14 @@ public sealed partial class ActEditorViewModel : ObservableObject
 
     // ------------------------------------------------------------------ 막 목록·열기
 
-    [RelayCommand]
-    private void PickFolder()
-    {
-        // 변경: 지정·저장·알림은 SettingsFlow 한 곳에서, 목록 갱신은 알림을 받아 OnSettingsChanged에서
-        if (SettingsFlow.PickScenarioFolder(_settings, _dialogs, _saveSettings, _messenger) is { } folder)
-            StatusText = $"막 {ActEntries.Count}개: {folder}";
-    }
+    // (삭제, 5회차) PickFolder 명령 — [폴더 지정…] 버튼 없앰, 설정 탭에서 Resources 폴더 지정
 
-    /// <summary>추가: 설정 변경 알림 — 시나리오 폴더가 바뀌면 막 목록 다시 읽기, 조합키가 바뀌면 가이드 슬롯 다시 만들기</summary>
+    /// <summary>설정 변경 알림 — Resources 폴더가 바뀌면 막 목록 다시 읽기, 조합키가 바뀌면 가이드 슬롯 다시 만들기</summary>
     private void OnSettingsChanged(SettingsChangedMessage m)
     {
         switch (m.Area)
         {
-            case SettingsArea.ScenarioFolder:
+            case SettingsArea.ResourcesFolder:   // 변경(5회차): 이전 ScenarioFolder
                 OnPropertyChanged(nameof(FolderText));
                 RefreshList();
                 break;
@@ -172,7 +166,7 @@ public sealed partial class ActEditorViewModel : ObservableObject
     {
         string? folder = _settings.Editor.ScenarioFolder;
         List<ActEntry> list = [];
-        if (!string.IsNullOrWhiteSpace(folder))
+        if (folder != null && Directory.Exists(folder))   // 변경(5회차): Resources 아래에 Scenario가 없으면 빈 목록
         {
             try { list = ActFiles.Scan(folder); }
             catch (Exception ex) { _log.Error($"시나리오 폴더 읽기 실패: {folder}", ex); }
@@ -327,7 +321,7 @@ public sealed partial class ActEditorViewModel : ObservableObject
         if (Document == null) return;
         var (assets, unknown) = CollectActSpines();
         if (assets.Count == 0 && unknown.Count == 0) { StatusText = "이 막에는 Spine CG가 없습니다"; return; }
-        string? folder = GameExportFlow.EnsureFolder(_settings, _dialogs, _saveSettings, _messenger);   // 변경: messenger
+        string? folder = GameExportFlow.EnsureFolder(_settings, _dialogs);   // 변경(5회차): 고르지 않고 Resources\Spine
         if (folder == null) return;
         string text = GameExportFlow.Summary(GameExportFlow.Run(_exporter, folder, assets, _dialogs, _log));
         if (unknown.Count > 0) text += $" · SpineData에 없음 {unknown.Count}: {string.Join(", ", unknown)}";
