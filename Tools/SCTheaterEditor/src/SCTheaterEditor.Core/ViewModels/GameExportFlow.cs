@@ -1,13 +1,18 @@
 using System.IO;
+using CommunityToolkit.Mvvm.Messaging;
 using SCTheaterEditor.Services;
 
 namespace SCTheaterEditor.ViewModels;
 
-/// <summary>'게임으로 내보내기' 공용 흐름 (리소스 탭·스크립트 표)</summary>
+/// <summary>'게임으로 내보내기' 공용 흐름 (리소스 탭·스크립트 표·설정 탭)</summary>
 internal static class GameExportFlow
 {
-    /// <summary>게임 Spine 폴더. 비었거나 없는 폴더면(또는 forcePick) 지정을 요청, 취소면 null</summary>
-    public static string? EnsureFolder(AppSettings settings, IDialogService dialogs, Action saveSettings, bool forcePick = false)
+    /// <summary>
+    /// 게임 Spine 폴더. 비었거나 없는 폴더면(또는 forcePick) 지정을 요청, 취소면 null.
+    /// 변경: 바꾸면 SettingsChangedMessage(GameSpineFolder) — ◎ 갱신·설정 탭 표시는 알림을 받아서
+    /// </summary>
+    public static string? EnsureFolder(AppSettings settings, IDialogService dialogs, Action saveSettings, IMessenger messenger,
+                                       bool forcePick = false)
     {
         string? folder = settings.Editor.GameSpineFolder;
         if (!forcePick && !string.IsNullOrWhiteSpace(folder) && Directory.Exists(folder)) return folder;
@@ -20,6 +25,7 @@ internal static class GameExportFlow
             return null;
         settings.Editor.GameSpineFolder = picked;
         saveSettings();
+        messenger.Send(new SettingsChangedMessage(SettingsArea.GameSpineFolder));   // 추가
         return picked;
     }
 

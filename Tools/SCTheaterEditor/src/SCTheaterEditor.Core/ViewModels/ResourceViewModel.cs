@@ -60,6 +60,11 @@ public sealed partial class ResourceViewModel : ObservableObject
         _library.Changed += OnLibraryChanged;
         _gameKeys = GameSpineExporter.ScanGameKeys(_settings.Editor.GameSpineFolder);   // 추가: 첫 목록 전에 게임 보유 확인
         OnLibraryChanged();
+        // 추가: 게임 Spine 폴더가 바뀌면 (어디서 바꿨든) ◎ 다시 확인
+        messenger.Register<ResourceViewModel, SettingsChangedMessage>(this, static (r, m) =>
+        {
+            if (m.Area == SettingsArea.GameSpineFolder) r.RefreshGameKeys();
+        });
     }
 
     /// <summary>아이돌 표에 없는 아이돌(정보가 아직 없는 세트)도 보여줌</summary>
@@ -119,7 +124,7 @@ public sealed partial class ResourceViewModel : ObservableObject
     private void ExportToGame()
     {
         if (SelectedAsset is not { } a) return;
-        string? folder = GameExportFlow.EnsureFolder(_settings, _dialogs, _saveSettings);
+        string? folder = GameExportFlow.EnsureFolder(_settings, _dialogs, _saveSettings, _messenger);   // 변경: messenger
         if (folder == null) return;
         ExportText = GameExportFlow.Summary(GameExportFlow.Run(_exporter, folder, [a], _dialogs, _log));
         RefreshGameKeys();   // 변경: ◎ 갱신
@@ -129,11 +134,8 @@ public sealed partial class ResourceViewModel : ObservableObject
     [RelayCommand]
     private void PickGameFolder()
     {
-        if (GameExportFlow.EnsureFolder(_settings, _dialogs, _saveSettings, forcePick: true) is { } f)
-        {
-            ExportText = $"게임 Spine 폴더: {f}";
-            RefreshGameKeys();   // 변경: ◎ 갱신
-        }
+        if (GameExportFlow.EnsureFolder(_settings, _dialogs, _saveSettings, _messenger, forcePick: true) is { } f)
+            ExportText = $"게임 Spine 폴더: {f}";   // 변경: ◎ 갱신은 설정 변경 알림을 받아서
     }
 
     /// <summary>파일이 지워졌을 수 있으므로 매니페스트와 실제 파일을 다시 확인 (서버 요청 없음). 변경: 게임 보유(◎)도 다시 확인</summary>

@@ -3,6 +3,7 @@ using System.Collections.Specialized;
 using System.IO;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;   // 추가: 설정 변경 알림
 using SCTheaterEditor.Script;
 using SCTheaterEditor.Services;
 
@@ -39,11 +40,16 @@ public sealed partial class ActEditorViewModel : ObservableObject
     private byte[]? _lastBackupBytes;      // 마지막 백업(또는 연 시점)의 내용 — 같으면 쓰지 않음
     private bool _originalBackedUp;        // 이 막을 연 뒤 저장 전 원본을 백업했는지
     private System.Threading.Timer? _backupTimer;
+    private readonly IMessenger _messenger;   // 추가: 설정 변경 알림
 
     public ActEditorViewModel(AppSettings settings, SpineLibrary library, IDialogService dialogs, IUiDispatcher ui,
                               Action saveSettings, AppLog log, string? backupFolder = null, Func<DateTime>? now = null,
-                              LineTypeCatalog? types = null, CharacterData? characters = null)
+                              LineTypeCatalog? types = null, CharacterData? characters = null,
+                              IMessenger? messenger = null)   // 변경: messenger 추가 (생략하면 이 인스턴스 전용)
     {
+        _messenger = messenger ?? new StrongReferenceMessenger();
+        // 추가: 시나리오 폴더가 바뀌면 (어디서 바꿨든) 막 목록 다시 읽기
+        _messenger.Register<ActEditorViewModel, SettingsChangedMessage>(this, static (r, m) => r.OnSettingsChanged(m));
         _characters = characters ?? CharacterData.LoadEmbedded();   // 추가(4-2): 라인에 적용할 때 이름 칸
         // 추가: 종류별 팔레트 (LineTypes.xml) + 저장된 칸 폭
         Types = types ?? LineTypeCatalog.LoadEmbedded();
@@ -139,13 +145,17 @@ public sealed partial class ActEditorViewModel : ObservableObject
     [RelayCommand]
     private void PickFolder()
     {
-        string? folder = _dialogs.PickFolder("시나리오 폴더 지정 (게임 Assets\\Resources\\Scenario)", _settings.Editor.ScenarioFolder);
-        if (folder == null) return;
-        _settings.Editor.ScenarioFolder = folder;
-        _saveSettings();
+        // 변경: 지정·저장·알림은 SettingsFlow 한 곳에서, 목록 갱신은 알림을 받아 OnSettingsChanged에서
+        if (SettingsFlow.PickScenarioFolder(_settings, _dialogs, _saveSettings, _messenger) is { } folder)
+            StatusText = $"막 {ActEntries.Count}개: {folder}";
+    }
+
+    /// <summary>추가: 설정 변경 알림 — 시나리오 폴더가 바뀌면 막 목록 다시 읽기</summary>
+    private void OnSettingsChanged(SettingsChangedMessage m)
+    {
+        if (m.Area != SettingsArea.ScenarioFolder) return;
         OnPropertyChanged(nameof(FolderText));
         RefreshList();
-        StatusText = $"막 {ActEntries.Count}개: {folder}";
     }
 
     [RelayCommand]
@@ -308,7 +318,7 @@ public sealed partial class ActEditorViewModel : ObservableObject
         if (Document == null) return;
         var (assets, unknown) = CollectActSpines();
         if (assets.Count == 0 && unknown.Count == 0) { StatusText = "이 막에는 Spine CG가 없습니다"; return; }
-        string? folder = GameExportFlow.EnsureFolder(_settings, _dialogs, _saveSettings);
+        string? folder = GameExportFlow.EnsureFolder(_settings, _dialogs, _saveSettings, _messenger);   // 변경: messenger
         if (folder == null) return;
         string text = GameExportFlow.Summary(GameExportFlow.Run(_exporter, folder, assets, _dialogs, _log));
         if (unknown.Count > 0) text += $" · SpineData에 없음 {unknown.Count}: {string.Join(", ", unknown)}";

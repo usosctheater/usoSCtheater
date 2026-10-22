@@ -49,7 +49,13 @@ public enum SaveChoice { Save, Discard, Cancel }
 /// </summary>
 public sealed record OpenSpineMessage(SpineAsset Asset, bool Immediate = false);
 
-public enum AppTab { Download, Resource, Script, License }
+public enum AppTab { Download, Resource, Script, Settings, License }   // 변경: Settings
+
+/// <summary>추가: 설정이 바뀌었다는 알림의 영역 (설정 관리 규칙 — 기능은 이 알림만 받음)</summary>
+public enum SettingsArea { ScriptEditing, ScenarioFolder, GameSpineFolder }
+
+/// <summary>추가: 설정이 바뀜 (설정 탭·작업 화면 버튼 어디서 바꿔도 같은 알림)</summary>
+public sealed record SettingsChangedMessage(SettingsArea Area);
 
 /// <summary>탭 사이 메시지: 이 탭으로 이동해 달라 (예: 미리보기 Esc → 리소스 탭으로 복귀)</summary>
 public sealed record ShowTabMessage(AppTab Tab);

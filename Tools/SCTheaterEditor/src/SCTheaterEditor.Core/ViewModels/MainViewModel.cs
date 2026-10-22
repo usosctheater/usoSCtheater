@@ -23,10 +23,14 @@ public sealed class MainViewModel
         Resource = new ResourceViewModel(settings, library, units, dialogs, saveSettings, messenger, log);
         Script = new ScriptViewModel(settings, library, backgrounds, stage, LipRules.LoadEmbedded(), messenger, saveSettings, log);
         // 추가(4-1): 스크립트 표 (스크립트 탭 아래쪽)
-        Editor = new ActEditorViewModel(settings, library, dialogs, ui, saveSettings, log);
+        Editor = new ActEditorViewModel(settings, library, dialogs, ui, saveSettings, log, messenger: messenger);   // 변경: messenger
         Script.Editor = Editor;
         Editor.StampProvider = () => Script.CurrentStamp;   // 추가(4-2): 줄 추가 때 무대에서 선택한 캐릭터 정보
+        SettingsPage = new SettingsViewModel(settings, dialogs, saveSettings, messenger, log);   // 추가: 설정 탭
     }
+
+    /// <summary>추가: 설정 탭 (설정 관리 규칙 — TE 핸드오프 0절)</summary>
+    public SettingsViewModel SettingsPage { get; }
 
     public AppSettings Settings { get; }
     public SpineLibrary Library { get; }

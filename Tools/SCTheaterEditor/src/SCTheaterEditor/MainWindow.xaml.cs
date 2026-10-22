@@ -113,6 +113,7 @@ public partial class MainWindow : Window
             AppTab.Download => DownloadTab,
             AppTab.Resource => ResourceTab,
             AppTab.Script => ScriptTab,
+            AppTab.Settings => SettingsTab,   // 추가
             _ => LicenseTab,
         };
     }
