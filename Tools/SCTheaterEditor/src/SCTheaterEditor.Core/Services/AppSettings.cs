@@ -230,6 +230,9 @@ public sealed class EditorSettings
 
     /// <summary>추가: 스크립트 표 칸 폭 (키: 종류.속성, 예: TEXT.Text). 없으면 LineTypes.xml 기본값</summary>
     public Dictionary<string, double> FieldWidths { get; set; } = new();
+
+    /// <summary>추가: 조합키 슬롯 1~9의 줄 종류 ("" = 빈 슬롯). 비어 있으면 기본값(드롭다운 순서) — LineSlots.Normalize</summary>
+    public List<string> LineSlots { get; set; } = new();
 }
 
 /// <summary>추가: 로그 창 (위치가 없거나 화면 밖이면 메인 창 가운데)</summary>

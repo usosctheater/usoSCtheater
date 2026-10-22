@@ -70,9 +70,75 @@ public partial class ActEditorView : UserControl
         finally { _selecting = false; }
     }
 
+    // ------------------------------------------------------------------ 추가: 조합키 (Ctrl+숫자 줄 삽입 · Ctrl 0.2초 누름 = 가이드)
+
+    private DispatcherTimer? _guideDelay;   // Ctrl을 누른 뒤 0.2초
+    private DispatcherTimer? _guideWatch;   // 가이드가 떠 있는 동안만 0.1초마다 Ctrl이 아직 눌렸는지 (다른 창으로 전환 등으로 뗀 신호를 놓쳤을 때)
+
+    private static bool CtrlDown => Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl);
+
+    /// <summary>위쪽 숫자 1~9 · 숫자 패드 1~9 → 슬롯 번호 (아니면 null)</summary>
+    private static int? SlotNumber(Key key) => key switch
+    {
+        >= Key.D1 and <= Key.D9 => key - Key.D1 + 1,
+        >= Key.NumPad1 and <= Key.NumPad9 => key - Key.NumPad1 + 1,
+        _ => null,
+    };
+
+    private void StartGuideDelay()
+    {
+        if (SlotGuide.Visibility == Visibility.Visible) return;
+        _guideDelay ??= new DispatcherTimer(TimeSpan.FromMilliseconds(200), DispatcherPriority.Input, (_, _) =>
+        {
+            _guideDelay!.Stop();
+            if (CtrlDown && IsKeyboardFocusWithin && Vm != null) ShowGuide();
+        }, Dispatcher) { IsEnabled = false };
+        _guideDelay.Stop();
+        _guideDelay.Start();
+    }
+
+    private void ShowGuide()
+    {
+        SlotGuide.Visibility = Visibility.Visible;
+        _guideWatch ??= new DispatcherTimer(TimeSpan.FromMilliseconds(100), DispatcherPriority.Input, (_, _) =>
+        {
+            if (!CtrlDown || !IsKeyboardFocusWithin) HideGuide();
+        }, Dispatcher) { IsEnabled = false };
+        _guideWatch.Start();
+    }
+
+    private void HideGuide()
+    {
+        _guideDelay?.Stop();
+        _guideWatch?.Stop();
+        SlotGuide.Visibility = Visibility.Collapsed;
+    }
+
+    private void Root_PreviewKeyUp(object sender, KeyEventArgs e)
+    {
+        if (e.Key is Key.LeftCtrl or Key.RightCtrl && !CtrlDown) HideGuide();
+    }
+
+    private void Root_IsKeyboardFocusWithinChanged(object sender, DependencyPropertyChangedEventArgs e)
+    {
+        if (!IsKeyboardFocusWithin) HideGuide();
+    }
+
     private void Root_PreviewKeyDown(object sender, KeyEventArgs e)
     {
         if (Vm == null) return;
+        // 추가: 조합키 — 이 패널(스크립트 표)에 포커스가 있을 때만 (무대 포커스 때는 이 처리기에 오지 않음)
+        if (e.Key is Key.LeftCtrl or Key.RightCtrl)
+        {
+            if (!e.IsRepeat) StartGuideDelay();
+            return;
+        }
+        if (Keyboard.Modifiers == ModifierKeys.Control && SlotNumber(e.Key) is int slot)
+        {
+            CommitFocusedBox();   // 입력 중인 칸을 먼저 확정
+            if (Vm.InsertSlot(slot)) e.Handled = true;
+            return;
+        }
         // Alt+↑/↓: 줄 이동 (칸 입력 중이면 먼저 확정)
         if (Keyboard.Modifiers == ModifierKeys.Alt && e.Key == Key.System && e.SystemKey is Key.Up or Key.Down)
         {

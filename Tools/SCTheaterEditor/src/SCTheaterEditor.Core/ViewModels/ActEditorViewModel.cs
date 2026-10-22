@@ -67,6 +67,7 @@ public sealed partial class ActEditorViewModel : ObservableObject
         Rows = new();
         StatusText = "[폴더 지정]으로 시나리오 폴더를 고르거나 [파일 열기]로 막 XML을 엽니다";
         library.Changed += () => _ui.Post(RefreshCgWarnings);   // 다운로드로 세트가 늘면 경고 다시 계산
+        GuideSlots = BuildSlots();   // 추가: 조합키 슬롯
     }
 
     /// <summary>저장 전 백업 폴더 (기본: exe 옆 Backups)</summary>
@@ -87,7 +88,8 @@ public sealed partial class ActEditorViewModel : ObservableObject
     [ObservableProperty] public partial ActEntry? SelectedEntry { get; set; }
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasDocument), nameof(DocumentTitle), nameof(DocumentPath), nameof(MainTitle), nameof(SubTitle))]
+    [NotifyPropertyChangedFor(nameof(HasDocument), nameof(DocumentTitle), nameof(DocumentPath), nameof(MainTitle), nameof(SubTitle),
+                              nameof(InsertPositionText))]   // 변경: 조합키 가이드 위치
     public partial ActDocument? Document { get; private set; }
 
     [ObservableProperty] public partial string StatusText { get; private set; }
@@ -150,12 +152,19 @@ public sealed partial class ActEditorViewModel : ObservableObject
             StatusText = $"막 {ActEntries.Count}개: {folder}";
     }
 
-    /// <summary>추가: 설정 변경 알림 — 시나리오 폴더가 바뀌면 막 목록 다시 읽기</summary>
+    /// <summary>추가: 설정 변경 알림 — 시나리오 폴더가 바뀌면 막 목록 다시 읽기, 조합키가 바뀌면 가이드 슬롯 다시 만들기</summary>
     private void OnSettingsChanged(SettingsChangedMessage m)
     {
-        if (m.Area != SettingsArea.ScenarioFolder) return;
-        OnPropertyChanged(nameof(FolderText));
-        RefreshList();
+        switch (m.Area)
+        {
+            case SettingsArea.ScenarioFolder:
+                OnPropertyChanged(nameof(FolderText));
+                RefreshList();
+                break;
+            case SettingsArea.LineSlots:
+                GuideSlots = BuildSlots();
+                break;
+        }
     }
 
     [RelayCommand]
@@ -376,6 +385,7 @@ public sealed partial class ActEditorViewModel : ObservableObject
         CutLinesCommand.NotifyCanExecuteChanged();    // 추가
         MoveUpCommand.NotifyCanExecuteChanged();
         MoveDownCommand.NotifyCanExecuteChanged();
+        OnPropertyChanged(nameof(InsertPositionText));   // 추가: 조합키 가이드
         NotifyHeader();
     }
 
@@ -478,18 +488,64 @@ public sealed partial class ActEditorViewModel : ObservableObject
     /// 무대에서 캐릭터를 선택하고 있으면 그 캐릭터의 이름·CG·위치·애니메이션을 채운 줄로. 추가한 줄의 대사 칸으로 커서 이동
     /// </summary>
     [RelayCommand(CanExecute = nameof(CanEdit))]
-    private void AddText()
+    private void AddText() => InsertLineOfType("TEXT");   // 변경: 조합키와 같은 삽입 코드 사용 (동작은 그대로)
+
+    // ------------------------------------------------------------------ 추가: 조합키 줄 삽입 (Ctrl+숫자, 가이드는 화면이 표시)
+
+    /// <summary>가이드에 보일 슬롯 1~9 (설정 Editor.LineSlots, 바뀌면 알림을 받아 다시 만듦)</summary>
+    [ObservableProperty] public partial IReadOnlyList<LineSlotItem> GuideSlots { get; private set; }
+
+    /// <summary>가이드에 보일 들어갈 위치</summary>
+    public string InsertPositionText =>
+        Document == null ? "열린 막 없음"
+        : _selection.Count > 0 ? $"{_selection.Max(r => r.Number)}번 줄 아래에 삽입"
+        : Document.Lines.Count == 0 ? "빈 막에 삽입" : "맨 끝에 삽입";
+
+    private IReadOnlyList<LineSlotItem> BuildSlots() =>
+        LineSlots.Normalize(_settings.Editor.LineSlots, Types).Select((t, i) => new LineSlotItem(i + 1, t)).ToList();
+
+    /// <summary>Ctrl+숫자(1~9): 그 슬롯 종류의 줄 삽입. 빈 슬롯이면 안내만. 처리했으면 true (막이 없으면 false)</summary>
+    public bool InsertSlot(int number)
+    {
+        if (Document == null || number < 1 || number > LineSlots.Count) return false;
+        var slot = GuideSlots[number - 1];
+        if (slot.IsEmpty)
+        {
+            StatusText = $"{number}번 슬롯이 비어 있습니다 (설정 탭 > 스크립트 편집 > 조합키)";
+            return true;
+        }
+        InsertLineOfType(slot.Type);
+        return true;
+    }
+
+    /// <summary>
+    /// 선택한 줄 아래(선택이 없으면 맨 끝)에 그 종류의 줄 (되돌리기 1단계).
+    /// TEXT·SETCG·CGGROUP은 무대에서 선택한 캐릭터가 있으면 CG·위치·애니메이션(TEXT는 이름도) — CGGROUP 그룹명은 비워 둠.
+    /// 삽입 뒤 TEXT는 대사 칸, 나머지는 그 종류의 첫 칸으로 커서 (칸이 없으면 줄만 선택)
+    /// </summary>
+    internal void InsertLineOfType(string type)
     {
         var doc = Document!;
+        type = Types.Find(type)?.Id ?? type;
         int index = _selection.Count > 0 ? _selection.Max(r => doc.Lines.IndexOf(r.Line)) + 1 : doc.Lines.Count;
-        var line = StampProvider?.Invoke() is { } s
-            ? ScriptLine.Create(("Type", "TEXT"), ("Name", _characters.KoreanName(s.NickName) ?? ""), ("Text", ""),
-                                ("CG", s.CgKey), ("Position", s.Position), ("Animation", s.Animation), ("SpeakerType", "1"))
-            : ScriptLine.Create(("Type", "TEXT"), ("Name", ""), ("Text", ""), ("SpeakerType", "1"));
+        var line = NewLineOfType(type, StampProvider?.Invoke());
         doc.InsertLines(index, [line]);
         SelectLines([line]);
-        if (_rowOf.TryGetValue(line, out var row)) FocusFieldRequested?.Invoke(row, "Text");
+        StatusText = $"{index + 1}번 줄에 {type} 줄 추가 (Ctrl+Z로 되돌리기)";
+        string? focus = type == "TEXT" ? "Text" : Types.Find(type)?.Fields.FirstOrDefault()?.Attr;
+        if (focus != null && _rowOf.TryGetValue(line, out var row)) FocusFieldRequested?.Invoke(row, focus);
     }
+
+    private ScriptLine NewLineOfType(string type, StageStamp? stamp) => type switch
+    {
+        "TEXT" => stamp is { } s
+            ? ScriptLine.Create(("Type", "TEXT"), ("Name", _characters.KoreanName(s.NickName) ?? ""), ("Text", ""),
+                                ("CG", s.CgKey), ("Position", s.Position), ("Animation", s.Animation), ("SpeakerType", "1"))
+            : ScriptLine.Create(("Type", "TEXT"), ("Name", ""), ("Text", ""), ("SpeakerType", "1")),
+        "SETCG" or "CGGROUP" when stamp is { } c =>
+            ScriptLine.Create(("Type", type), ("CG", c.CgKey), ("Position", c.Position), ("Animation", c.Animation)),
+        _ => ScriptLine.Create(("Type", type)),
+    };
 
     [RelayCommand(CanExecute = nameof(HasSelection))]
     private void DeleteRows()
@@ -619,6 +675,7 @@ public sealed partial class ActEditorViewModel : ObservableObject
         for (int i = 0; i < Rows.Count; i++) Rows[i].Number = i + 1;
         RebuildGroupNames();
         RefreshCgWarnings();
+        OnPropertyChanged(nameof(InsertPositionText));   // 추가: 줄 번호가 바뀌면 가이드 위치도
     }
 
     private void OnUndoChanged()

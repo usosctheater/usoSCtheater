@@ -1,7 +1,9 @@
 <UserControl x:Class="SCTheaterEditor.Views.ActEditorView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             PreviewKeyDown="Root_PreviewKeyDown">
+             PreviewKeyDown="Root_PreviewKeyDown" PreviewKeyUp="Root_PreviewKeyUp"
+             IsKeyboardFocusWithinChanged="Root_IsKeyboardFocusWithinChanged">
+    <!-- 변경: PreviewKeyUp·포커스 변경 = 조합키 가이드 닫기 -->
     <!-- 스크립트 표 (변경: 종류별 팔레트). DataContext = ActEditorViewModel
          행 = # · 종류(드롭다운) · 그 종류의 속성 칸들(LineTypes.xml) · 기타(팔레트에 없는 속성, 읽기 전용)
          제목 줄 = 선택한 줄의 종류 기준. 경계선을 드래그하면 그 종류의 칸 폭이 바뀌고 설정에 저장
@@ -143,6 +145,8 @@
             </Grid>
         </Border>
 
+        <!-- 변경: 조합키 가이드를 표 아래쪽에 겹쳐 두려고 Grid로 감쌈 -->
+        <Grid>
         <ListBox x:Name="LineList" ItemsSource="{Binding Rows}" SelectionMode="Extended" BorderBrush="#FFD0D0D0" Padding="0"
                  ScrollViewer.HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch"
                  VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
@@ -200,5 +204,32 @@
                 </DataTemplate>
             </ListBox.ItemTemplate>
         </ListBox>
+
+        <!-- 추가: 조합키 가이드 — 스크립트 표 패널에 포커스가 있을 때 Ctrl을 0.2초 누르고 있으면 표시 (마우스는 통과) -->
+        <Border x:Name="SlotGuide" Visibility="Collapsed" VerticalAlignment="Bottom" Margin="1,0,1,1" Padding="8,3"
+                Background="#F0303030" IsHitTestVisible="False">
+            <DockPanel>
+                <TextBlock DockPanel.Dock="Right" Text="{Binding InsertPositionText}" Foreground="#FFFFE08A" VerticalAlignment="Center" Margin="12,0,0,0"/>
+                <TextBlock Text="Ctrl +" Foreground="White" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                <ItemsControl ItemsSource="{Binding GuideSlots}" ItemsPanel="{StaticResource HorizontalPanel}" Focusable="False">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border x:Name="Chip" Background="#FF4A4A4A" CornerRadius="3" Padding="6,1" Margin="0,0,4,0">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="{Binding Number}" Foreground="#FFFFE08A" FontWeight="Bold" Margin="0,0,5,0"/>
+                                    <TextBlock Text="{Binding Label}" Foreground="White"/>
+                                </StackPanel>
+                            </Border>
+                            <DataTemplate.Triggers>
+                                <DataTrigger Binding="{Binding IsEmpty}" Value="True">
+                                    <Setter TargetName="Chip" Property="Opacity" Value="0.45"/>
+                                </DataTrigger>
+                            </DataTemplate.Triggers>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </DockPanel>
+        </Border>
+        </Grid>
     </DockPanel>
 </UserControl>

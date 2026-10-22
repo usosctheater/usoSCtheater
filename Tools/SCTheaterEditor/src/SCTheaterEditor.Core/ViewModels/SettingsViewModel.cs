@@ -2,6 +2,7 @@ using System.IO;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
+using SCTheaterEditor.Script;   // 추가: 조합키 슬롯
 using SCTheaterEditor.Services;
 
 namespace SCTheaterEditor.ViewModels;
@@ -9,7 +10,7 @@ namespace SCTheaterEditor.ViewModels;
 /// <summary>
 /// 추가: 설정 탭. 설정 관리 규칙(TE 핸드오프 0절) — 값은 AppSettings 한 곳, 바꾸는 로직은 여기(Core), 화면은 바인딩만,
 /// 기능은 SettingsChangedMessage만 받음. 바뀌면 바로 저장(0.4초 모아서).
-/// 구역: 스크립트 편집(자동 백업·보관 수) / 경로. 4회차에 조합키 슬롯, ④에 게임 Resources 폴더 추가 예정
+/// 구역: 스크립트 편집(자동 백업·보관 수·조합키 슬롯) / 경로. ④에 게임 Resources 폴더 추가 예정
 /// </summary>
 public sealed partial class SettingsViewModel : ObservableObject
 {
@@ -23,13 +24,20 @@ public sealed partial class SettingsViewModel : ObservableObject
     private readonly IMessenger _messenger;
     private readonly AppLog _log;
 
-    public SettingsViewModel(AppSettings settings, IDialogService dialogs, Action saveSettings, IMessenger messenger, AppLog log)
+    private readonly LineTypeCatalog _types;   // 추가: 조합키 슬롯 목록
+
+    public SettingsViewModel(AppSettings settings, IDialogService dialogs, Action saveSettings, IMessenger messenger, AppLog log,
+                             LineTypeCatalog? types = null)   // 변경: types 추가 (생략하면 내장 LineTypes.xml)
     {
         _settings = settings;
         _dialogs = dialogs;
         _saveSettings = saveSettings;
         _messenger = messenger;
         _log = log;
+        _types = types ?? LineTypeCatalog.LoadEmbedded();
+        SlotOptions = [NoSlot, .. _types.Ids];
+        Slots = LineSlots.Normalize(settings.Editor.LineSlots, _types)
+                         .Select((t, i) => new SlotSetting(i + 1, t.Length == 0 ? NoSlot : t, OnSlotChanged)).ToList();
         ScriptEditingNote = "";
         PathNote = "";
         // 다른 곳(스크립트 표 [폴더 지정…]·리소스 탭 [게임 폴더…])에서 바꿔도 표시를 맞춤
@@ -95,6 +103,37 @@ public sealed partial class SettingsViewModel : ObservableObject
         OnPropertyChanged(nameof(BackupCountText));
     }
 
+    // ------------------------------------------------------------------ 추가: 조합키 (스크립트 표에서 Ctrl+숫자)
+
+    /// <summary>드롭다운에서 빈 슬롯을 나타내는 글자 (저장할 때는 "")</summary>
+    public const string NoSlot = "(없음)";
+
+    /// <summary>슬롯 드롭다운 목록: (없음) + 줄 종류 (드롭다운 순서)</summary>
+    public IReadOnlyList<string> SlotOptions { get; }
+
+    /// <summary>슬롯 1~9</summary>
+    public IReadOnlyList<SlotSetting> Slots { get; }
+
+    private void OnSlotChanged(SlotSetting _) => SaveSlots();
+
+    private void SaveSlots()
+    {
+        _settings.Editor.LineSlots = Slots.Select(s => s.Selected == NoSlot ? "" : s.Selected).ToList();
+        Changed(SettingsArea.LineSlots);
+    }
+
+    [RelayCommand]
+    private void ResetLineSlots()
+    {
+        for (int i = 0; i < Slots.Count; i++)
+        {
+            string t = LineSlots.Default(_types, i);
+            Slots[i].Set(t.Length == 0 ? NoSlot : t);
+        }
+        _settings.Editor.LineSlots = new();   // 비우면 기본값 (드롭다운 순서)
+        Changed(SettingsArea.LineSlots);
+    }
+
     // ------------------------------------------------------------------ 경로
 
     public string ScenarioFolderText => ShowPath(_settings.Editor.ScenarioFolder);
@@ -149,5 +188,42 @@ public sealed partial class SettingsViewModel : ObservableObject
             case SettingsArea.ScenarioFolder: OnPropertyChanged(nameof(ScenarioFolderText)); break;
             case SettingsArea.GameSpineFolder: OnPropertyChanged(nameof(GameSpineFolderText)); break;
         }
+    }
+}
+
+/// <summary>추가: 설정 탭의 조합키 슬롯 1개 (드롭다운). 바꾸면 SettingsViewModel이 저장·알림</summary>
+public sealed class SlotSetting : ObservableObject
+{
+    private readonly Action<SlotSetting> _changed;
+    private string _selected;
+
+    internal SlotSetting(int number, string selected, Action<SlotSetting> changed)
+    {
+        Number = number;
+        _selected = selected;
+        _changed = changed;
+    }
+
+    public int Number { get; }
+
+    /// <summary>고른 종류 (빈 값은 무시 — 목록 재사용 중 드롭다운이 잠깐 비는 경우)</summary>
+    public string Selected
+    {
+        get => _selected;
+        set
+        {
+            if (string.IsNullOrEmpty(value) || value == _selected) return;
+            _selected = value;
+            OnPropertyChanged();
+            _changed(this);
+        }
+    }
+
+    /// <summary>저장·알림 없이 값만 (기본값으로 되돌릴 때 — 저장은 한 번에)</summary>
+    internal void Set(string value)
+    {
+        if (value == _selected) return;
+        _selected = value;
+        OnPropertyChanged(nameof(Selected));
     }
 }

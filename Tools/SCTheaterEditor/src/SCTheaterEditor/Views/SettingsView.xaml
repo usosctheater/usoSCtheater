@@ -25,7 +25,7 @@
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="12" MaxWidth="1000" HorizontalAlignment="Left">
 
-            <!-- 스크립트 편집 (4회차: 조합키 슬롯 추가 예정) -->
+            <!-- 스크립트 편집 (변경: 조합키 슬롯 추가) -->
             <GroupBox Header="스크립트 편집">
                 <StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,2">
@@ -43,9 +43,32 @@
                     <TextBlock Foreground="Gray" Margin="0,4,0,0" TextWrapping="Wrap"
                                Text="자동 백업은 저장하지 않아도 에디터 내용을 exe 옆 Backups\{그룹}\ 에 씁니다 (편집이 없으면 쓰지 않음). 막을 연 뒤 첫 저장 때는 저장 전 원본도 보관합니다."/>
                     <DockPanel Margin="0,6,0,0">
-                        <Button DockPanel.Dock="Left" Content="이 구역 기본값으로" Padding="8,1" Command="{Binding ResetScriptEditingCommand}"/>
+                        <!-- 변경: 이름 (이전: 이 구역 기본값으로 — 같은 구역에 조합키가 들어와 대상을 분명히) -->
+                        <Button DockPanel.Dock="Left" Content="자동 백업 기본값으로" Padding="8,1" Command="{Binding ResetScriptEditingCommand}"/>
                         <TextBlock Text="{Binding ScriptEditingNote}" Foreground="#FFC62828" VerticalAlignment="Center" Margin="10,0,0,0"/>
                     </DockPanel>
+
+                    <!-- 추가: 조합키 슬롯 1~9 -->
+                    <TextBlock Margin="0,12,0,4" TextWrapping="Wrap"
+                               Text="조합키: 스크립트 표에 포커스가 있을 때 Ctrl을 누르고 있으면 가이드가 뜨고, Ctrl+숫자로 그 종류의 줄을 선택한 줄 아래에 넣습니다"/>
+                    <ItemsControl ItemsSource="{Binding Slots}" Focusable="False">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel Orientation="Horizontal"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal" Margin="0,2,12,2">
+                                    <TextBlock Text="{Binding Number, StringFormat=Ctrl+{0}}" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                    <ComboBox Width="110" SelectedItem="{Binding Selected}"
+                                              ItemsSource="{Binding DataContext.SlotOptions, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <Button Content="조합키 기본값으로" Padding="8,1" Margin="0,6,0,0" HorizontalAlignment="Left"
+                            Command="{Binding ResetLineSlotsCommand}" ToolTip="1~9 = 드롭다운 순서 (TEXT · BG · AUDIO · SE · TRANSITION · BREAK · SETCG · CGGROUP · IMAGE)"/>
                 </StackPanel>
             </GroupBox>
 
