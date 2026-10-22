@@ -65,6 +65,11 @@ internal sealed class FakeDialogs : IDialogService
     public bool ConfirmResult { get; set; } = true;
     public int NoticeCount { get; private set; }
     public bool Confirm(string title, string message) => ConfirmResult;
+
+    // 추가(6회차): 예/아니오
+    public bool YesNoResult { get; set; } = true;
+    public int YesNoCount { get; private set; }
+    public bool AskYesNo(string title, string message) { YesNoCount++; return YesNoResult; }
     public void ShowChangeNotice(CatalogDiff diff, DateTime previousAt) => NoticeCount++;
     public void OpenInExplorer(string path) { }
 

@@ -106,6 +106,31 @@ public class StageMessageTests
     {
         Assert.Equal("https://spinedata.scsm/P_SSR/%E3%80%90Merry%E3%80%91/", StageUrls.SpineFolder(@"P_SSR\【Merry】"));
         Assert.Equal("https://backgrounds.scsm/bg%20office.png", StageUrls.Background("bg office.png"));
+        // 추가(6회차): 게임 Resources 오디오 (경로 조각마다 인코딩, \ 와 / 모두)
+        Assert.Equal("https://resources.scsm/Audio/Voice/IL/s001%20001.wav", StageUrls.Resource(@"Audio\Voice\IL\s001 001.wav"));
+        Assert.Equal("https://resources.scsm/Audio/SE/se_baton.mp3", StageUrls.Resource("/Audio/SE/se_baton.mp3"));
+    }
+
+    /// <summary>추가(6회차): 오디오 메시지 직렬화·해석</summary>
+    [Fact]
+    public void AudioMessages_SerializeAndParse()
+    {
+        using var play = JsonDocument.Parse(new PlayAudio("bgm", "https://resources.scsm/Audio/BGM/a.mp3", 0.5, true).ToJson());
+        var p = play.RootElement;
+        Assert.Equal("audioPlay", p.GetProperty("type").GetString());
+        Assert.Equal("bgm", p.GetProperty("channel").GetString());
+        Assert.Equal(0.5, p.GetProperty("volume").GetDouble());
+        Assert.True(p.GetProperty("loop").GetBoolean());
+        Assert.Equal(0, p.GetProperty("start").GetDouble());
+        using var stop = JsonDocument.Parse(new StopAudio(null).ToJson());
+        Assert.Equal(JsonValueKind.Null, stop.RootElement.GetProperty("channel").ValueKind);   // null = 전부
+        Assert.Equal("audioSeek", JsonDocument.Parse(new SeekAudio("bgm", 12.5).ToJson()).RootElement.GetProperty("type").GetString());
+
+        var started = Assert.IsType<AudioStarted>(StageEvents.Parse(JsonDocument.Parse("""{"type":"audioStarted","channel":"bgm","url":"u","duration":123.4}""").RootElement));
+        Assert.Equal(123.4, started.Duration);
+        Assert.Equal(60.0, Assert.IsType<AudioSeeked>(StageEvents.Parse(JsonDocument.Parse("""{"type":"audioSeeked","channel":"bgm","time":60}""").RootElement)).Time);
+        Assert.Equal("se", Assert.IsType<AudioEnded>(StageEvents.Parse(JsonDocument.Parse("""{"type":"audioEnded","channel":"se"}""").RootElement)).Channel);
+        Assert.Equal("code 4", Assert.IsType<AudioError>(StageEvents.Parse(JsonDocument.Parse("""{"type":"audioError","channel":"v","url":"u","message":"code 4"}""").RootElement)).Message);
     }
 }
 

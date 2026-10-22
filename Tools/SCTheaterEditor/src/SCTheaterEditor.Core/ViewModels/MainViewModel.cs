@@ -13,7 +13,8 @@ public sealed class MainViewModel
     public MainViewModel(AppSettings settings, SpineLibrary library, BackgroundLibrary backgrounds, IStageHost stage,
                          IDialogService dialogs, IUiDispatcher ui,
                          Func<ICatalogSource> catalogFactory, Func<ISetDownloader> downloaderFactory,
-                         Action saveSettings, IMessenger messenger, AppLog log)
+                         Action saveSettings, IMessenger messenger, AppLog log,
+                         AudioMemoStore? audioMemos = null)   // 추가(6회차): 오디오 메모 (exe 옆 AudioMemo.xml)
     {
         Settings = settings;
         Library = library;
@@ -21,7 +22,7 @@ public sealed class MainViewModel
         Log = new LogViewModel(log, ui);
         Download = new DownloadViewModel(settings, library, units, dialogs, catalogFactory, downloaderFactory, saveSettings, log);
         Resource = new ResourceViewModel(settings, library, units, dialogs, saveSettings, messenger, log);
-        Script = new ScriptViewModel(settings, library, backgrounds, stage, LipRules.LoadEmbedded(), messenger, saveSettings, log);
+        Script = new ScriptViewModel(settings, library, backgrounds, stage, LipRules.LoadEmbedded(), messenger, saveSettings, log, audioMemos);   // 변경(6회차)
         // 추가(4-1): 스크립트 표 (스크립트 탭 아래쪽)
         Editor = new ActEditorViewModel(settings, library, dialogs, ui, saveSettings, log, messenger: messenger);   // 변경: messenger
         Script.Editor = Editor;

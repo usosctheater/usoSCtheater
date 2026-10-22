@@ -125,6 +125,24 @@ public sealed record RequestBones(int Id) : StageCommand
     public override string Type => "bones";
 }
 
+/// <summary>추가(6회차): 오디오 재생 — 채널마다 하나 (같은 채널에 다시 보내면 바꿔 재생). Url = StageUrls.Resource</summary>
+public sealed record PlayAudio(string Channel, string Url, double Volume, bool Loop, double Start = 0) : StageCommand
+{
+    public override string Type => "audioPlay";
+}
+
+/// <summary>추가(6회차): 오디오 정지 (Channel = null이면 전부)</summary>
+public sealed record StopAudio(string? Channel) : StageCommand
+{
+    public override string Type => "audioStop";
+}
+
+/// <summary>추가(6회차): 오디오 재생 위치 이동 (초)</summary>
+public sealed record SeekAudio(string Channel, double Seconds) : StageCommand
+{
+    public override string Type => "audioSeek";
+}
+
 // ====================================================================== JS → C#
 
 public abstract record StageEvent;
@@ -169,6 +187,12 @@ public sealed record ActorDropped(int Id, double X) : StageEvent;
 /// <summary>무대에 포커스가 있을 때 누른 키 (Ctrl·Alt 조합은 C#의 AcceleratorKeyPressed가 처리)</summary>
 public sealed record StageKey(string Key, bool Shift) : StageEvent;
 
+// 추가(6회차): 오디오 이벤트 (Duration·Time = 초)
+public sealed record AudioStarted(string Channel, string Url, double Duration) : StageEvent;
+public sealed record AudioSeeked(string Channel, double Time) : StageEvent;
+public sealed record AudioEnded(string Channel) : StageEvent;
+public sealed record AudioError(string Channel, string Url, string Message) : StageEvent;
+
 public static class StageEvents
 {
     private static readonly JsonSerializerOptions Options = new() { PropertyNameCaseInsensitive = true };
@@ -189,6 +213,10 @@ public static class StageEvents
             "clicked" => msg.Deserialize<StageClicked>(Options),
             "dropped" => msg.Deserialize<ActorDropped>(Options),
             "key" => msg.Deserialize<StageKey>(Options),
+            "audioStarted" => msg.Deserialize<AudioStarted>(Options),   // 추가(6회차)
+            "audioSeeked" => msg.Deserialize<AudioSeeked>(Options),
+            "audioEnded" => msg.Deserialize<AudioEnded>(Options),
+            "audioError" => msg.Deserialize<AudioError>(Options),
             _ => null,
         };
     }
@@ -216,4 +244,12 @@ public static class StageUrls
 
     /// <summary>배경 파일 이름 → URL</summary>
     public static string Background(string fileName) => $"https://{BackgroundHost}/{Uri.EscapeDataString(fileName)}";
+
+    /// <summary>추가(6회차): 게임 Resources (무대 페이지에는 Audio\ 아래만 제공)</summary>
+    public const string ResourcesHost = "resources.scsm";
+
+    /// <summary>추가(6회차): 게임 Resources 기준 상대 경로 → URL (예: Audio/SE/se_baton.mp3, 경로 조각마다 인코딩)</summary>
+    public static string Resource(string relativePath) =>
+        $"https://{ResourcesHost}/" + string.Join("/", relativePath
+            .Split(['\\', '/'], StringSplitOptions.RemoveEmptyEntries).Select(Uri.EscapeDataString));
 }

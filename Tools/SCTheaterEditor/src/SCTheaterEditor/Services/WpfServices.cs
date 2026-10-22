@@ -23,6 +23,12 @@ public sealed class WpfDialogService : IDialogService
             ? MessageBox.Show(Owner, message, title, MessageBoxButton.OKCancel, MessageBoxImage.Question)
             : MessageBox.Show(message, title, MessageBoxButton.OKCancel, MessageBoxImage.Question)) == MessageBoxResult.OK;
 
+    // 추가(6회차): 예/아니오
+    public bool AskYesNo(string title, string message) =>
+        (Owner != null
+            ? MessageBox.Show(Owner, message, title, MessageBoxButton.YesNo, MessageBoxImage.Question)
+            : MessageBox.Show(message, title, MessageBoxButton.YesNo, MessageBoxImage.Question)) == MessageBoxResult.Yes;
+
     public void ShowChangeNotice(CatalogDiff diff, DateTime previousAt) =>
         new ChangeNoticeWindow(Owner, diff, previousAt).ShowDialog();
 

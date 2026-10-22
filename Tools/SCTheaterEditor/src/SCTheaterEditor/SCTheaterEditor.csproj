@@ -27,6 +27,7 @@
     <EmbeddedResource Include="Viewer\js\actor.js" LogicalName="viewer/js/actor.js" />
     <EmbeddedResource Include="Viewer\js\stage.js" LogicalName="viewer/js/stage.js" />
     <EmbeddedResource Include="Viewer\js\main.js" LogicalName="viewer/js/main.js" />
+    <EmbeddedResource Include="Viewer\js\audio.js" LogicalName="viewer/js/audio.js" />
     <EmbeddedResource Include="Viewer\lib\pixi.min.js" LogicalName="viewer/lib/pixi.min.js" />
     <EmbeddedResource Include="Viewer\lib\pixi-spine.js" LogicalName="viewer/lib/pixi-spine.js" />
   </ItemGroup>

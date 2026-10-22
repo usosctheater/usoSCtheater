@@ -20,7 +20,9 @@ public partial class ScriptView : UserControl
         InitializeComponent();
         Loaded += async (_, _) =>
         {
-            try { await App.Stage.AttachAsync(StageWeb, App.Settings.SaveFolder, () => App.Backgrounds.Folder); }   // 변경(5회차): 지금 배경 폴더
+            // 변경(5회차): 지금 배경 폴더, 변경(6회차): 오디오용 게임 Resources 폴더
+            try { await App.Stage.AttachAsync(StageWeb, App.Settings.SaveFolder, () => App.Backgrounds.Folder,
+                                              () => App.Settings.Editor.GameResourcesFolder); }
             catch (Exception ex) { AppLog.Shared.Error("무대(WebView2)를 시작하지 못했습니다 — WebView2 런타임 설치 여부를 확인하세요", ex); }
         };
     }
@@ -31,7 +33,8 @@ public partial class ScriptView : UserControl
     {
         if (Vm == null) return;
         // 추가(4-1): 스크립트 표 단축키는 탭 어디서나 (무대에 포커스가 있어도)
-        if (Vm.Editor is { } editor && HandleEditorShortcut(e, editor, Vm)) { e.Handled = true; return; }
+        bool inAudio = IsInside(e.OriginalSource as DependencyObject, AudioPanel);   // 추가(6회차): 오디오 목록 안의 키
+        if (Vm.Editor is { } editor && HandleEditorShortcut(e, editor, Vm, inAudio)) { e.Handled = true; return; }
         if (Keyboard.Modifiers != ModifierKeys.None) return;
         // 추가(4-2): F5 스크립트 → 무대 (입력 중인 칸을 먼저 확정)
         if (e.Key == Key.F5)
@@ -42,6 +45,7 @@ public partial class ScriptView : UserControl
             return;
         }
         if (e.OriginalSource is TextBox or ComboBox or ComboBoxItem) return;   // 글자 입력·드롭다운에서는 무시
+        if (inAudio) return;   // 추가(6회차): 오디오 목록의 Space(재생) 등은 목록이 처리 — 무대로 넘기지 않음
         if (IsInside(e.OriginalSource as DependencyObject, EditorPanel)) return;   // 추가(4-1): 표 안의 키(Delete·Space·Enter 등)는 표가 처리
         // 애니메이션 목록에서 Enter는 "이 애니메이션 적용" (목록이 직접 처리)
         if (e.Key == Key.Enter && IsInside(e.OriginalSource as DependencyObject, AnimList)) return;
@@ -63,7 +67,7 @@ public partial class ScriptView : UserControl
     /// 변경: 표의 칸이 모두 입력 상자가 되어, 확정 전 글자가 있는 상자에서만 Ctrl+Z·Y를 그 상자에 맡기고 나머지는 표 되돌리기.
     /// 저장·열기 전에는 입력 중인 칸을 먼저 확정
     /// </summary>
-    private static bool HandleEditorShortcut(KeyEventArgs e, ActEditorViewModel editor, ScriptViewModel stage)
+    private static bool HandleEditorShortcut(KeyEventArgs e, ActEditorViewModel editor, ScriptViewModel stage, bool inAudio)
     {
         var mods = Keyboard.Modifiers;
         if ((mods & ModifierKeys.Control) == 0 || (mods & ModifierKeys.Alt) != 0) return false;
@@ -83,8 +87,16 @@ public partial class ScriptView : UserControl
             if (lc.CanExecute(null)) lc.Execute(null);
             return true;
         }
+        // 추가(6회차): 오디오 목록에 포커스가 있으면 Ctrl+Enter = 선택한 오디오 키를 줄에 넣기 (보이스는 Ctrl+Shift+Enter = 이어 붙이기)
+        //             메모 입력 중이면 메모만 확정. 그 밖의 Ctrl+Shift+Enter는 Ctrl+Enter와 같음
+        if (e.Key == Key.Enter && inAudio)
+        {
+            if (e.OriginalSource is TextBox { DataContext: AudioRow memoRow }) memoRow.CommitEdit();
+            else stage.Audio.InsertSelected(append: shift);
+            return true;
+        }
         // 추가(4-2): Ctrl+Enter 라인에 적용 · Ctrl+N 줄 추가 (입력 중인 칸을 먼저 확정)
-        if (!shift && (e.Key == Key.Enter || e.Key == Key.N))
+        if (e.Key == Key.Enter || (!shift && e.Key == Key.N))   // 변경(6회차): Ctrl+Shift+Enter도 라인에 적용
         {
             ActEditorView.CommitFocusedBox();
             var c = e.Key == Key.Enter ? stage.ApplyToLineCommand : editor.AddTextCommand;
@@ -128,6 +140,69 @@ public partial class ScriptView : UserControl
     }
 
     private void DevTools_Click(object sender, RoutedEventArgs e) => App.Stage.OpenDevTools();
+
+    // ------------------------------------------------------------------ 추가(6회차): 오디오 목록
+
+    /// <summary>Space = 재생/정지 (목록 기본 동작인 선택 토글 대신). 메모 입력 중이면 그대로 글자</summary>
+    private void AudioList_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.OriginalSource is TextBox || Keyboard.Modifiers != ModifierKeys.None || Vm == null) return;
+        if (e.Key == Key.Space)
+        {
+            Vm.Audio.TogglePlayCommand.Execute(null);
+            e.Handled = true;
+        }
+    }
+
+    /// <summary>더블클릭 = 처음부터 재생 (메모 칸은 제외)</summary>
+    private void AudioList_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+    {
+        if (Vm == null || e.OriginalSource is not DependencyObject d || IsInsideType<TextBox>(d)) return;
+        if (ItemsControl.ContainerFromElement(AudioList, d) is ListBoxItem { DataContext: AudioRow row })
+        {
+            Vm.Audio.PlayFromStart(row);
+            e.Handled = true;
+        }
+    }
+
+    /// <summary>메모 클릭 = 그 자리에서 편집</summary>
+    private void Memo_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is not FrameworkElement { DataContext: AudioRow row } || Vm == null) return;
+        Vm.Audio.SelectedItem = row;
+        row.BeginEdit();
+        e.Handled = true;
+    }
+
+    private void MemoBox_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+    {
+        if (sender is TextBox box && box.IsVisible)
+            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Input, () => { box.Focus(); box.SelectAll(); });
+    }
+
+    /// <summary>Enter = 확정, Esc = 취소 → 목록 줄로 포커스</summary>
+    private void MemoBox_KeyDown(object sender, KeyEventArgs e)
+    {
+        if (sender is not TextBox { DataContext: AudioRow row } || Keyboard.Modifiers != ModifierKeys.None) return;
+        if (e.Key == Key.Enter) row.CommitEdit();
+        else if (e.Key == Key.Escape) row.CancelEdit();
+        else return;
+        e.Handled = true;
+        (AudioList.ItemContainerGenerator.ContainerFromItem(row) as ListBoxItem)?.Focus();
+    }
+
+    /// <summary>다른 곳을 누르면 확정</summary>
+    private void MemoBox_LostKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
+    {
+        if (sender is TextBox { DataContext: AudioRow row }) row.CommitEdit();
+    }
+
+    private static bool IsInsideType<T>(DependencyObject? d) where T : DependencyObject
+    {
+        for (; d != null; d = d is Visual or System.Windows.Media.Media3D.Visual3D ? VisualTreeHelper.GetParent(d) : LogicalTreeHelper.GetParent(d))
+            if (d is T) return true;
+        return false;
+    }
 
     private void OpenBackgroundFolder_Click(object sender, RoutedEventArgs e)
     {

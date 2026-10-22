@@ -16,6 +16,7 @@ public sealed class EqualsConverter : IValueConverter
     {
         if (value is not true || parameter == null) return Binding.DoNothing;
         var type = Nullable.GetUnderlyingType(targetType) ?? targetType;
+        if (type.IsEnum) return Enum.Parse(type, parameter.ToString()!, ignoreCase: true);   // 추가(6회차): 열거형 (오디오 구분)
         return System.Convert.ChangeType(parameter.ToString(), type, CultureInfo.InvariantCulture);
     }
 }

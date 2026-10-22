@@ -530,6 +530,58 @@ public sealed partial class ActEditorViewModel : ObservableObject
         if (focus != null && _rowOf.TryGetValue(line, out var row)) FocusFieldRequested?.Invoke(row, focus);
     }
 
+    // ------------------------------------------------------------------ 추가(6회차): 오디오 키 넣기 (오디오 목록에서 Ctrl+Enter)
+
+    /// <summary>
+    /// 선택한 첫 줄에 오디오 키를 넣음 (되돌리기 1단계). 넣을 칸이 없으면 그 종류의 새 줄을 선택한 줄 아래(선택이 없으면 맨 끝)에.
+    /// - 보이스: TEXT 줄의 Voice (append = 뒤에 공백으로 이어 붙이기 — 동시 재생) / 아니면 Voice만 넣은 TEXT 줄
+    /// - SE: SE 줄의 Track / bgm이 아닌 AUDIO 줄이면 '루프 SE?' 물어 예 = 슬롯(빈 칸이면 1)·Track·Effect=loop, 아니오 = SE 줄 / 그 밖은 SE 줄
+    /// - BGM: 트랙 분류가 bgm이거나 빈 AUDIO 줄의 Track(빈 칸이면 bgm으로) / 아니면 Value=bgm AUDIO 줄
+    /// 커서는 옮기지 않음 (오디오 목록에서 이어서 넣을 수 있도록)
+    /// </summary>
+    public void InsertAudioKey(AudioKind kind, string key, bool append = false)
+    {
+        if (Document is not { } doc) { StatusText = "막을 먼저 여세요"; return; }
+        var row = _selection.Count > 0 ? _selection.MinBy(r => r.Number) : null;
+        string type = row?.Type.ToUpperInvariant() ?? "";
+        string slot = row?.Get("Value").Trim() ?? "";
+        bool bgmSlot = slot.Equals("bgm", StringComparison.OrdinalIgnoreCase);
+
+        // 변경(6회차 확인 후): 트랙 분류가 빈 AUDIO 줄 — BGM은 bgm으로 채움, SE는 '루프 SE?' 물어 예 = 슬롯(빈 칸이면 1)·loop, 아니오 = SE 줄 새로
+        List<(string Name, string? Value)>? changes = kind switch
+        {
+            AudioKind.Voice when type == "TEXT" => [("Voice", Append(row!.Get("Voice"), key, append))],
+            AudioKind.SE when type == "SE" => [("Track", key)],
+            AudioKind.SE when type == "AUDIO" && !bgmSlot && _dialogs.AskYesNo("루프 SE",
+                $"{row!.Number}번 AUDIO 줄에 {key}를 루프 SE로 사용하시겠습니까?\n\n예 = 이 줄에 넣기 (트랙 분류 {(slot.Length > 0 ? slot : "1")} · 이펙트 loop)\n아니오 = 아래에 SE 줄 새로 넣기")
+                => [("Value", slot.Length > 0 ? slot : "1"), ("Track", key), ("Effect", "loop")],
+            AudioKind.BGM when type == "AUDIO" && (bgmSlot || slot.Length == 0) => [("Value", bgmSlot ? slot : "bgm"), ("Track", key)],
+            _ => null,
+        };
+        if (row != null && changes != null)
+        {
+            doc.SetAttributes(row.Line, changes);
+            StatusText = $"{row.Number}번 줄 {string.Join(" · ", changes.Select(c => $"{c.Name}={c.Value}"))}";
+            return;
+        }
+
+        var line = kind switch
+        {
+            AudioKind.Voice => ScriptLine.Create(("Type", "TEXT"), ("Name", ""), ("Text", ""), ("Voice", key), ("SpeakerType", "1")),
+            AudioKind.SE => ScriptLine.Create(("Type", "SE"), ("Track", key)),
+            _ => ScriptLine.Create(("Type", "AUDIO"), ("Value", "bgm"), ("Track", key)),
+        };
+        int index = _selection.Count > 0 ? _selection.Max(r => doc.Lines.IndexOf(r.Line)) + 1 : doc.Lines.Count;
+        doc.InsertLines(index, [line]);
+        SelectLines([line]);
+        StatusText = $"{index + 1}번 줄에 {line.Get("Type")} 줄 추가: {key}" +
+                     (row != null ? $" ({row.Number}번 줄({row.Type})에는 넣을 칸이 없음)" : "");
+    }
+
+    /// <summary>보이스 키 이어 붙이기 (append이고 기존 값이 있으면 "기존 새", 아니면 새 키)</summary>
+    private static string Append(string old, string key, bool append) =>
+        append && old.Trim().Length > 0 ? $"{old.Trim()} {key}" : key;
+
     private ScriptLine NewLineOfType(string type, StageStamp? stamp) => type switch
     {
         "TEXT" => stamp is { } s

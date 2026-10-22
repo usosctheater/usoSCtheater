@@ -15,6 +15,9 @@ public interface IDialogService
     /// <summary>확인/취소 질문. 확인이면 true</summary>
     bool Confirm(string title, string message);
 
+    /// <summary>추가(6회차): 예/아니오 질문 (둘 다 진행하는 갈림길 — 취소 없음). 예면 true</summary>
+    bool AskYesNo(string title, string message);
+
     /// <summary>목록 변경 알림 창</summary>
     void ShowChangeNotice(CatalogDiff diff, DateTime previousAt);
 

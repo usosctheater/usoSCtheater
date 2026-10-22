@@ -41,8 +41,10 @@ public sealed partial class ScriptViewModel : ObservableObject
     private bool _initializing = true;                // 생성 중 (배경 기본값이 저장된 설정을 덮어쓰지 않도록)
 
     public ScriptViewModel(AppSettings settings, SpineLibrary library, BackgroundLibrary backgrounds, IStageHost host,
-                           LipRules lipRules, IMessenger messenger, Action saveSettings, AppLog log)
+                           LipRules lipRules, IMessenger messenger, Action saveSettings, AppLog log,
+                           AudioMemoStore? audioMemos = null)   // 추가(6회차): 오디오 메모 (없으면 저장하지 않는 빈 메모)
     {
+        Audio = new AudioListViewModel(settings, audioMemos ?? new AudioMemoStore(null), Send, messenger, log);   // 추가(6회차)
         _settings = settings;
         _library = library;
         _backgrounds = backgrounds;
@@ -79,8 +81,21 @@ public sealed partial class ScriptViewModel : ObservableObject
         _initializing = false;
     }
 
-    /// <summary>추가(4-1): 스크립트 표 (MainViewModel이 연결, 4-2에서 무대와 연동)</summary>
-    public ActEditorViewModel? Editor { get; set; }
+    /// <summary>추가(4-1): 스크립트 표 (MainViewModel이 연결, 4-2에서 무대와 연동). 변경(6회차): 오디오 목록에도 연결</summary>
+    public ActEditorViewModel? Editor
+    {
+        get => _editor;
+        set
+        {
+            _editor = value;
+            Audio.AttachEditor(value);
+        }
+    }
+
+    private ActEditorViewModel? _editor;
+
+    /// <summary>추가(6회차): 오디오 목록 (선택 캐릭터 패널 아래 접는 영역)</summary>
+    public AudioListViewModel Audio { get; }
 
     public ObservableCollection<StageActor> Actors { get; } = new();
 
@@ -751,6 +766,7 @@ public sealed partial class ScriptViewModel : ObservableObject
             case StageClicked m: SelectedActor = Actors.FirstOrDefault(a => a.Id == m.Id); break;
             case ActorDropped m: OnDropped(m.Id, m.X); break;
             case StageKey m: HandleKey(m.Key); break;
+            case AudioEnded or AudioError: Audio.OnStageEvent(e); break;   // 추가(6회차): 오디오 목록 미리 듣기
         }
     }
 
@@ -759,6 +775,7 @@ public sealed partial class ScriptViewModel : ObservableObject
     {
         _stageReady = true;
         _hidden.Clear();   // 추가(4-2): 페이지를 새로 불러오면 숨겨 둔 캐릭터는 페이지에서 사라짐
+        Audio.OnStageReset();   // 추가(6회차): 재생 중이던 미리 듣기도 사라짐
         Send(new StageConfig(AnimationScript.TrackCount, StageLayout.ScreenWidth, StageLayout.ScreenHeight, StageLayout.UnitScale));
         SendBackground();
         Send(new WatchBones(BonesVisible));   // 변경: 무대 전체 일시정지 대신 (캐릭터별 일시정지는 불러온 뒤 OnActorLoaded에서)

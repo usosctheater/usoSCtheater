@@ -3,6 +3,7 @@
 import { post, onMessage } from "./bridge.js";
 import { configure } from "./actor.js";
 import { Stage } from "./stage.js";
+import * as audio from "./audio.js";   // 추가(6회차)
 
 const stage = new Stage(document.getElementById("stage"));
 const messageEl = document.getElementById("message");
@@ -31,6 +32,9 @@ onMessage((msg) => {
     case "seek": stage.seek(msg.id, msg.seconds); break;           // 변경: 실제 초, id 없음 = 무대 전체
     case "watchBones": stage.watchBones = !!msg.on; break;         // 추가
     case "bones": withActor(msg.id, a => post({ type: "bones", id: msg.id, bones: a.changedBones() })); break;
+    case "audioPlay": audio.play(msg); break;                         // 추가(6회차)
+    case "audioStop": audio.stop(msg.channel); break;
+    case "audioSeek": audio.seek(msg.channel, msg.seconds); break;
   }
 });
 

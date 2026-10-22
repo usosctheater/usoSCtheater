@@ -77,7 +77,8 @@ public partial class App : Application
             downloaderFactory: () => new SpineDownloader(Settings, library.Manifest, AppLog.Shared),
             saveSettings: SaveSettingsSoon,
             messenger: CommunityToolkit.Mvvm.Messaging.WeakReferenceMessenger.Default,
-            log: AppLog.Shared);
+            log: AppLog.Shared,
+            audioMemos: new AudioMemoStore(AudioMemoStore.DefaultPath));   // 추가(6회차): exe 옆 AudioMemo.xml
 
         var window = new MainWindow(vm);
         MainWindow = window;
