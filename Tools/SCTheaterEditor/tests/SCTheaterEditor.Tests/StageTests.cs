@@ -131,6 +131,15 @@ public class StageMessageTests
         Assert.Equal(60.0, Assert.IsType<AudioSeeked>(StageEvents.Parse(JsonDocument.Parse("""{"type":"audioSeeked","channel":"bgm","time":60}""").RootElement)).Time);
         Assert.Equal("se", Assert.IsType<AudioEnded>(StageEvents.Parse(JsonDocument.Parse("""{"type":"audioEnded","channel":"se"}""").RootElement)).Channel);
         Assert.Equal("code 4", Assert.IsType<AudioError>(StageEvents.Parse(JsonDocument.Parse("""{"type":"audioError","channel":"v","url":"u","message":"code 4"}""").RootElement)).Message);
+
+        // 추가(8회차): 재생 시간(stopAt) · 일시정지 · 끝 상태 · 시간 알림
+        Assert.Equal(0.4, JsonDocument.Parse(new PlayAudio("line0", "u", 1, false, 0, 0.4).ToJson()).RootElement.GetProperty("stopAt").GetDouble());
+        var pause = JsonDocument.Parse(new PauseAudio("line0", true).ToJson()).RootElement;
+        Assert.Equal(("audioPause", "line0", true), (pause.GetProperty("type").GetString(), pause.GetProperty("channel").GetString(), pause.GetProperty("paused").GetBoolean()));
+        var end = JsonDocument.Parse(new SeekEnd(7).ToJson()).RootElement;
+        Assert.Equal(("seekEnd", 7), (end.GetProperty("type").GetString(), end.GetProperty("id").GetInt32()));
+        Assert.Equal(new AudioTime("line0", 1.5, 3, true),
+            StageEvents.Parse(JsonDocument.Parse("""{"type":"audioTime","channel":"line0","time":1.5,"duration":3,"paused":true}""").RootElement));
     }
 }
 
@@ -341,16 +350,17 @@ public class ScriptViewModelTests
         c.Vm.Open(c.Asset(0), immediate: true);
         c.Vm.Open(c.Asset(1), immediate: true);
         var (a, b) = (c.Vm.Actors[0], c.Vm.Actors[1]);
+        Assert.True(a.Paused && b.Paused);         // 변경(8회차): 리소스 탭에서 연 캐릭터는 멈춘 채
 
         c.Vm.SelectedActor = a;
         c.Vm.HandleKey(" ");
-        Assert.True(a.Paused);
-        Assert.False(b.Paused);
-        Assert.Equal(new SetPaused(true, a.Id), c.Stage.Last<SetPaused>());
-        Assert.True(c.Vm.Paused);
+        Assert.False(a.Paused);
+        Assert.True(b.Paused);
+        Assert.Equal(new SetPaused(false, a.Id), c.Stage.Last<SetPaused>());
+        Assert.False(c.Vm.Paused);
 
         c.Vm.SelectedActor = null;
-        Assert.False(c.Vm.Paused);                 // b가 재생 중
+        Assert.False(c.Vm.Paused);                 // a가 재생 중
         c.Vm.HandleKey(" ");                       // 하나라도 재생 중 → 모두 멈춤
         Assert.True(a.Paused && b.Paused);
         Assert.Equal(new SetPaused(true), c.Stage.Last<SetPaused>());
@@ -367,6 +377,7 @@ public class ScriptViewModelTests
         var a = c.Vm.Actors[0];
         c.Load(a);
         c.Vm.SelectedActor = null;
+        c.Vm.HandleKey(" ");                        // 변경(8회차): 연 캐릭터는 멈춘 채 → 무대 전체 재생
         c.Stage.Raise(new StageTime(1, 4, false));
         Assert.Equal(0.25, c.Vm.TimeValue, 3);
         Assert.Equal("1.00 / 4.00s", c.Vm.TimeText);
@@ -437,5 +448,123 @@ public class ScriptViewModelTests
         c.Vm.ApplySnapshot(Snap(("no_such_key", "left", null)));
         Assert.Empty(c.Vm.Actors);
         Assert.Contains("올리지 못함: no_such_key", c.Vm.StatusText);
+    }
+
+    // ---------------------------------------------------------------- 추가(8회차): 통합 재생 바 · F5 줄 재생
+
+    private static LinePlan Line(string? cg, double voiceSeconds, params LineSound[] sounds) =>
+        new(3, "TEXT", cg, sounds, voiceSeconds, []);
+
+    private static LineSound Voice(int i, double length) => new($"line{i}", $"Audio/Voice/IL/v{i}.wav", 1, length, 0);
+
+    [Fact]
+    public void LineF5_PlaysLineSpineWithVoiceLip_AfterLoad_OthersSeekEnd()
+    {
+        using var c = new Ctx();
+        string k0 = c.Asset(0).CgKey, k1 = c.Asset(1).CgKey;
+        c.Vm.ApplySnapshot(Snap((k0, "left", "wait"), (k1, "right", "wait")), Line(k0, 2.5, Voice(0, 2.5), Voice(1, 1)));
+        var (line, other) = (c.Vm.Actors[0], c.Vm.Actors[1]);
+        Assert.Same(line, c.Vm.LineActor);
+        Assert.Same(line, c.Vm.SelectedActor);
+        Assert.Equal(PlayTarget.Line, c.Vm.Target);
+        Assert.Empty(c.Stage.Sent.OfType<PlayAudio>());          // Spine을 다 불러온 뒤 함께 시작
+        Assert.True(other.SeekEndOnLoad);
+
+        c.Load(other);
+        Assert.Equal(new SeekEnd(other.Id), c.Stage.Last<SeekEnd>());
+        Assert.False(other.Paused);
+        c.Load(line);
+        var lineplay = c.Stage.Sent.OfType<PlayAnims>().Last(p => p.Id == line.Id);
+        Assert.Equal(2.5, lineplay.Lip!.Seconds);                // 립 = 가장 긴 보이스
+        Assert.Equal(new[] { "line0", "line1" }, c.Stage.Sent.OfType<PlayAudio>().Select(p => p.Channel));
+        Assert.Equal("https://resources.scsm/Audio/Voice/IL/v0.wav", c.Stage.Sent.OfType<PlayAudio>().First().Url);
+        Assert.DoesNotContain(c.Stage.Sent.OfType<SeekEnd>(), s => s.Id == line.Id);
+
+        // 바 길이 = 애니메이션(1초)과 소리(2.5초) 중 긴 것
+        c.Stage.Raise(new ActorState(line.Id, [null, null, null, null], false, 0.5, 1, null));
+        Assert.Equal("0.50 / 2.50s", c.Vm.TimeText);
+        Assert.Equal(0.2, c.Vm.TimeValue, 3);
+
+        // 다시 F5: 바뀌지 않은 다른 캐릭터는 그대로, 이전 줄 소리는 끔
+        c.Stage.Sent.Clear();
+        c.Vm.ApplySnapshot(Snap((k0, "left", null), (k1, "right", null)), Line(k0, 0));
+        Assert.Empty(c.Stage.Sent.OfType<SeekEnd>());
+        Assert.Equal(new[] { "line0", "line1" }, c.Stage.Sent.OfType<StopAudio>().Select(s => s.Channel));
+        Assert.Contains(c.Stage.Sent.OfType<PlayAnims>(), p => p.Id == line.Id);   // 줄의 Spine은 늘 처음부터
+        Assert.Equal(3.0, c.Stage.Sent.OfType<PlayAnims>().Last().Lip!.Seconds);    // 보이스 없음 → 설정대로
+    }
+
+    [Fact]
+    public void LineToggle_PausesAndAlignsSoundsToBar_RestartsAtEnd()
+    {
+        using var c = new Ctx();
+        string k0 = c.Asset(0).CgKey;
+        c.Vm.ApplySnapshot(Snap((k0, "center", "wait")), Line(k0, 2, Voice(0, 2), Voice(1, 1)));
+        var a = c.Vm.Actors[0];
+        c.Load(a);
+        c.Stage.Raise(new ActorState(a.Id, [null, null, null, null], false, 0.5, 1, null));
+
+        c.Stage.Sent.Clear();
+        c.Vm.HandleKey(" ");                                     // 일시정지: Spine + 소리 모두
+        Assert.True(c.Vm.Paused);
+        Assert.Equal(new SetPaused(true, a.Id), c.Stage.Last<SetPaused>());
+        Assert.Equal(2, c.Stage.Sent.OfType<PauseAudio>().Count(p => p.Paused));
+
+        c.Vm.TimeValue = 0.75;                                   // 1.5초로 이동
+        Assert.Equal(new Seek(a.Id, 1.5), c.Stage.Last<Seek>());
+        Assert.Equal(new SeekAudio("line0", 1.5), c.Stage.Sent.OfType<SeekAudio>().First());
+        Assert.Equal(new SeekAudio("line1", 1), c.Stage.Sent.OfType<SeekAudio>().Last());
+
+        c.Stage.Sent.Clear();
+        c.Vm.HandleKey(" ");                                     // 이어 재생: 바 시점으로 맞춘 뒤 (끝난 line1은 그대로)
+        Assert.False(c.Vm.Paused);
+        Assert.Equal(new SeekAudio("line0", 1.5), Assert.Single(c.Stage.Sent.OfType<SeekAudio>()));
+        Assert.Equal(new PauseAudio("line0", false), Assert.Single(c.Stage.Sent.OfType<PauseAudio>()));
+
+        c.Stage.Raise(new ActorState(a.Id, [null, null, null, null], false, 5, 1, null));   // 끝 (바는 2초에서 멈춤)
+        c.Stage.Sent.Clear();
+        c.Vm.HandleKey(" ");                                     // 끝난 뒤 = 처음부터
+        Assert.Equal(new Seek(a.Id, 0), c.Stage.Last<Seek>());
+        Assert.Equal(2, c.Stage.Sent.OfType<PlayAudio>().Count());
+    }
+
+    [Fact]
+    public void LineWithoutSpine_AudioDrivesBar_OtherTypesTargetStage()
+    {
+        using var c = new Ctx();
+        var se = new LinePlan(5, "SE", null, [new LineSound("line0", "Audio/SE/se.mp3", 0.5, 0.4, 0.4)], 0, []);
+        c.Vm.ApplySnapshot(Snap(), se);
+        Assert.Equal(PlayTarget.Line, c.Vm.Target);
+        Assert.Null(c.Vm.SelectedActor);
+        var play = c.Stage.Last<PlayAudio>();
+        Assert.Equal((0.5, 0.4), (play.Volume, play.StopAt));
+        c.Stage.Raise(new AudioTime("line0", 0.2, 0.4, false));
+        Assert.Equal(0.5, c.Vm.TimeValue, 3);
+        Assert.Contains("5번 줄", c.Vm.TargetText);
+
+        c.Vm.ApplySnapshot(Snap(), new LinePlan(6, "BG", null, [], 0, []));
+        Assert.Equal(PlayTarget.Stage, c.Vm.Target);
+        Assert.Equal("무대 전체", c.Vm.TargetText);
+    }
+
+    [Fact]
+    public void Target_FollowsLastAction_OpenPaused_AnimListPlays()
+    {
+        using var c = new Ctx();
+        c.Vm.Open(c.Asset(0), immediate: true);
+        var a = c.Vm.Actors[0];
+        c.Load(a);
+        Assert.Equal(PlayTarget.Actor, c.Vm.Target);
+        Assert.True(a.Paused);                                    // 리소스 탭에서 열면 자동 재생 안 함
+        Assert.Equal(new SetPaused(true, a.Id), c.Stage.Last<SetPaused>());
+
+        c.Vm.ApplyAnimCommand.Execute(c.Vm.AnimItems[1]);         // 애니메이션 목록에서 고르면 재생
+        Assert.False(a.Paused);
+        Assert.Equal(new SetPaused(false, a.Id), c.Stage.Last<SetPaused>());
+
+        c.Stage.Raise(new StageClicked(null));                    // 빈 곳 클릭 = 무대 전체
+        Assert.Equal(PlayTarget.Stage, c.Vm.Target);
+        c.Stage.Raise(new StageClicked(a.Id));
+        Assert.Equal(PlayTarget.Actor, c.Vm.Target);
     }
 }

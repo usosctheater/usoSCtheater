@@ -101,6 +101,47 @@ public class AudioTests
         Assert.True(NaturalComparer.Instance.Compare("s001002", "s001010") < 0);
     }
 
+    // ------------------------------------------------------------------ 추가(8회차): F5 줄 재생 계획
+
+    [Fact]
+    public void LinePlayback_Text_VoicesFromGroupThenRoot_Missing()
+    {
+        using var t = new TempFolder();
+        string res = MakeResources(t.Path);
+        var line = SCTheaterEditor.Script.ScriptLine.Create(("Type", "TEXT"), ("CG", "cg1"), ("Voice", "s001001 OT/OT001, nope"));
+        var plan = LinePlayback.Build(line, 3, "IL", res);
+        Assert.Equal("cg1", plan.CgKey);
+        Assert.Equal(new[] { "Audio/Voice/IL/s001001.wav", "Audio/Voice/OT/OT001.wav" }, plan.Sounds.Select(s => s.RelativePath));
+        Assert.Equal(new[] { "line0", "line1" }, plan.Sounds.Select(s => s.Channel));
+        Assert.Equal(2.5, plan.VoiceSeconds);
+        Assert.Equal(2.5, plan.SoundLength);
+        Assert.Equal("보이스 nope", Assert.Single(plan.Missing));
+
+        var none = LinePlayback.Build(SCTheaterEditor.Script.ScriptLine.Create(("Type", "TEXT"), ("CG", "none")), 1, "IL", res);
+        Assert.Null(none.CgKey);
+        Assert.False(none.HasContent);
+    }
+
+    [Fact]
+    public void LinePlayback_Se_Audio_VolumeDurationFolderStop()
+    {
+        using var t = new TempFolder();
+        string res = MakeResources(t.Path);
+        SCTheaterEditor.Script.ScriptLine L(params (string, string)[] a) => SCTheaterEditor.Script.ScriptLine.Create(a);
+
+        var se = Assert.Single(LinePlayback.Build(L(("Type", "SE"), ("Track", "se_a"), ("Volume", "0.5"), ("Duration", "0.4")), 1, "IL", res).Sounds);
+        Assert.Equal("Audio/SE/se_a.mp3", se.RelativePath);
+        Assert.Equal((0.5, 0.4, 0.4), (se.Volume, se.StopAt, se.Length));   // 길이 1초 → 재생 시간 0.4초
+
+        var bgm = Assert.Single(LinePlayback.Build(L(("Type", "AUDIO"), ("Value", "bgm"), ("Track", "BGM_2")), 1, "IL", res).Sounds);
+        Assert.Equal("Audio/BGM/BGM_2.mp3", bgm.RelativePath);
+        Assert.Equal((1.0, 0.0, 1.0), (bgm.Volume, bgm.StopAt, bgm.Length));
+        var slot = Assert.Single(LinePlayback.Build(L(("Type", "AUDIO"), ("Value", "1"), ("Track", "se_b"), ("Effect", "loop")), 1, "IL", res).Sounds);
+        Assert.Equal("Audio/SE/se_b.mp3", slot.RelativePath);   // 슬롯 → SE 폴더, 반복은 하지 않음
+        Assert.Empty(LinePlayback.Build(L(("Type", "AUDIO"), ("Value", "bgm"), ("Track", "BGM_2"), ("Effect", "stop")), 1, "IL", res).Sounds);
+        Assert.Empty(LinePlayback.Build(L(("Type", "BG"), ("Track", "se_a")), 1, "IL", res).Sounds);
+    }
+
     [Fact]
     public void MemoStore_SetGetRemove_SaveLoad()
     {
@@ -186,9 +227,23 @@ public class AudioTests
         Assert.Equal(AudioListViewModel.PreviewChannel, play.Channel);
         Assert.Equal("https://resources.scsm/Audio/SE/se_a.mp3", play.Url);
         Assert.True(env.Audio.IsPlaying && env.Row("se_a").IsPlaying);
-        env.Audio.TogglePlayCommand.Execute(null);                         // 다시 = 정지
+        env.Audio.TogglePlayCommand.Execute(null);                         // 변경(8회차): 다시 = 일시정지 (항목 표시는 유지)
+        Assert.Equal(new PauseAudio(AudioListViewModel.PreviewChannel, true), env.Sent.Last());
+        Assert.True(env.Audio.IsPaused);
+        Assert.False(env.Audio.IsPlaying);
+        Assert.True(env.Row("se_a").IsPlaying);
+        env.Audio.Seek(0.5);
+        Assert.Equal(new SeekAudio(AudioListViewModel.PreviewChannel, 0.5), env.Sent.Last());
+        env.Audio.TogglePlayCommand.Execute(null);                         // 이어 재생
+        Assert.Equal(new PauseAudio(AudioListViewModel.PreviewChannel, false), env.Sent.Last());
+        Assert.True(env.Audio.IsPlaying);
+        env.Audio.SelectedItem = env.Row("se_b");
+        env.Audio.TogglePlayCommand.Execute(null);                         // 다른 항목을 고르면 그 항목을 처음부터
+        Assert.EndsWith("se_b.mp3", Assert.IsType<PlayAudio>(env.Sent.Last()).Url);
+        Assert.False(env.Row("se_a").IsPlaying);
+        env.Audio.Stop();
         Assert.IsType<StopAudio>(env.Sent.Last());
-        Assert.False(env.Audio.IsPlaying || env.Row("se_a").IsPlaying);
+        Assert.False(env.Audio.IsPlaying || env.Row("se_b").IsPlaying);
 
         env.Audio.PlayFromStart(env.Row("se_b"));                          // 더블클릭
         Assert.Equal("se_b", env.Audio.SelectedItem?.Key);

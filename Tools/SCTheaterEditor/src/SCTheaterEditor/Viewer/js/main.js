@@ -35,6 +35,8 @@ onMessage((msg) => {
     case "audioPlay": audio.play(msg); break;                         // 추가(6회차)
     case "audioStop": audio.stop(msg.channel); break;
     case "audioSeek": audio.seek(msg.channel, msg.seconds); break;
+    case "audioPause": audio.pause(msg.channel, msg.paused); break;   // 추가(8회차)
+    case "seekEnd": stage.seekEnd(msg.id); break;                     // 추가(8회차)
   }
 });
 

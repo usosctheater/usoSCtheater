@@ -69,6 +69,17 @@ public sealed partial class ScriptViewModel : ObservableObject
         Split = 3;
 
         _host.EventReceived += OnStageEvent;
+        // 추가(8회차): 오디오를 고르거나 재생하면 재생 바 대상 = 오디오, 미리 듣기 상태가 바뀌면 바·버튼 갱신
+        Audio.Activated += () => SetTarget(PlayTarget.Audio);
+        Audio.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName is nameof(AudioListViewModel.Playing) or nameof(AudioListViewModel.IsPaused) or nameof(AudioListViewModel.SelectedItem)
+                && Target == PlayTarget.Audio)
+            {
+                UpdatePaused();
+                OnPropertyChanged(nameof(TargetText));
+            }
+        };
         messenger.Register<ScriptViewModel, OpenSpineMessage>(this, (r, m) => r.Open(m.Asset, m.Immediate));
         // 추가(5회차): Resources 폴더가 바뀌면 배경 목록 다시 읽기
         messenger.Register<ScriptViewModel, SettingsChangedMessage>(this, static (r, m) =>
@@ -220,7 +231,8 @@ public sealed partial class ScriptViewModel : ObservableObject
         foreach (var a in Actors)
             if (remap.TryGetValue(a.Position, out var moved)) a.Position = moved;
 
-        var actor = new StageActor(++_nextId, asset, position) { IsPreview = !immediate };
+        // 변경(8회차): 리소스 탭에서 연 캐릭터는 자동 재생하지 않음 (멈춘 채 첫 프레임, 애니메이션을 고르거나 Space로 재생)
+        var actor = new StageActor(++_nextId, asset, position) { IsPreview = !immediate, Paused = true };
         Actors.Add(actor);
         Send(new AddActor(actor.Id, StageUrls.SpineFolder(asset.RelativeFolder), asset.JsonFile, asset.AtlasFile, actor.Label, actor.IsPreview));
         if (_replaced != null) Send(new ShowActor(_replaced.Id, false));
@@ -305,6 +317,7 @@ public sealed partial class ScriptViewModel : ObservableObject
     {
         Send(new RemoveActor(actor.Id));
         Actors.Remove(actor);
+        if (actor == _lineActor) _lineActor = null;   // 추가(8회차)
         if (SelectedActor == actor) SelectedActor = null;
     }
 
@@ -399,7 +412,7 @@ public sealed partial class ScriptViewModel : ObservableObject
     partial void OnSelectedActorChanged(StageActor? value)
     {
         Send(new SelectActor(value?.Id));
-        UpdatePaused();   // 추가
+        SetTarget(value != null ? PlayTarget.Actor : PlayTarget.Stage);   // 추가(8회차): 고른 캐릭터 / 선택 없음 = 무대 전체 (UpdatePaused 포함)
         SelectedTrack = 0;
         Bones = [];
         BonesHeader = "본 목록 (기본 자세와 다른 본)";
@@ -447,6 +460,7 @@ public sealed partial class ScriptViewModel : ObservableObject
             // 디버그 방식: 선택한 트랙에만 건다 (접두어와 달라도 허용)
             a.Tracks[selected] = name;
             Send(new SetTrack(a.Id, selected, name));
+            Resume(a);   // 추가(8회차)
         }
         else
         {
@@ -454,10 +468,21 @@ public sealed partial class ScriptViewModel : ObservableObject
             int target = name == null ? selected : AnimationScript.TrackIndex(name);
             a.Tracks[target] = name;
             PlayAll(a);
+            Resume(a);   // 추가(8회차): 애니메이션 목록에서 고르면 자동 재생 (멈춰 있던 캐릭터도)
             if (target != selected)
                 StatusText = $"{name}은(는) 접두어 기준으로 트랙 {target}({AnimationScript.TrackLabels[target]})에 들어갑니다 (게임과 동일)";
         }
         SelectedAnimItem = item;
+        SetTarget(PlayTarget.Actor);   // 추가(8회차)
+    }
+
+    /// <summary>추가(8회차): 멈춰 있던 캐릭터를 다시 재생</summary>
+    private void Resume(StageActor a)
+    {
+        if (!a.Paused) return;
+        a.Paused = false;
+        Send(new SetPaused(false, a.Id));
+        UpdatePaused();
     }
 
     /// <summary>선택한 캐릭터 전체 트랙 초기화 (R)</summary>
@@ -484,7 +509,10 @@ public sealed partial class ScriptViewModel : ObservableObject
         var names = a.Animations.Select(x => x.Name).ToHashSet();
         var (moving, still) = _lipRules.Resolve(anims, a.Asset.NickName, names.Contains);
         if (moving == null) return null;
-        return new LipPlay(moving, still, LipAlways ? -1 : _settings.Viewer.LipSeconds);
+        // 변경(8회차): F5로 맞춘 TEXT 줄의 캐릭터는 보이스 중 가장 긴 길이만큼 말함 (보이스가 없으면 설정대로)
+        double seconds = a == _lineActor && _line is { VoiceSeconds: > 0 } line ? line.VoiceSeconds
+                       : LipAlways ? -1 : _settings.Viewer.LipSeconds;
+        return new LipPlay(moving, still, seconds);
     }
 
     partial void OnSelectedSkinChanged(string? value)
@@ -536,6 +564,9 @@ public sealed partial class ScriptViewModel : ObservableObject
     [RelayCommand]
     private void TogglePause()
     {
+        // 추가(8회차): 재생 대상이 오디오 / F5 줄이면 그쪽
+        if (Target == PlayTarget.Audio) { Audio.TogglePlayCommand.Execute(null); return; }
+        if (Target == PlayTarget.Line) { ToggleLine(); return; }
         if (SelectedActor is { } a)
         {
             a.Paused = !a.Paused;
@@ -551,14 +582,22 @@ public sealed partial class ScriptViewModel : ObservableObject
         if (Paused) RefreshBones();
     }
 
-    private void UpdatePaused() =>
-        Paused = SelectedActor?.Paused ?? (Actors.Count > 0 && Actors.All(a => a.Paused));
+    // 변경(8회차): 재생 대상 기준
+    private void UpdatePaused() => Paused = Target switch
+    {
+        PlayTarget.Audio => Audio.Playing == null || Audio.IsPaused,
+        PlayTarget.Line => _linePaused,
+        _ => SelectedActor?.Paused ?? (Actors.Count > 0 && Actors.All(a => a.Paused)),
+    };
 
-    /// <summary>변경: 드래그 바 → 실제 초 (선택한 캐릭터, 없으면 무대 전체)</summary>
+    /// <summary>변경: 드래그 바 → 실제 초 (변경(8회차): 재생 대상 — 오디오 · F5 줄 · 선택한 캐릭터 · 무대 전체)</summary>
     partial void OnTimeValueChanged(double value)
     {
         if (_fromState || !Paused) return;
         double seconds = value * _timeLength;
+        _barTime = seconds;   // 추가(8회차)
+        if (Target == PlayTarget.Audio) { Audio.Seek(seconds); return; }
+        if (Target == PlayTarget.Line) { SeekLine(seconds); return; }
         if (SelectedActor is { } a)
         {
             if (!a.IsLoaded) return;
@@ -618,13 +657,29 @@ public sealed partial class ScriptViewModel : ObservableObject
             StatusText = "스크립트 표에서 동기화할 줄을 선택하세요";
             return;
         }
-        ApplySnapshot(snapshot);
+        // 추가(8회차): 그 줄 하나만으로 재생 계획 (Spine · 보이스 · SE · AUDIO)
+        LinePlan? line = null;
+        if (Editor?.Document is { } doc && snapshot.LineIndex >= 0 && snapshot.LineIndex < doc.Lines.Count)
+        {
+            try { line = LinePlayback.Build(doc.Lines[snapshot.LineIndex], snapshot.LineIndex + 1, doc.Group, _settings.Editor.GameResourcesFolder); }
+            catch (Exception ex) { _log.Error("줄 재생 계획 실패", ex); }
+        }
+        ApplySnapshot(snapshot, line);
     }
 
-    /// <summary>무대를 계산 결과로: 배경 · 캐릭터(같은 세트는 그대로 두고 위치·애니메이션만, 없는 캐릭터는 숨겨 두기, 숨겨 둔 캐릭터는 다시 보이기)</summary>
-    public void ApplySnapshot(StageSnapshot snapshot)
+    /// <summary>
+    /// 무대를 계산 결과로: 배경 · 캐릭터(같은 세트는 그대로 두고 위치·애니메이션만, 없는 캐릭터는 숨겨 두기, 숨겨 둔 캐릭터는 다시 보이기).
+    /// 변경(8회차): line이 있으면 그 줄을 바로 재생 (줄의 Spine은 처음부터 + 소리, 재생 바 대상 = 줄).
+    /// 줄의 Spine이 아닌 캐릭터 중 새로 올렸거나 애니메이션이 바뀐 캐릭터는 끝 상태(end-loop)로 — 자동 재생 중인 게임 화면과 같음.
+    /// 바뀌지 않은 캐릭터는 그대로
+    /// </summary>
+    public void ApplySnapshot(StageSnapshot snapshot, LinePlan? line = null)
     {
         CancelPreviewInternal(goBack: false);
+        StopLine();                       // 추가(8회차): 이전 줄의 소리
+        Audio.Stop();                     // 추가(8회차): 미리 듣기
+        _line = line;
+        string? lineSource = line?.CgKey is { } lineCg ? _library.Find(lineCg)?.SourcePath : null;
         var skipped = new List<string>();
 
         // 배경 (게임 Resources\BG에 없으면 배경 없음 + 안내)   변경(5회차): 주석만
@@ -679,19 +734,188 @@ public sealed partial class ScriptViewModel : ObservableObject
                 var tracks = AnimationScript.Parse(st.Animation);
                 Array.Copy(tracks, actor.Tracks, Math.Min(tracks.Length, actor.Tracks.Length));
             }
-            if (replay && actor.IsLoaded) PlayAll(actor);   // 아직 불러오는 중이면 OnActorLoaded에서 재생
+            // 변경(8회차): 줄의 Spine은 늘 처음부터 재생, 그 밖에 바뀐 캐릭터는 끝 상태로 (아직 불러오는 중이면 OnActorLoaded에서)
+            if (asset.SourcePath == lineSource)
+            {
+                _lineActor = actor;
+                actor.SeekEndOnLoad = false;
+                actor.Paused = false;
+                if (actor.IsLoaded)
+                {
+                    PlayAll(actor);
+                    Send(new SetPaused(false, actor.Id));
+                }
+            }
+            else if (replay)
+            {
+                actor.Paused = false;
+                if (actor.IsLoaded)
+                {
+                    PlayAll(actor);
+                    Send(new SeekEnd(actor.Id));
+                    actor.SeekEndOnLoad = false;
+                }
+                else actor.SeekEndOnLoad = true;
+            }
         }
 
         PlaceAll();
         UpdateSplit();
         if (SelectedActor != null && !Actors.Contains(SelectedActor)) SelectedActor = null;
+
+        // 추가(8회차): 줄 재생 시작 — 재생 바 대상 = 줄 (Spine도 소리도 없으면 무대 전체)
+        _linePaused = false;
+        if (line is { HasContent: true } && (_lineActor != null || line.Sounds.Count > 0))
+        {
+            SelectedActor = _lineActor;   // 줄의 Spine을 선택 (없으면 선택 해제)
+            if (_lineActor is { IsLoaded: false }) _lineSoundsPending = true;   // 불러온 뒤 Spine과 함께 시작
+            else StartSounds(0);
+            SetTarget(PlayTarget.Line);
+        }
+        else if (line != null)
+        {
+            SelectedActor = null;
+            SetTarget(PlayTarget.Stage);
+        }
         UpdatePaused();
 
         string status = $"동기화: {snapshot.LineIndex + 1}번 줄 시점 · 캐릭터 {desired.Count}명 · 배경 {(snapshot.Background ?? "없음")}";
         if (skipped.Count > 0) status += $" · 올리지 못함: {string.Join(", ", skipped)}";
+        if (line is { Missing.Count: > 0 }) status += $" · 없는 소리: {string.Join(", ", line.Missing)}";   // 추가(8회차)
         if (snapshot.Notes.Count > 0) status += " · " + string.Join(" / ", snapshot.Notes);
         StatusText = status;
     }
+
+    // ------------------------------------------------------------------ 추가(8회차): 재생 대상 · F5 줄 재생
+
+    private PlayTarget _target = PlayTarget.Stage;
+    private LinePlan? _line;              // F5로 맞춘 줄 (소리 · 립 길이)
+    private StageActor? _lineActor;       // 그 줄의 Spine (없으면 소리만)
+    private bool _linePaused;
+    private bool _lineSoundsPending;      // 줄의 Spine을 불러오는 중 → 불러온 뒤 소리 시작
+    private double _barTime;              // 재생 바가 가리키는 초 (재생 중엔 무대·오디오 알림, 멈춘 뒤엔 드래그한 초)
+
+    /// <summary>재생 바 · Space · ▶가 다루는 대상 (가장 최근 동작)</summary>
+    public PlayTarget Target => _target;
+
+    /// <summary>재생 바 왼쪽 표시</summary>
+    public string TargetText => _target switch
+    {
+        PlayTarget.Line when _line != null => $"F5 {_line.LineNumber}번 줄 ({_line.Type})" + (_lineActor != null ? $" · {_lineActor.Label}" : "") +
+                                              (_line.Sounds.Count > 0 ? $" · 소리 {_line.Sounds.Count}" : ""),
+        PlayTarget.Actor when SelectedActor != null => $"캐릭터: {SelectedActor.Label}",
+        PlayTarget.Audio => $"오디오: {(Audio.Playing ?? Audio.SelectedItem)?.File.Key ?? "-"}",
+        _ => "무대 전체",
+    };
+
+    /// <summary>F5로 맞춘 줄의 Spine (테스트·표시용)</summary>
+    public StageActor? LineActor => _lineActor;
+
+    private void SetTarget(PlayTarget target)
+    {
+        bool changed = _target != target;
+        _target = target;
+        if (changed)
+        {
+            OnPropertyChanged(nameof(Target));
+            _fromState = true;
+            TimeValue = 0;
+            _fromState = false;
+            _barTime = 0;
+            TimeText = "-";
+            if (target == PlayTarget.Audio) TrackStateText = "오디오 미리 듣기 (Space · ▶ = 재생 / 일시정지)";
+            else if (target == PlayTarget.Line && _lineActor == null) TrackStateText = "소리만 있는 줄 (Space · ▶ = 재생 / 일시정지)";
+        }
+        OnPropertyChanged(nameof(TargetText));
+        UpdatePaused();
+    }
+
+    /// <summary>줄의 소리를 from초부터 (그보다 짧은 소리는 건너뜀)</summary>
+    private void StartSounds(double from)
+    {
+        if (_line == null) return;
+        foreach (var s in _line.Sounds)
+            if (from <= 0 || s.Length <= 0 || from < s.Length)
+                Send(new PlayAudio(s.Channel, StageUrls.Resource(s.RelativePath), s.Volume, false, Math.Max(0, from), s.StopAt));
+    }
+
+    /// <summary>이전 줄의 소리를 끄고 줄 재생 상태를 비움</summary>
+    private void StopLine()
+    {
+        if (_line != null)
+            foreach (var s in _line.Sounds) Send(new StopAudio(s.Channel));
+        _line = null;
+        _lineActor = null;
+        _linePaused = false;
+        _lineSoundsPending = false;
+    }
+
+    /// <summary>
+    /// 줄 재생/일시정지 (Space · ▶). 끝까지 간 뒤에는 처음부터 다시.
+    /// 이어 재생할 때 소리를 재생 바 시점(= Spine 시계)으로 맞춘 뒤 다시 재생
+    /// </summary>
+    private void ToggleLine()
+    {
+        if (_line == null) return;
+        if (!_linePaused && _timeLength > 0 && _barTime >= _timeLength - 0.05)
+        {
+            RestartLine();
+            return;
+        }
+        _linePaused = !_linePaused;
+        if (_lineActor != null)
+        {
+            _lineActor.Paused = _linePaused;
+            Send(new SetPaused(_linePaused, _lineActor.Id));
+        }
+        if (_linePaused)
+            foreach (var s in _line.Sounds) Send(new PauseAudio(s.Channel, true));
+        else AlignSounds(_barTime);
+        UpdatePaused();
+        if (Paused) RefreshBones();
+    }
+
+    private void RestartLine()
+    {
+        if (_line == null) return;
+        _linePaused = false;
+        if (_lineActor is { IsLoaded: true } a)
+        {
+            a.Paused = false;
+            Send(new Seek(a.Id, 0));
+            Send(new SetPaused(false, a.Id));
+        }
+        _barTime = 0;
+        StartSounds(0);
+        UpdatePaused();
+    }
+
+    /// <summary>소리를 seconds초로 옮겨 다시 재생 (이미 끝난 소리는 그대로)</summary>
+    private void AlignSounds(double seconds)
+    {
+        if (_line == null) return;
+        foreach (var s in _line.Sounds)
+        {
+            if (s.Length > 0 && seconds >= s.Length) continue;
+            Send(new SeekAudio(s.Channel, seconds));
+            Send(new PauseAudio(s.Channel, false));
+        }
+    }
+
+    /// <summary>멈춘 동안 재생 바 드래그: Spine과 소리를 함께 옮김 (멈춘 채)</summary>
+    private void SeekLine(double seconds)
+    {
+        if (_line == null) return;
+        if (_lineActor is { IsLoaded: true } a)
+        {
+            Send(new Seek(a.Id, seconds));
+            RefreshBones();
+        }
+        foreach (var s in _line.Sounds) Send(new SeekAudio(s.Channel, s.Length > 0 ? Math.Min(seconds, s.Length) : seconds));
+    }
+
+    /// <summary>Spine이 없는 줄: 가장 긴 소리의 채널이 재생 바를 움직임</summary>
+    private string? LineClockChannel => _line is { Sounds.Count: > 0 } l ? l.Sounds.MaxBy(s => s.Length)!.Channel : null;
 
     private string? FindBackground(string key) =>
         _backgrounds.Keys.FirstOrDefault(k => k.Equals(key, StringComparison.OrdinalIgnoreCase));
@@ -764,14 +988,32 @@ public sealed partial class ScriptViewModel : ObservableObject
                 }
                 break;
             case ActorState m when m.Id == SelectedActor?.Id: ShowState(m); break;
-            case StageTime m when SelectedActor == null: ShowStageTime(m); break;                         // 추가
+            case StageTime m when SelectedActor == null && Target == PlayTarget.Stage: ShowStageTime(m); break;   // 변경(8회차): 대상이 무대 전체일 때만
             case ActorBones m when m.Id == SelectedActor?.Id: ShowBones(m.Bones); break;
             case BackgroundError m: _log.Warn($"배경 불러오기 실패: {m.Url} — {m.Message}"); break;      // 추가
-            case StageClicked m: SelectedActor = Actors.FirstOrDefault(a => a.Id == m.Id); break;
+            case StageClicked m:
+                // 변경(8회차): 무대를 클릭하면 재생 대상 = 그 캐릭터 (빈 곳 = 무대 전체) — 이미 선택한 캐릭터를 다시 눌러도
+                SelectedActor = Actors.FirstOrDefault(a => a.Id == m.Id);
+                SetTarget(SelectedActor != null ? PlayTarget.Actor : PlayTarget.Stage);
+                break;
             case ActorDropped m: OnDropped(m.Id, m.X); break;
             case StageKey m: HandleKey(m.Key); break;
+            case AudioTime m: ShowAudioTime(m); break;                    // 추가(8회차)
+            case AudioError m when m.Channel.StartsWith(LinePlayback.ChannelPrefix, StringComparison.Ordinal):   // 추가(8회차): 줄 소리
+                StatusText = $"소리 재생 실패: {m.Message}";
+                _log.Warn($"줄 소리 재생 실패: {m.Url} — {m.Message}");
+                break;
             case AudioEnded or AudioError: Audio.OnStageEvent(e); break;   // 추가(6회차): 오디오 목록 미리 듣기
         }
+    }
+
+    /// <summary>추가(8회차): 오디오 시간 알림 → 대상이 미리 듣기, 또는 Spine 없는 줄이면 재생 바</summary>
+    private void ShowAudioTime(AudioTime m)
+    {
+        if (Target == PlayTarget.Audio && m.Channel == AudioListViewModel.PreviewChannel && Audio.Playing != null)
+            ShowTime(m.Time, m.Duration);
+        else if (Target == PlayTarget.Line && _lineActor == null && _line != null && m.Channel == LineClockChannel)
+            ShowTime(m.Time, _line.SoundLength > 0 ? _line.SoundLength : m.Duration);
     }
 
     /// <summary>페이지가 (다시) 준비됨 → 지금 무대 상태를 전부 보냄</summary>
@@ -780,6 +1022,12 @@ public sealed partial class ScriptViewModel : ObservableObject
         _stageReady = true;
         _hidden.Clear();   // 추가(4-2): 페이지를 새로 불러오면 숨겨 둔 캐릭터는 페이지에서 사라짐
         Audio.OnStageReset();   // 추가(6회차): 재생 중이던 미리 듣기도 사라짐
+        // 추가(8회차): 줄 소리도 사라짐 → 줄 재생 끝
+        _line = null;
+        _lineActor = null;
+        _linePaused = false;
+        _lineSoundsPending = false;
+        if (Target is PlayTarget.Line or PlayTarget.Audio) SetTarget(SelectedActor != null ? PlayTarget.Actor : PlayTarget.Stage);
         Send(new StageConfig(AnimationScript.TrackCount, StageLayout.ScreenWidth, StageLayout.ScreenHeight, StageLayout.UnitScale));
         SendBackground();
         Send(new WatchBones(BonesVisible));   // 변경: 무대 전체 일시정지 대신 (캐릭터별 일시정지는 불러온 뒤 OnActorLoaded에서)
@@ -808,8 +1056,22 @@ public sealed partial class ScriptViewModel : ObservableObject
         if (a.Tracks.All(t => t == null) && m.Animations.Any(x => x.Name == "wait")) a.Tracks[0] = "wait";
         if (a.Skin != null && a.Skins.Count > 1) Send(new SetSkin(a.Id, a.Skin));
         PlayAll(a);
-        if (a.Paused) Send(new SetPaused(true, a.Id));   // 추가: 페이지를 새로 불러온 경우 멈춰 있던 캐릭터는 다시 멈춤
+        // 추가(8회차): F5에서 줄의 Spine이 아닌 새 캐릭터 → 끝 상태(end-loop)
+        if (a.SeekEndOnLoad)
+        {
+            a.SeekEndOnLoad = false;
+            a.Paused = false;
+            Send(new SeekEnd(a.Id));
+        }
+        if (a.Paused) Send(new SetPaused(true, a.Id));   // 추가: 페이지를 새로 불러온 경우 멈춰 있던 캐릭터는 다시 멈춤 (변경(8회차): 리소스 탭에서 연 캐릭터도)
+        // 추가(8회차): F5 줄의 Spine을 다 불러옴 → 소리를 함께 시작
+        if (a == _lineActor && _lineSoundsPending)
+        {
+            _lineSoundsPending = false;
+            StartSounds(0);
+        }
         if (a == SelectedActor) RefreshPanel();
+        if (a == _lineActor || a == SelectedActor) OnPropertyChanged(nameof(TargetText));
     }
 
     private void ShowState(ActorState m)
@@ -833,7 +1095,9 @@ public sealed partial class ScriptViewModel : ObservableObject
                     : $"립: 멈춤 ({lip.Still ?? "lip 트랙 정지"})");
         }
         TrackStateText = sb.ToString().TrimEnd();
-        ShowTime(m.Clock, m.Length);   // 변경: 기본 트랙 진행률 → 실제 초 (가장 긴 트랙 기준)
+        // 변경: 기본 트랙 진행률 → 실제 초 (가장 긴 트랙 기준). 변경(8회차): 대상이 F5 줄이면 길이 = 애니메이션 · 소리 중 가장 긴 것
+        if (Target == PlayTarget.Line && _line != null && m.Id == _lineActor?.Id) ShowTime(m.Clock, Math.Max(m.Length, _line.SoundLength));
+        else if (Target == PlayTarget.Actor) ShowTime(m.Clock, m.Length);
         if (m.Bones != null) ShowBones(m.Bones);   // 추가: 본 목록 실시간 갱신
     }
 
@@ -851,6 +1115,7 @@ public sealed partial class ScriptViewModel : ObservableObject
         double t = Math.Min(time, length);
         if (!Paused)
         {
+            _barTime = t;   // 추가(8회차)
             _fromState = true;
             TimeValue = length > 0 ? t / length : 0;
             _fromState = false;
@@ -873,6 +1138,9 @@ public sealed partial class ScriptViewModel : ObservableObject
         BonesHeader = $"본 목록 (기본 자세와 다른 본 {Bones.Count}개)";
     }
 }
+
+/// <summary>추가(8회차): 재생 바 · Space · ▶의 대상 (가장 최근 동작)</summary>
+public enum PlayTarget { Stage, Actor, Audio, Line }
 
 public enum AnimListItemKind { None, Item, Separator }
 

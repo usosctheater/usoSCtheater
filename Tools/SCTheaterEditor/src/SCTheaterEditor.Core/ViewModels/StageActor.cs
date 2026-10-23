@@ -36,6 +36,9 @@ public sealed partial class StageActor : ObservableObject
     /// <summary>추가: 이 캐릭터 일시정지 (재생/일시정지는 캐릭터별, 선택이 없으면 무대 전체)</summary>
     public bool Paused { get; set; }
 
+    /// <summary>추가(8회차): 불러오면 바로 끝 상태(end-loop)로 — F5에서 줄의 Spine이 아닌 새로 올린 캐릭터</summary>
+    public bool SeekEndOnLoad { get; set; }
+
     [ObservableProperty] public partial IReadOnlyList<string> Skins { get; set; }
     [ObservableProperty] public partial string? Skin { get; set; }
 

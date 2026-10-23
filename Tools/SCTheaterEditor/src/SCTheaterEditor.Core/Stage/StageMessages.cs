@@ -125,10 +125,28 @@ public sealed record RequestBones(int Id) : StageCommand
     public override string Type => "bones";
 }
 
-/// <summary>추가(6회차): 오디오 재생 — 채널마다 하나 (같은 채널에 다시 보내면 바꿔 재생). Url = StageUrls.Resource</summary>
-public sealed record PlayAudio(string Channel, string Url, double Volume, bool Loop, double Start = 0) : StageCommand
+/// <summary>
+/// 추가(6회차): 오디오 재생 — 채널마다 하나 (같은 채널에 다시 보내면 바꿔 재생). Url = StageUrls.Resource.
+/// 추가(8회차): StopAt &gt; 0이면 그 초에서 멈춤 (SE 줄의 재생 시간)
+/// </summary>
+public sealed record PlayAudio(string Channel, string Url, double Volume, bool Loop, double Start = 0, double StopAt = 0) : StageCommand
 {
     public override string Type => "audioPlay";
+}
+
+/// <summary>추가(8회차): 오디오 일시정지 / 이어 재생 (재생 바)</summary>
+public sealed record PauseAudio(string Channel, bool Paused) : StageCommand
+{
+    public override string Type => "audioPause";
+}
+
+/// <summary>
+/// 추가(8회차): 캐릭터를 '끝 시점'으로 — 가장 긴 트랙(과 립) 끝으로 시점 이동 후 재생 (게임에서 대사를 넘긴 뒤의 end-loop 상태).
+/// F5 때 그 줄이 아닌 Spine (재생 바에는 묶지 않음)
+/// </summary>
+public sealed record SeekEnd(int Id) : StageCommand
+{
+    public override string Type => "seekEnd";
 }
 
 /// <summary>추가(6회차): 오디오 정지 (Channel = null이면 전부)</summary>
@@ -193,6 +211,9 @@ public sealed record AudioSeeked(string Channel, double Time) : StageEvent;
 public sealed record AudioEnded(string Channel) : StageEvent;
 public sealed record AudioError(string Channel, string Url, string Message) : StageEvent;
 
+/// <summary>추가(8회차): 재생 중이거나 멈춰 있는 오디오 채널의 시간 (10회/초, 재생 바)</summary>
+public sealed record AudioTime(string Channel, double Time, double Duration, bool Paused) : StageEvent;
+
 public static class StageEvents
 {
     private static readonly JsonSerializerOptions Options = new() { PropertyNameCaseInsensitive = true };
@@ -217,6 +238,7 @@ public static class StageEvents
             "audioSeeked" => msg.Deserialize<AudioSeeked>(Options),
             "audioEnded" => msg.Deserialize<AudioEnded>(Options),
             "audioError" => msg.Deserialize<AudioError>(Options),
+            "audioTime" => msg.Deserialize<AudioTime>(Options),         // 추가(8회차)
             _ => null,
         };
     }

@@ -226,6 +226,18 @@ export class Stage {
     for (const e of this.entries.values()) e.actor.setPaused(paused);
   }
 
+  /**
+   * 추가(8회차): 끝 시점으로 — 가장 긴 트랙(과 립 길이) 끝으로 이동 후 재생 (게임에서 대사를 넘긴 뒤의 end-loop 상태).
+   * 1회 재생은 마지막 동작 유지, loop_start는 반복 구간, wait·blank는 반복, 립은 멈춤 (seekTo의 게임 규칙 그대로)
+   */
+  seekEnd(id) {
+    const e = this.entries.get(id);
+    if (!e || !e.loaded) return;
+    const lip = e.actor.lip;
+    e.actor.seekTo(Math.max(e.actor.length(), lip && lip.seconds > 0 ? lip.seconds : 0));
+    e.actor.setPaused(false);
+  }
+
   /** 일시정지 중 시점 이동 (실제 초). id 없음 = 무대 전체 */
   seek(id, seconds) {
     if (id != null) {

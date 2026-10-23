@@ -62,6 +62,29 @@ public static class AudioLibrary
                     .ToList();
     }
 
+    /// <summary>
+    /// 추가(8회차): 키 → Resources 기준 상대 경로 (없으면 null). 게임 AudioManager와 같은 규칙:
+    /// 보이스 = Voice/{시나리오}/{키} → Voice/{키} ("OT/OT001"처럼 폴더를 붙인 키는 루트 쪽에서 찾힘), SE·BGM = 그 폴더/{키}
+    /// </summary>
+    public static string? Resolve(string? resources, AudioKind kind, string key, string? voiceGroup = null)
+    {
+        key = key.Trim().Replace('\\', '/');
+        if (string.IsNullOrWhiteSpace(resources) || key.Length == 0) return null;
+        var dirs = new List<string>();
+        if (kind == AudioKind.Voice && !string.IsNullOrWhiteSpace(voiceGroup)) dirs.Add(Path.Combine(SubFolder(kind), voiceGroup));
+        dirs.Add(SubFolder(kind));
+        foreach (var dir in dirs)
+            foreach (var ext in Extensions)
+            {
+                string full = Path.Combine(resources, dir, key + ext);
+                if (File.Exists(full)) return Path.GetRelativePath(resources, full).Replace('\\', '/');
+            }
+        return null;
+    }
+
+    /// <summary>추가(8회차): 상대 경로 파일의 길이(초, 캐시)</summary>
+    public static double? DurationOf(string resources, string relativePath) => DurationOf(Path.Combine(resources, relativePath));
+
     private static double? DurationOf(string path)
     {
         var info = new FileInfo(path);

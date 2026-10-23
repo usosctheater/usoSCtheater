@@ -73,8 +73,11 @@
                         </Button.Style>
                     </Button>
                     <TextBlock DockPanel.Dock="Right" Width="110" TextAlignment="Right" VerticalAlignment="Center" FontFamily="Consolas" Text="{Binding TimeText}"/>
+                    <!-- 추가(8회차): 재생 대상 (가장 최근 동작 — F5 줄 · 선택한 캐릭터 · 무대 전체 · 오디오) -->
+                    <TextBlock DockPanel.Dock="Left" MaxWidth="220" Margin="8,0,0,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                               Text="{Binding TargetText}" ToolTip="{Binding TargetText}"/>
                     <Slider Minimum="0" Maximum="1" Margin="8,0" VerticalAlignment="Center" Value="{Binding TimeValue}" IsEnabled="{Binding Paused}"
-                            ToolTip="일시정지 중에 드래그하면 그 초로 이동합니다 (선택한 캐릭터, 선택이 없으면 무대 전체). 길이 = 가장 긴 애니메이션"/>
+                            ToolTip="일시정지 중에 드래그하면 그 초로 이동합니다 (재생 대상 기준). 길이 = 대상의 가장 긴 애니메이션 · 소리"/>
                 </DockPanel>
 
                 <!-- 무대 (WebView2) -->

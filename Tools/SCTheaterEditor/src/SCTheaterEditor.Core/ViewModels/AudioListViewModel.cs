@@ -129,7 +129,9 @@ public sealed partial class AudioListViewModel : ObservableObject
             files = [];
         }
         Items = files.Select(f => new AudioRow(f, _memos.Get(f.Kind, f.MemoKey), SaveMemo)).ToList();
-        SelectedItem = Items.FirstOrDefault(r => r.File.Key == selectedKey);
+        _refreshing = true;   // 추가(8회차)
+        try { SelectedItem = Items.FirstOrDefault(r => r.File.Key == selectedKey); }
+        finally { _refreshing = false; }
         if (Playing != null) Playing = Items.FirstOrDefault(r => r.File.RelativePath == Playing.File.RelativePath);
         if (Playing != null) Playing.IsPlaying = true;
         StatusText = res == null ? "설정 탭에서 게임 Resources 폴더를 지정하세요"
@@ -144,21 +146,50 @@ public sealed partial class AudioListViewModel : ObservableObject
         catch (Exception ex) { _log.Error($"오디오 메모 저장 실패: {AudioMemoStore.DefaultPath}", ex); }
     }
 
-    // ------------------------------------------------------------------ 미리 듣기
+    // ------------------------------------------------------------------ 미리 듣기 (변경(8회차): 재생 바와 같은 대상 — 일시정지 · 이어 재생 · 시점 이동)
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsPlaying))]
     public partial AudioRow? Playing { get; private set; }
 
-    public bool IsPlaying => Playing != null;
+    /// <summary>추가(8회차): 재생 중인 항목이 멈춰 있음</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsPlaying))]
+    public partial bool IsPaused { get; private set; }
 
-    /// <summary>Space · [▶]: 재생 중이면 정지, 아니면 선택한 항목 재생</summary>
+    /// <summary>소리가 나는 중 (변경(8회차): 멈춤 제외 — 버튼은 ❚❚ 일시정지)</summary>
+    public bool IsPlaying => Playing != null && !IsPaused;
+
+    /// <summary>추가(8회차): 사용자가 오디오를 고르거나 재생함 → 재생 바 대상을 이 오디오로 (ScriptViewModel이 받음)</summary>
+    public event Action? Activated;
+
+    private bool _refreshing;   // 목록을 다시 읽으며 선택을 되살리는 중 (재생 대상을 바꾸지 않음)
+
+    partial void OnSelectedItemChanged(AudioRow? value)
+    {
+        if (value != null && !_refreshing) Activated?.Invoke();
+    }
+
+    /// <summary>
+    /// Space · [▶] · 재생 바: 고른 항목이 재생 중인 것과 다르면 처음부터 재생, 같으면 일시정지 / 이어 재생 (변경(8회차): 정지 → 일시정지).
+    /// 끝난 뒤에는 처음부터 다시
+    /// </summary>
     [RelayCommand]
     private void TogglePlay()
     {
-        if (Playing != null) Stop();
-        else if (SelectedItem is { } row) Play(row);
-        else StatusText = "목록에서 들을 오디오를 고르세요";
+        if (SelectedItem is { } selected && selected != Playing) Play(selected);
+        else if (Playing != null)
+        {
+            IsPaused = !IsPaused;
+            _send(new PauseAudio(PreviewChannel, IsPaused));
+            StatusText = IsPaused ? $"일시정지: {Playing.File.Key}" : $"재생: {Playing.File.Key}";
+        }
+        else
+        {
+            StatusText = "목록에서 들을 오디오를 고르세요";
+            return;
+        }
+        Activated?.Invoke();
     }
 
     /// <summary>더블클릭: 그 항목을 처음부터</summary>
@@ -166,12 +197,20 @@ public sealed partial class AudioListViewModel : ObservableObject
     {
         SelectedItem = row;
         Play(row);
+        Activated?.Invoke();
+    }
+
+    /// <summary>추가(8회차): 재생 바 시점 이동 (재생 중이거나 멈춘 항목)</summary>
+    public void Seek(double seconds)
+    {
+        if (Playing != null) _send(new SeekAudio(PreviewChannel, seconds));
     }
 
     private void Play(AudioRow row)
     {
         if (Playing != null) Playing.IsPlaying = false;
         Playing = row;
+        IsPaused = false;
         row.IsPlaying = true;
         _send(new PlayAudio(PreviewChannel, StageUrls.Resource(row.File.RelativePath), 1, false));
         StatusText = $"재생: {row.File.Key}";
@@ -182,11 +221,12 @@ public sealed partial class AudioListViewModel : ObservableObject
         if (Playing == null) return;
         Playing.IsPlaying = false;
         Playing = null;
+        IsPaused = false;
         _send(new StopAudio(PreviewChannel));
         StatusText = "정지";
     }
 
-    /// <summary>무대 이벤트 (ScriptViewModel이 넘김): 끝남·오류면 재생 표시 해제</summary>
+    /// <summary>무대 이벤트 (ScriptViewModel이 넘김): 끝남·오류면 재생 표시 해제, 시간 알림으로 멈춤 상태 맞춤</summary>
     public void OnStageEvent(StageEvent e)
     {
         switch (e)
@@ -194,11 +234,13 @@ public sealed partial class AudioListViewModel : ObservableObject
             case AudioEnded { Channel: PreviewChannel } when Playing != null:
                 Playing.IsPlaying = false;
                 Playing = null;
+                IsPaused = false;
                 StatusText = "끝남";
                 break;
             case AudioError { Channel: PreviewChannel } m:
                 if (Playing != null) Playing.IsPlaying = false;
                 Playing = null;
+                IsPaused = false;
                 StatusText = $"재생 실패: {m.Message}";
                 _log.Warn($"오디오 재생 실패: {m.Url} — {m.Message}");
                 break;
@@ -210,6 +252,7 @@ public sealed partial class AudioListViewModel : ObservableObject
     {
         if (Playing != null) Playing.IsPlaying = false;
         Playing = null;
+        IsPaused = false;
     }
 
     // ------------------------------------------------------------------ 줄에 넣기
