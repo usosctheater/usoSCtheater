@@ -72,6 +72,16 @@
                 </StackPanel>
             </GroupBox>
 
+            <!-- 추가(7회차): 화면 배치 (스크립트 탭 경계선으로 바꾼 크기) -->
+            <GroupBox Header="화면 배치">
+                <DockPanel Margin="0,2">
+                    <Button DockPanel.Dock="Right" Content="배치 기본값으로" Padding="8,1" Margin="10,0,0,0" Command="{Binding ResetLayoutCommand}"
+                            ToolTip="스크립트 탭: Spine 패널 350 · 오디오 패널 350, 무대 영역 : 스크립트 표 = 3 : 2"/>
+                    <TextBlock Text="{Binding LayoutText}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                               ToolTip="스크립트 탭의 경계선을 끌면 바뀌고 바로 저장됩니다"/>
+                </DockPanel>
+            </GroupBox>
+
             <!-- 경로 -->
             <GroupBox Header="경로">
                 <Grid>

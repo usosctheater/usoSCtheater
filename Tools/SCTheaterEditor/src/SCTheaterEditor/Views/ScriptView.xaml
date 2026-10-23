@@ -7,22 +7,22 @@
              Focusable="True" FocusVisualStyle="{x:Null}"
              PreviewKeyDown="Root_PreviewKeyDown">
     <!-- 스크립트 탭. DataContext = ScriptViewModel
-         변경(4-1 확인 후): 배치 = 위쪽 [무대 | 선택 캐릭터 패널] · 아래쪽 스크립트 표(가로 전체).
-         선택 캐릭터 패널은 무대 영역 높이만 쓰고, 아래쪽은 모두 스크립트 표가 씀 -->
+         변경(7회차): 위쪽 = [무대 | Spine 패널 | 오디오 패널], 아래쪽 = 스크립트 표(가로 전체).
+         패널은 각각 화면 부품(ActorPanelView · AudioPanelView)이고, 이 화면은 배치와 탭 전체 단축키만 맡음.
+         경계선으로 바꾼 크기는 ScriptViewModel.Layout(설정 ScriptLayout)에 양방향 바인딩 → 저장, 설정 탭에서 기본값으로 -->
     <UserControl.Resources>
         <conv:EqualsConverter x:Key="Equals"/>
-        <conv:NotNullToBoolConverter x:Key="NotNull"/>
-        <BooleanToVisibilityConverter x:Key="BoolToVisible"/>   <!-- 추가(6회차) -->
+        <conv:GridLengthConverter x:Key="GridLen"/>   <!-- 추가(7회차) -->
     </UserControl.Resources>
 
     <Grid Margin="6">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
-            <!-- 무대 영역 (무대 + 재생 제어 | 선택 캐릭터 패널) -->
-            <RowDefinition Height="3*" MinHeight="240"/>
+            <!-- 무대 영역 (무대 + 재생 제어 | Spine 패널 | 오디오 패널) — 변경(7회차): 비율 저장 -->
+            <RowDefinition Height="{Binding Layout.StageWeight, Mode=TwoWay, Converter={StaticResource GridLen}, ConverterParameter=*}" MinHeight="240"/>
             <RowDefinition Height="8"/>
             <!-- 스크립트 표 (경계선 드래그로 크기 조절) -->
-            <RowDefinition Height="2*" MinHeight="150"/>
+            <RowDefinition Height="{Binding Layout.TableWeight, Mode=TwoWay, Converter={StaticResource GridLen}, ConverterParameter=*}" MinHeight="150"/>
         </Grid.RowDefinitions>
 
         <!-- 상단: 배경 / 분할 / 상태 -->
@@ -47,12 +47,14 @@
                        ToolTip="무대: 클릭 = 선택 · 드래그 = 자리 이동(겹치면 교체) · Space = 재생/일시정지 · R = 초기화 · Delete = 내리기 · Enter/Esc = 미리보기 적용/취소"/>
         </DockPanel>
 
-        <!-- ===== 무대 영역: 왼쪽 무대 + 재생 제어 / 오른쪽 선택 캐릭터 패널 ===== -->
+        <!-- ===== 무대 영역: 무대 + 재생 제어 | Spine 패널 | 오디오 패널 (변경(7회차): 패널 폭 저장) ===== -->
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*" MinWidth="480"/>
                 <ColumnDefinition Width="5"/>
-                <ColumnDefinition Width="350"/>
+                <ColumnDefinition Width="{Binding Layout.ActorWidth, Mode=TwoWay, Converter={StaticResource GridLen}}" MinWidth="250"/>
+                <ColumnDefinition Width="5"/>
+                <ColumnDefinition Width="{Binding Layout.AudioWidth, Mode=TwoWay, Converter={StaticResource GridLen}}" MinWidth="250"/>
             </Grid.ColumnDefinitions>
 
             <DockPanel Grid.Column="0">
@@ -81,191 +83,30 @@
                 </Border>
             </DockPanel>
 
-            <GridSplitter Grid.Column="1" HorizontalAlignment="Stretch"/>
+            <GridSplitter Grid.Column="1" HorizontalAlignment="Stretch" ToolTip="드래그: 무대 / Spine 패널 폭 조절"/>
 
-            <!-- ===== 선택 캐릭터 패널 (변경: 기본 = 정보 · 버튼 · 트랙/애니메이션 목록 · 트랙 상태, 나머지는 [설정]을 펼치면) ===== -->
-            <DockPanel Grid.Column="2" Margin="6,0,0,0">
-                <TextBlock DockPanel.Dock="Top" Text="{Binding InfoText}" TextWrapping="Wrap" Margin="0,0,0,6"/>
+            <!-- Spine 패널 (선택 캐릭터) -->
+            <local:ActorPanelView x:Name="ActorPanel" Grid.Column="2" Margin="6,0,0,0"/>
 
-                <!-- 미리보기 적용/취소, 내리기 -->
-                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
-                    <Button Content="미리보기 적용 (Enter)" Padding="8,1" Margin="0,0,6,0" Command="{Binding ConfirmPreviewCommand}"/>
-                    <Button Content="취소 (Esc)" Padding="8,1" Margin="0,0,6,0" Command="{Binding CancelPreviewCommand}"/>
-                    <Button Content="내리기 (Delete)" Padding="8,1" Command="{Binding RemoveSelectedCommand}"
-                            IsEnabled="{Binding SelectedActor, Converter={StaticResource NotNull}}"/>
-                </StackPanel>
+            <!-- 변경(7회차 확인 후): 고정 폭 칸 둘 사이의 GridSplitter는 앞 칸(Spine)만 바꾸고 차이를 무대가 떠안음
+                 → 두 패널 폭을 직접 주고받는 경계선 (무대 폭은 그대로) -->
+            <Thumb Grid.Column="3" Cursor="SizeWE" DragDelta="PanelSplitter_DragDelta" ToolTip="드래그: Spine 패널 / 오디오 패널 폭 조절">
+                <Thumb.Template>
+                    <ControlTemplate TargetType="Thumb">
+                        <Border Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}"/>
+                    </ControlTemplate>
+                </Thumb.Template>
+            </Thumb>
 
-                <!-- 추가(4-2): 도장 찍기 -->
-                <Button DockPanel.Dock="Top" Content="라인에 적용 (Ctrl+Enter)" Padding="8,2" Margin="0,0,0,6" Command="{Binding ApplyToLineCommand}"
-                        IsEnabled="{Binding SelectedActor, Converter={StaticResource NotNull}}"
-                        ToolTip="이 캐릭터의 CG·위치·애니메이션을 스크립트에서 선택한 줄(TEXT·SETCG·CGGROUP)에 기록. TEXT는 이름이 비어 있으면 이름도 넣고 대사 칸으로 이동"/>
-
-                <DockPanel DockPanel.Dock="Top" Margin="0,0,0,4">
-                    <Button DockPanel.Dock="Right" Content="초기화 (R)" Padding="8,1" Command="{Binding ResetSelectedCommand}"/>
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <RadioButton GroupName="Track" Content="0 기본" Margin="0,0,8,0"
-                                     IsChecked="{Binding SelectedTrack, Converter={StaticResource Equals}, ConverterParameter=0}"/>
-                        <RadioButton GroupName="Track" Content="1 face" Margin="0,0,8,0"
-                                     IsChecked="{Binding SelectedTrack, Converter={StaticResource Equals}, ConverterParameter=1}"/>
-                        <RadioButton GroupName="Track" Content="2 lip" Margin="0,0,8,0"
-                                     IsChecked="{Binding SelectedTrack, Converter={StaticResource Equals}, ConverterParameter=2}"/>
-                        <RadioButton GroupName="Track" Content="3 arm"
-                                     IsChecked="{Binding SelectedTrack, Converter={StaticResource Equals}, ConverterParameter=3}"/>
-                    </StackPanel>
-                </DockPanel>
-
-                <!-- 추가(6회차): 오디오 목록 (맨 아래 접는 영역). Space·[▶] 재생/정지 · 더블클릭 처음부터 · Ctrl+Enter 줄에 넣기 -->
-                <Expander x:Name="AudioPanel" DockPanel.Dock="Bottom" Header="오디오" Margin="0,6,0,0" DataContext="{Binding Audio}"
-                          ToolTip="게임 Resources\Audio의 SE · BGM · 보이스. 목록에 포커스가 있을 때 Ctrl+Enter = 스크립트 표에서 선택한 줄에 넣기">
-                    <DockPanel Margin="0,4,0,0">
-                        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,4">
-                            <Button DockPanel.Dock="Right" Content="↻" Padding="6,0" Margin="4,0,0,0" Command="{Binding ReloadCommand}"
-                                    ToolTip="폴더 다시 읽기"/>
-                            <Button DockPanel.Dock="Right" Width="56" Command="{Binding TogglePlayCommand}" ToolTip="선택한 오디오 재생/정지 (Space)">
-                                <Button.Style>
-                                    <Style TargetType="Button">
-                                        <Setter Property="Content" Value="▶ 재생"/>
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding IsPlaying}" Value="True">
-                                                <Setter Property="Content" Value="■ 정지"/>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </Button.Style>
-                            </Button>
-                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <RadioButton GroupName="AudioKind" Content="SE" Margin="0,0,8,0"
-                                             IsChecked="{Binding Kind, Converter={StaticResource Equals}, ConverterParameter=SE}"/>
-                                <RadioButton GroupName="AudioKind" Content="BGM" Margin="0,0,8,0"
-                                             IsChecked="{Binding Kind, Converter={StaticResource Equals}, ConverterParameter=BGM}"/>
-                                <RadioButton GroupName="AudioKind" Content="Voice" Margin="0,0,6,0"
-                                             IsChecked="{Binding Kind, Converter={StaticResource Equals}, ConverterParameter=Voice}"/>
-                                <ComboBox ItemsSource="{Binding VoiceFolders}" SelectedItem="{Binding VoiceFolder}" MinWidth="60"
-                                          Visibility="{Binding IsVoice, Converter={StaticResource BoolToVisible}}"
-                                          ToolTip="보이스 폴더(시나리오). 처음 값 = 지금 연 막의 그룹. 다른 폴더의 보이스는 '폴더/키'로 넣음"/>
-                            </StackPanel>
-                        </DockPanel>
-                        <TextBlock DockPanel.Dock="Bottom" Text="{Binding StatusText}" Foreground="Gray" Margin="0,2,0,0" TextTrimming="CharacterEllipsis"
-                                   ToolTip="Space · [▶] 재생/정지 · 더블클릭 처음부터 · Ctrl+Enter 줄에 넣기 (보이스는 Ctrl+Shift+Enter = 뒤에 이어 붙이기) · 메모 클릭 = 편집(Enter 확정, Esc 취소)"/>
-                        <ListBox x:Name="AudioList" ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}" Height="200"
-                                 HorizontalContentAlignment="Stretch" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                                 VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
-                                 PreviewKeyDown="AudioList_PreviewKeyDown" MouseDoubleClick="AudioList_MouseDoubleClick">
-                            <ListBox.ItemTemplate>
-                                <DataTemplate>
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
-                                        <StackPanel Orientation="Horizontal">
-                                            <TextBlock Text="♪ " Foreground="#FF1E88E5" Visibility="{Binding IsPlaying, Converter={StaticResource BoolToVisible}}"/>
-                                            <TextBlock Text="{Binding Key}" TextTrimming="CharacterEllipsis"/>
-                                        </StackPanel>
-                                        <TextBlock Grid.Column="1" Text="{Binding LengthText}" Foreground="Gray" Margin="8,0,0,0" FontFamily="Consolas"/>
-                                        <Grid Grid.Column="2" Margin="8,0,0,0">
-                                            <TextBlock Text="{Binding MemoLabel}" MaxWidth="150" TextTrimming="CharacterEllipsis" HorizontalAlignment="Right"
-                                                       Cursor="IBeam" ToolTip="{Binding Memo}" MouseLeftButtonUp="Memo_MouseLeftButtonUp">
-                                                <TextBlock.Style>
-                                                    <Style TargetType="TextBlock">
-                                                        <Setter Property="Foreground" Value="#FF555555"/>
-                                                        <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding HasMemo}" Value="False">
-                                                                <Setter Property="Foreground" Value="#FFAAAAAA"/>
-                                                            </DataTrigger>
-                                                            <!-- 메모가 없으면 선택·마우스를 올린 줄에만 '(메모 추가)' -->
-                                                            <MultiDataTrigger>
-                                                                <MultiDataTrigger.Conditions>
-                                                                    <Condition Binding="{Binding HasMemo}" Value="False"/>
-                                                                    <Condition Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="False"/>
-                                                                    <Condition Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="False"/>
-                                                                </MultiDataTrigger.Conditions>
-                                                                <Setter Property="Visibility" Value="Hidden"/>
-                                                            </MultiDataTrigger>
-                                                            <DataTrigger Binding="{Binding IsEditing}" Value="True">
-                                                                <Setter Property="Visibility" Value="Collapsed"/>
-                                                            </DataTrigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </TextBlock.Style>
-                                            </TextBlock>
-                                            <TextBox Width="140" Text="{Binding EditText, UpdateSourceTrigger=PropertyChanged}"
-                                                     Visibility="{Binding IsEditing, Converter={StaticResource BoolToVisible}}"
-                                                     KeyDown="MemoBox_KeyDown" LostKeyboardFocus="MemoBox_LostKeyboardFocus"
-                                                     IsVisibleChanged="MemoBox_IsVisibleChanged"/>
-                                        </Grid>
-                                    </Grid>
-                                </DataTemplate>
-                            </ListBox.ItemTemplate>
-                        </ListBox>
-                    </DockPanel>
-                </Expander>
-
-                <!-- 아래쪽부터: [설정] 접는 영역 / 트랙 상태 (애니메이션 목록이 남은 높이를 채움) -->
-                <Expander DockPanel.Dock="Bottom" Header="설정" Margin="0,6,0,0" IsExpanded="{Binding SettingsExpanded}"
-                          ToolTip="트랙 교체 방식 · 스킨 · 립 재생 규칙 · 본 목록 · 개발자 도구">
-                    <!-- 접혀 있는 동안은 그리지 않고, 본 목록도 펼쳐 둔 동안만 무대에서 갱신 -->
-                    <ScrollViewer MaxHeight="380" VerticalScrollBarVisibility="Auto">
-                        <StackPanel Margin="4">
-                            <CheckBox Content="바꾼 트랙만 교체 (디버그 씬 방식)" IsChecked="{Binding SingleTrackMode}"
-                                      ToolTip="끄면 게임 방식: 애니메이션은 접두어 기준 트랙에 들어가고, 바뀔 때마다 전체 트랙을 처음부터 다시 재생합니다 (CGManager와 동일)"/>
-                            <DockPanel Margin="0,6,0,0">
-                                <TextBlock Text="스킨:" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                <ComboBox ItemsSource="{Binding SkinOptions}" SelectedItem="{Binding SelectedSkin}"
-                                          ToolTip="불러올 때 normal 스킨이 있으면 normal, 없으면 default가 아닌 첫 스킨을 고릅니다"/>
-                            </DockPanel>
-                            <CheckBox Content="립 재생 (게임 규칙)" Margin="0,8,0,0" IsChecked="{Binding LipEnabled}"
-                                      IsEnabled="{Binding SingleTrackMode, Converter={StaticResource Equals}, ConverterParameter=False}"
-                                      ToolTip="Animation에 lip_이 있으면 그 립, 없으면 기본 트랙 애니메이션 이름과 DefaultLipData.xml로 말하는 중/멈춤 립을 정합니다"/>
-                            <StackPanel Orientation="Horizontal" Margin="18,4,0,0" IsEnabled="{Binding LipControlsEnabled}">
-                                <RadioButton GroupName="LipMode" Content="계속 말함" Margin="0,0,12,0" VerticalAlignment="Center" IsChecked="{Binding LipAlways}"/>
-                                <RadioButton GroupName="LipMode" Content="말하다 멈춤:" VerticalAlignment="Center" IsChecked="{Binding LipSeconds}"/>
-                                <TextBox Width="44" Margin="4,0,2,0" TextAlignment="Right" IsEnabled="{Binding LipSecondsEnabled}"
-                                         Text="{Binding LipSecondsText, UpdateSourceTrigger=LostFocus}" KeyDown="LipSeconds_KeyDown"
-                                         ToolTip="보이스 길이 (0.1 ~ 60초, Enter로 확정)"/>
-                                <TextBlock Text="초" VerticalAlignment="Center"/>
-                            </StackPanel>
-                            <Expander Header="{Binding BonesHeader}" Margin="0,8,0,0" IsExpanded="{Binding BonesExpanded}">
-                                <DockPanel>
-                                    <Button DockPanel.Dock="Top" HorizontalAlignment="Left" Content="지금 자세로 갱신" Padding="8,1" Margin="0,4"
-                                            Command="{Binding RefreshBonesCommand}"/>
-                                    <ListBox ItemsSource="{Binding Bones}" Height="140" FontFamily="Consolas"/>
-                                </DockPanel>
-                            </Expander>
-                            <Button Content="개발자 도구" HorizontalAlignment="Left" Padding="8,1" Margin="0,8,0,0"
-                                    Click="DevTools_Click" ToolTip="무대 페이지 오류 확인용 (디버그 빌드에서는 F5로 JS를 다시 읽음)"/>
-                        </StackPanel>
-                    </ScrollViewer>
-                </Expander>
-                <TextBlock DockPanel.Dock="Bottom" Text="{Binding TrackStateText}" FontFamily="Consolas" Margin="0,6,0,0" TextWrapping="Wrap"/>
-
-                <ListBox x:Name="AnimList" ItemsSource="{Binding AnimItems}" SelectedItem="{Binding SelectedAnimItem, Mode=OneWay}"
-                         DisplayMemberPath="Text" FontFamily="Consolas"
-                         VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
-                         PreviewMouseLeftButtonUp="AnimList_PreviewMouseLeftButtonUp" KeyDown="AnimList_KeyDown">
-                    <ListBox.ItemContainerStyle>
-                        <Style TargetType="ListBoxItem">
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding IsSeparator}" Value="True">
-                                    <Setter Property="IsEnabled" Value="False"/>
-                                    <Setter Property="Focusable" Value="False"/>
-                                </DataTrigger>
-                                <DataTrigger Binding="{Binding Kind}" Value="None">
-                                    <Setter Property="Foreground" Value="Gray"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </ListBox.ItemContainerStyle>
-                </ListBox>
-            </DockPanel>
+            <!-- 오디오 패널 -->
+            <local:AudioPanelView x:Name="AudioPanel" Grid.Column="4" Margin="6,0,0,0" DataContext="{Binding Audio}"/>
         </Grid>
 
         <!-- 경계선 = 무대 영역 ↔ 스크립트 표 (가로 전체). 드래그 바와 헷갈리지 않게 회색 줄로 표시 -->
         <GridSplitter Grid.Row="2" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" ResizeDirection="Rows"
                       Background="#FFD0D0D0" Cursor="SizeNS" ToolTip="드래그: 무대 영역 / 스크립트 표 크기 조절"/>
 
-        <!-- 스크립트 표 (막 열기·편집·저장) — 변경: 가로 전체 -->
+        <!-- 스크립트 표 (막 열기·편집·저장) — 가로 전체 -->
         <local:ActEditorView x:Name="EditorPanel" Grid.Row="3" DataContext="{Binding Editor}"/>
     </Grid>
 </UserControl>

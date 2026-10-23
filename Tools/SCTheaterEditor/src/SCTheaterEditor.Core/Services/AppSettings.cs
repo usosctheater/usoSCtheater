@@ -31,6 +31,9 @@ public sealed class AppSettings
     /// <summary>추가: 로그 창 위치·크기·열림 상태</summary>
     public LogWindowSettings LogWindow { get; set; } = new();
 
+    /// <summary>추가(7회차): 스크립트 탭 화면 배치 (경계선으로 바꾼 크기)</summary>
+    public ScriptLayoutSettings ScriptLayout { get; set; } = new();
+
     /// <summary>읽는 중에 생긴 일 (예전 설정 이전, 손상 복구 등). 로그로 알리기 위한 값, 저장하지 않음</summary>
     [JsonIgnore]
     public string? LoadNotice { get; private set; }
@@ -245,6 +248,31 @@ public sealed class EditorSettings
 
     /// <summary>추가: 조합키 슬롯 1~9의 줄 종류 ("" = 빈 슬롯). 비어 있으면 기본값(드롭다운 순서) — LineSlots.Normalize</summary>
     public List<string> LineSlots { get; set; } = new();
+}
+
+/// <summary>
+/// 추가(7회차): 스크립트 탭 배치 — 위쪽 [무대 | Spine 패널 | 오디오 패널]의 패널 폭(px)과 무대 영역 : 스크립트 표 높이 비율.
+/// 경계선을 끌면 바뀌고(ScriptLayoutViewModel), 설정 탭 [배치 기본값으로]는 ResetToDefaults
+/// </summary>
+public sealed class ScriptLayoutSettings
+{
+    public const double MinPanelWidth = 250;
+    public const double MaxPanelWidth = 1200;
+
+    public double ActorWidth { get; set; } = 350;    // Spine 패널 (이전 고정 폭과 같음)
+    public double AudioWidth { get; set; } = 350;    // 오디오 패널 (Spine 패널과 같은 폭)
+    public double StageWeight { get; set; } = 3;     // 무대 영역 높이 비율
+    public double TableWeight { get; set; } = 2;     // 스크립트 표 높이 비율
+
+    /// <summary>기본값으로 (객체는 그대로 — 화면이 이 객체를 바인딩하고 있으므로)</summary>
+    public void ResetToDefaults()
+    {
+        var d = new ScriptLayoutSettings();
+        ActorWidth = d.ActorWidth;
+        AudioWidth = d.AudioWidth;
+        StageWeight = d.StageWeight;
+        TableWeight = d.TableWeight;
+    }
 }
 
 /// <summary>추가: 로그 창 (위치가 없거나 화면 밖이면 메인 창 가운데)</summary>

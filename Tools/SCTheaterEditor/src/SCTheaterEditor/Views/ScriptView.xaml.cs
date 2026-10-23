@@ -48,7 +48,7 @@ public partial class ScriptView : UserControl
         if (inAudio) return;   // 추가(6회차): 오디오 목록의 Space(재생) 등은 목록이 처리 — 무대로 넘기지 않음
         if (IsInside(e.OriginalSource as DependencyObject, EditorPanel)) return;   // 추가(4-1): 표 안의 키(Delete·Space·Enter 등)는 표가 처리
         // 애니메이션 목록에서 Enter는 "이 애니메이션 적용" (목록이 직접 처리)
-        if (e.Key == Key.Enter && IsInside(e.OriginalSource as DependencyObject, AnimList)) return;
+        if (e.Key == Key.Enter && IsInside(e.OriginalSource as DependencyObject, ActorPanel.AnimListBox)) return;   // 변경(7회차): Spine 패널로 옮김
         string? key = e.Key switch
         {
             Key.Space => " ",
@@ -118,90 +118,21 @@ public partial class ScriptView : UserControl
         return true;
     }
 
-    /// <summary>항목 클릭(같은 항목을 다시 눌러도) → 적용</summary>
-    private void AnimList_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    // (이동, 7회차) 애니메이션 목록·립 초·개발자 도구 → ActorPanelView, 오디오 목록·메모 → AudioPanelView
+
+    /// <summary>
+    /// 추가(7회차 확인 후): Spine ↔ 오디오 경계선 — 두 패널이 폭을 주고받음 (합은 그대로, 각자 최소 폭 이상).
+    /// 값은 Layout(설정)으로 넣고 칸 폭은 바인딩으로 따라옴
+    /// </summary>
+    private void PanelSplitter_DragDelta(object sender, System.Windows.Controls.Primitives.DragDeltaEventArgs e)
     {
-        if (ItemsControl.ContainerFromElement(AnimList, (DependencyObject)e.OriginalSource) is ListBoxItem { IsEnabled: true } item)
-            Vm?.ApplyAnimCommand.Execute(item.DataContext as AnimListItem);
-    }
-
-    private void AnimList_KeyDown(object sender, KeyEventArgs e)
-    {
-        if (e.Key != Key.Enter || AnimList.SelectedItem is not AnimListItem item) return;
-        Vm?.ApplyAnimCommand.Execute(item);
-        e.Handled = true;
-    }
-
-    private void LipSeconds_KeyDown(object sender, KeyEventArgs e)
-    {
-        if (e.Key != Key.Enter || sender is not TextBox box) return;
-        box.GetBindingExpression(TextBox.TextProperty)?.UpdateSource();
-        e.Handled = true;
-    }
-
-    private void DevTools_Click(object sender, RoutedEventArgs e) => App.Stage.OpenDevTools();
-
-    // ------------------------------------------------------------------ 추가(6회차): 오디오 목록
-
-    /// <summary>Space = 재생/정지 (목록 기본 동작인 선택 토글 대신). 메모 입력 중이면 그대로 글자</summary>
-    private void AudioList_PreviewKeyDown(object sender, KeyEventArgs e)
-    {
-        if (e.OriginalSource is TextBox || Keyboard.Modifiers != ModifierKeys.None || Vm == null) return;
-        if (e.Key == Key.Space)
-        {
-            Vm.Audio.TogglePlayCommand.Execute(null);
-            e.Handled = true;
-        }
-    }
-
-    /// <summary>더블클릭 = 처음부터 재생 (메모 칸은 제외)</summary>
-    private void AudioList_MouseDoubleClick(object sender, MouseButtonEventArgs e)
-    {
-        if (Vm == null || e.OriginalSource is not DependencyObject d || IsInsideType<TextBox>(d)) return;
-        if (ItemsControl.ContainerFromElement(AudioList, d) is ListBoxItem { DataContext: AudioRow row })
-        {
-            Vm.Audio.PlayFromStart(row);
-            e.Handled = true;
-        }
-    }
-
-    /// <summary>메모 클릭 = 그 자리에서 편집</summary>
-    private void Memo_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
-    {
-        if (sender is not FrameworkElement { DataContext: AudioRow row } || Vm == null) return;
-        Vm.Audio.SelectedItem = row;
-        row.BeginEdit();
-        e.Handled = true;
-    }
-
-    private void MemoBox_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
-    {
-        if (sender is TextBox box && box.IsVisible)
-            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Input, () => { box.Focus(); box.SelectAll(); });
-    }
-
-    /// <summary>Enter = 확정, Esc = 취소 → 목록 줄로 포커스</summary>
-    private void MemoBox_KeyDown(object sender, KeyEventArgs e)
-    {
-        if (sender is not TextBox { DataContext: AudioRow row } || Keyboard.Modifiers != ModifierKeys.None) return;
-        if (e.Key == Key.Enter) row.CommitEdit();
-        else if (e.Key == Key.Escape) row.CancelEdit();
-        else return;
-        e.Handled = true;
-        (AudioList.ItemContainerGenerator.ContainerFromItem(row) as ListBoxItem)?.Focus();
-    }
-
-    /// <summary>다른 곳을 누르면 확정</summary>
-    private void MemoBox_LostKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
-    {
-        if (sender is TextBox { DataContext: AudioRow row }) row.CommitEdit();
-    }
-
-    private static bool IsInsideType<T>(DependencyObject? d) where T : DependencyObject
-    {
-        for (; d != null; d = d is Visual or System.Windows.Media.Media3D.Visual3D ? VisualTreeHelper.GetParent(d) : LogicalTreeHelper.GetParent(d))
-            if (d is T) return true;
-        return false;
+        if (Vm?.Layout is not { } layout) return;
+        double min = ScriptLayoutSettings.MinPanelWidth;
+        double total = layout.ActorWidth + layout.AudioWidth;
+        double actor = Math.Round(Math.Clamp(layout.ActorWidth + e.HorizontalChange, min, Math.Max(min, total - min)));
+        if (actor == layout.ActorWidth) return;
+        layout.ActorWidth = actor;
+        layout.AudioWidth = total - actor;
     }
 
     private void OpenBackgroundFolder_Click(object sender, RoutedEventArgs e)

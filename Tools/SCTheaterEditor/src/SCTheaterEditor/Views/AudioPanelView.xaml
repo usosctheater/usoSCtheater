@@ -1,0 +1,99 @@
+<UserControl x:Class="SCTheaterEditor.Views.AudioPanelView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:conv="clr-namespace:SCTheaterEditor.Converters">
+    <!-- 추가(7회차): 오디오 패널 (이전 ScriptView의 [오디오] 접는 영역을 항상 보이는 패널로). DataContext = AudioListViewModel
+         Space·[▶] 재생/정지 · 더블클릭 처음부터 · Ctrl+Enter 줄에 넣기(ScriptView가 처리) · 메모 클릭 = 편집 -->
+    <UserControl.Resources>
+        <conv:EqualsConverter x:Key="Equals"/>
+        <BooleanToVisibilityConverter x:Key="BoolToVisible"/>
+    </UserControl.Resources>
+
+    <DockPanel>
+        <TextBlock DockPanel.Dock="Top" Text="오디오" FontWeight="Bold" Margin="0,0,0,4"
+                   ToolTip="게임 Resources\Audio의 SE · BGM · 보이스. 목록에 포커스가 있을 때 Ctrl+Enter = 스크립트 표에서 선택한 줄에 넣기"/>
+        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,4">
+            <Button DockPanel.Dock="Right" Content="↻" Padding="6,0" Margin="4,0,0,0" Command="{Binding ReloadCommand}"
+                    ToolTip="폴더 다시 읽기"/>
+            <Button DockPanel.Dock="Right" Width="56" Command="{Binding TogglePlayCommand}" ToolTip="선택한 오디오 재생/정지 (Space)">
+                <Button.Style>
+                    <Style TargetType="Button">
+                        <Setter Property="Content" Value="▶ 재생"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsPlaying}" Value="True">
+                                <Setter Property="Content" Value="■ 정지"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Button.Style>
+            </Button>
+            <WrapPanel VerticalAlignment="Center">
+                <RadioButton GroupName="AudioKind" Content="SE" Margin="0,0,8,0" VerticalAlignment="Center"
+                             IsChecked="{Binding Kind, Converter={StaticResource Equals}, ConverterParameter=SE}"/>
+                <RadioButton GroupName="AudioKind" Content="BGM" Margin="0,0,8,0" VerticalAlignment="Center"
+                             IsChecked="{Binding Kind, Converter={StaticResource Equals}, ConverterParameter=BGM}"/>
+                <RadioButton GroupName="AudioKind" Content="Voice" Margin="0,0,6,0" VerticalAlignment="Center"
+                             IsChecked="{Binding Kind, Converter={StaticResource Equals}, ConverterParameter=Voice}"/>
+                <ComboBox ItemsSource="{Binding VoiceFolders}" SelectedItem="{Binding VoiceFolder}" MinWidth="60"
+                          Visibility="{Binding IsVoice, Converter={StaticResource BoolToVisible}}"
+                          ToolTip="보이스 폴더(시나리오). 처음 값 = 지금 연 막의 그룹. 다른 폴더의 보이스는 '폴더/키'로 넣음"/>
+            </WrapPanel>
+        </DockPanel>
+        <TextBlock DockPanel.Dock="Bottom" Text="{Binding StatusText}" Foreground="Gray" Margin="0,2,0,0" TextTrimming="CharacterEllipsis"
+                   ToolTip="Space · [▶] 재생/정지 · 더블클릭 처음부터 · Ctrl+Enter 줄에 넣기 (보이스는 Ctrl+Shift+Enter = 뒤에 이어 붙이기) · 메모 클릭 = 편집(Enter 확정, Esc 취소)"/>
+
+        <!-- 변경(7회차): 고정 높이(200) 없앰 → 남은 높이를 모두 씀 -->
+        <ListBox x:Name="AudioList" ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}"
+                 HorizontalContentAlignment="Stretch" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                 VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
+                 PreviewKeyDown="AudioList_PreviewKeyDown" MouseDoubleClick="AudioList_MouseDoubleClick">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="♪ " Foreground="#FF1E88E5" Visibility="{Binding IsPlaying, Converter={StaticResource BoolToVisible}}"/>
+                            <TextBlock Text="{Binding Key}" TextTrimming="CharacterEllipsis"/>
+                        </StackPanel>
+                        <TextBlock Grid.Column="1" Text="{Binding LengthText}" Foreground="Gray" Margin="8,0,0,0" FontFamily="Consolas"/>
+                        <Grid Grid.Column="2" Margin="8,0,0,0">
+                            <TextBlock Text="{Binding MemoLabel}" MaxWidth="150" TextTrimming="CharacterEllipsis" HorizontalAlignment="Right"
+                                       Cursor="IBeam" ToolTip="{Binding Memo}" MouseLeftButtonUp="Memo_MouseLeftButtonUp">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="#FF555555"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding HasMemo}" Value="False">
+                                                <Setter Property="Foreground" Value="#FFAAAAAA"/>
+                                            </DataTrigger>
+                                            <!-- 메모가 없으면 선택·마우스를 올린 줄에만 '(메모 추가)' -->
+                                            <MultiDataTrigger>
+                                                <MultiDataTrigger.Conditions>
+                                                    <Condition Binding="{Binding HasMemo}" Value="False"/>
+                                                    <Condition Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="False"/>
+                                                    <Condition Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="False"/>
+                                                </MultiDataTrigger.Conditions>
+                                                <Setter Property="Visibility" Value="Hidden"/>
+                                            </MultiDataTrigger>
+                                            <DataTrigger Binding="{Binding IsEditing}" Value="True">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                            <TextBox Width="140" Text="{Binding EditText, UpdateSourceTrigger=PropertyChanged}"
+                                     Visibility="{Binding IsEditing, Converter={StaticResource BoolToVisible}}"
+                                     KeyDown="MemoBox_KeyDown" LostKeyboardFocus="MemoBox_LostKeyboardFocus"
+                                     IsVisibleChanged="MemoBox_IsVisibleChanged"/>
+                        </Grid>
+                    </Grid>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+    </DockPanel>
+</UserControl>

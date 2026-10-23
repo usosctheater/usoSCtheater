@@ -45,6 +45,7 @@ public sealed partial class ScriptViewModel : ObservableObject
                            AudioMemoStore? audioMemos = null)   // 추가(6회차): 오디오 메모 (없으면 저장하지 않는 빈 메모)
     {
         Audio = new AudioListViewModel(settings, audioMemos ?? new AudioMemoStore(null), Send, messenger, log);   // 추가(6회차)
+        Layout = new ScriptLayoutViewModel(settings, saveSettings, messenger);   // 추가(7회차): 화면 배치
         _settings = settings;
         _library = library;
         _backgrounds = backgrounds;
@@ -94,8 +95,11 @@ public sealed partial class ScriptViewModel : ObservableObject
 
     private ActEditorViewModel? _editor;
 
-    /// <summary>추가(6회차): 오디오 목록 (선택 캐릭터 패널 아래 접는 영역)</summary>
+    /// <summary>추가(6회차): 오디오 목록 (변경(7회차): 오디오 패널)</summary>
     public AudioListViewModel Audio { get; }
+
+    /// <summary>추가(7회차): 스크립트 탭 배치 (패널 폭 · 무대/표 높이 비율, 경계선 크기 저장)</summary>
+    public ScriptLayoutViewModel Layout { get; }
 
     public ObservableCollection<StageActor> Actors { get; } = new();
 

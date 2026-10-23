@@ -21,6 +21,20 @@ public sealed class EqualsConverter : IValueConverter
     }
 }
 
+/// <summary>
+/// 추가(7회차): double ↔ GridLength (경계선 크기 저장용 양방향 바인딩). 파라미터 "*"이면 비율(Star), 아니면 px.
+/// 되돌릴 때는 GridLength의 값만 (Auto 등은 무시)
+/// </summary>
+public sealed class GridLengthConverter : IValueConverter
+{
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        new System.Windows.GridLength(value is double d && d > 0 ? d : 1,
+            parameter as string == "*" ? System.Windows.GridUnitType.Star : System.Windows.GridUnitType.Pixel);
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        value is System.Windows.GridLength { IsAuto: false } g ? g.Value : Binding.DoNothing;
+}
+
 /// <summary>null이 아니면 true</summary>
 public sealed class NotNullToBoolConverter : IValueConverter
 {

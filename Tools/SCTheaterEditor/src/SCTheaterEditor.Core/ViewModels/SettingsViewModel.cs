@@ -180,6 +180,28 @@ public sealed partial class SettingsViewModel : ObservableObject
         catch (Exception ex) { _log.Error("탐색기 열기 실패", ex); }
     }
 
+    // ------------------------------------------------------------------ 추가(7회차): 화면 배치 (스크립트 탭 경계선 크기)
+
+    /// <summary>지금 배치 (스크립트 탭에서 경계선을 끌면 알림을 받아 갱신)</summary>
+    public string LayoutText
+    {
+        get
+        {
+            var l = _settings.ScriptLayout;
+            double total = l.StageWeight + l.TableWeight;
+            int stage = total > 0 ? (int)Math.Round(l.StageWeight / total * 100) : 60;
+            return $"스크립트 탭: Spine 패널 {l.ActorWidth:0}px · 오디오 패널 {l.AudioWidth:0}px · 무대 영역 {stage}% / 스크립트 표 {100 - stage}%";
+        }
+    }
+
+    /// <summary>[배치 기본값으로] — 패널 350 · 350, 무대 영역 : 표 = 3 : 2</summary>
+    [RelayCommand]
+    private void ResetLayout()
+    {
+        _settings.ScriptLayout.ResetToDefaults();   // 객체는 그대로 (스크립트 탭이 바인딩 중)
+        Changed(SettingsArea.ScriptLayout);
+    }
+
     // ------------------------------------------------------------------ 저장·알림
 
     private void Changed(SettingsArea area)
@@ -190,6 +212,7 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     private void OnSettingsChanged(SettingsChangedMessage m)
     {
+        if (m.Area == SettingsArea.ScriptLayout) { OnPropertyChanged(nameof(LayoutText)); return; }   // 추가(7회차)
         if (m.Area != SettingsArea.ResourcesFolder) return;   // 변경(5회차)
         PathNote = "";
         OnPropertyChanged(nameof(ResourcesFolderText));
