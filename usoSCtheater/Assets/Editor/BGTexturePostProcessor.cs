@@ -1,7 +1,7 @@
 using UnityEditor;
 
 /// <summary>
-/// Assets/Resources/BG, Image 폴더에 임포트되는 이미지의
+/// Assets/Resources/BG, Image, CharacterIcon 폴더에 임포트되는 이미지의
 /// TextureType을 Sprite(2D and UI), SpriteMode를 Single로 자동 변환합니다.
 /// </summary>
 public class BGTexturePostprocessor : AssetPostprocessor
@@ -9,7 +9,8 @@ public class BGTexturePostprocessor : AssetPostprocessor
     private static readonly string[] TARGET_PATHS =
     {
         "Assets/Resources/BG/",
-        "Assets/Resources/Image/"
+        "Assets/Resources/Image/",
+        "Assets/Resources/CharacterIcon/"   //[캐릭터 DB] 추가: 시나리오 목록 등장인물 아이콘
     };
 
     private void OnPreprocessTexture()

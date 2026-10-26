@@ -1,13 +1,15 @@
 using System;
+using System.Collections.Generic;   //[태그/등장인물]
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using UsoSCTheater.Character;       //[태그/등장인물] CharacterDatabase
 
 namespace UsoSCTheater.Scenario
 {
     /// <summary>
     /// 시나리오 목록의 한 항목 (ScenarioListItem 프리팹 루트).
-    /// 썸네일 / 제목 / (추후) 태그·등장인물 / 막 목록(모두 재생 + 막별 재생)을 채운다.
+    /// 썸네일 / 제목 / 태그·등장인물 / 막 목록(모두 재생 + 막별 재생)을 채운다.
     /// 항목 크기는 고정. 막 행 높이는 ActList의 VerticalLayoutGroup + 행 LayoutElement(Min~Preferred)가 자동 조절.
     /// </summary>
     public class ScenarioListItem : MonoBehaviour
@@ -15,8 +17,15 @@ namespace UsoSCTheater.Scenario
         [Header("시나리오 정보")]
         [SerializeField] private Image thumbnail;
         [SerializeField] private TextMeshProUGUI scenarioTitle;
-        [SerializeField] private RectTransform tagArea;             // 추후 태그 프리팹 생성 위치
-        [SerializeField] private RectTransform characterIconArea;   // 추후 캐릭터 아이콘 프리팹 생성 위치
+        [SerializeField] private RectTransform tagArea;             // 태그 생성 위치 (HorizontalLayoutGroup)        //[태그/등장인물] 주석 변경
+        [SerializeField] private RectTransform characterIconArea;   // 등장인물 아이콘 생성 위치 (HorizontalLayoutGroup) //[태그/등장인물] 주석 변경
+
+        //[태그/등장인물]
+        [Header("태그 / 등장인물")]
+        [SerializeField] private ScenarioTagItem tagItemPrefab;          // TagItem 프리팹
+        [SerializeField] private CharacterIconItem characterIconPrefab;  // CharacterIcon 프리팹
+        [SerializeField, Min(0)] private int maxTags = 4;                // 표시 최대 개수 (0 = 제한 없음), 초과분은 잘라내고 경고
+        [SerializeField, Min(0)] private int maxCharacters = 5;          // 표시 최대 개수 (0 = 제한 없음), 초과분은 잘라내고 경고
 
         [Header("막 목록")]
         [SerializeField] private RectTransform actList;             // VerticalLayoutGroup
@@ -72,13 +81,86 @@ namespace UsoSCTheater.Scenario
             scenarioTitle.text = title;
         }
 
-        // ── 태그 (추후 구현) ──
-        // 시나리오 데이터 파일에서 태그 목록을 읽어 tagArea에 태그 프리팹을 생성한다.
-        private void ApplyTags(ScenarioEntry entry) { }
+        // ── 태그: 카탈로그 tags 순서대로 TagItem 생성, maxTags 초과분은 생략 ──
+        private void ApplyTags(ScenarioEntry entry)
+        {
+            List<string> tags = entry.tags ?? new List<string>();
+            if (tagArea == null || tagItemPrefab == null)
+            {
+                if (tags.Count > 0) Debug.LogWarning($"[ScenarioListItem] {entry.folderName}: TagArea 또는 TagItem 프리팹 미연결 — 태그 생략");
+                return;
+            }
 
-        // ── 등장인물 (추후 구현) ──
-        // 시나리오 데이터 파일에서 등장인물 목록을 읽어 characterIconArea에 캐릭터 아이콘 프리팹을 생성한다.
-        private void ApplyCharacters(ScenarioEntry entry) { }
+            ClearChildren(tagArea);
+
+            int count = tags.Count;
+            if (maxTags > 0 && count > maxTags)
+            {
+                Debug.LogWarning($"[ScenarioListItem] {entry.folderName}: 태그 {count}개 중 최대 {maxTags}개만 표시 (생략: {string.Join(", ", tags.GetRange(maxTags, count - maxTags))})");
+                count = maxTags;
+            }
+
+            for (int i = 0; i < count; i++)
+            {
+                ScenarioTagItem item = Instantiate(tagItemPrefab, tagArea);
+                item.name = $"TagItem_{i}";
+                item.Setup(tags[i]);
+            }
+            LayoutRebuilder.ForceRebuildLayoutImmediate(tagArea);
+        }
+
+        // ── 등장인물: 카탈로그 characters 순서대로 CharacterDatabase 아이콘 생성 ──
+        // DB에 없거나 아이콘 미지정이면 건너뜀(경고), maxCharacters는 실제 표시되는 아이콘 기준
+        private void ApplyCharacters(ScenarioEntry entry)
+        {
+            List<string> characters = entry.characters ?? new List<string>();
+            if (characterIconArea == null || characterIconPrefab == null)
+            {
+                if (characters.Count > 0) Debug.LogWarning($"[ScenarioListItem] {entry.folderName}: CharacterIconArea 또는 CharacterIcon 프리팹 미연결 — 등장인물 생략");
+                return;
+            }
+
+            ClearChildren(characterIconArea);
+            if (characters.Count == 0) return;
+
+            int shown = 0;
+            for (int i = 0; i < characters.Count; i++)
+            {
+                string id = characters[i];
+                if (maxCharacters > 0 && shown >= maxCharacters)
+                {
+                    Debug.LogWarning($"[ScenarioListItem] {entry.folderName}: 등장인물 최대 {maxCharacters}명만 표시 (생략: {string.Join(", ", characters.GetRange(i, characters.Count - i))})");
+                    break;
+                }
+
+                //[캐릭터 DB] 변경: SO 조회 → static DB, 아이콘은 경로(Resources/CharacterIcon/{Id})로 불러옴
+                CharacterEntry character = CharacterDatabase.Find(id);
+                if (character == null)
+                {
+                    Debug.LogWarning($"[ScenarioListItem] {entry.folderName}: 등장인물 '{id}'가 CharacterData.xml에 없음 → 생략");
+                    continue;
+                }
+                Sprite iconSprite = CharacterDatabase.LoadIcon(character.Id);
+                if (iconSprite == null) continue;   //경고는 LoadIcon에서 (아이콘당 1번)
+
+                CharacterIconItem icon = Instantiate(characterIconPrefab, characterIconArea);
+                icon.name = $"CharacterIcon_{character.Id}";
+                icon.Setup(character.Id, iconSprite);
+                shown++;
+            }
+            LayoutRebuilder.ForceRebuildLayoutImmediate(characterIconArea);
+        }
+
+        //[태그/등장인물] 생성 영역 비우기 (프리팹 안의 견본 포함). 비활성화 후 Destroy → 같은 프레임 레이아웃 계산에서 즉시 제외
+        private static void ClearChildren(RectTransform area)
+        {
+            for (int i = area.childCount - 1; i >= 0; i--)
+            {
+                GameObject child = area.GetChild(i).gameObject;
+                child.SetActive(false);
+                Destroy(child);
+            }
+        }
 
         // ── 막 목록: ActListItem_All 다음에 막 수만큼 생성 ──
         private void BuildActList(ScenarioEntry entry, Action<int> onPlayAct)

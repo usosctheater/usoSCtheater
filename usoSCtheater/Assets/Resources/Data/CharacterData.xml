@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    캐릭터 통합 데이터 (사람이 직접 편집). 코드: UsoSCTheater.Character.CharacterDatabase
+    Id = 캐릭터 ID (TE idollist의 nickName과 동일, 대소문자 무시). Spine 폴더·CG 키 앞부분·ScenarioData.xml Character 값과 같음
+    Id 외의 속성은 모두 언어별 표기: {언어 코드} = 이름, {언어 코드}Full = 성까지 포함한 이름 (예: En / EnFull을 추가해도 코드 수정 불필요)
+    Spine 목록은 여기에 쓰지 않음 (등록 도구가 자동 생성하는 CharacterSpineData.xml)
+-->
+<CharacterData>
+    <Character Id="mano"    Ko="마노"   KoFull="사쿠라기 마노"     Ja="真乃"   JaFull="櫻木真乃" />
+    <Character Id="hiori"   Ko="히오리" KoFull="카자노 히오리"     Ja="灯織"   JaFull="風野灯織" />
+    <Character Id="meguru"  Ko="메구루" KoFull="하치미야 메구루"   Ja="めぐる" JaFull="八宮めぐる" />
+    <Character Id="kogane"  Ko="코가네" KoFull="츠키오카 코가네"   Ja="恋鐘"   JaFull="月岡恋鐘" />
+    <Character Id="mamimi"  Ko="마미미" KoFull="타나카 마미미"     Ja="摩美々" JaFull="田中摩美々" />
+    <Character Id="sakuya"  Ko="사쿠야" KoFull="시라세 사쿠야"     Ja="咲耶"   JaFull="白瀬咲耶" />
+    <Character Id="yuika"   Ko="유이카" KoFull="미츠미네 유이카"   Ja="結華"   JaFull="三峰結華" />
+    <Character Id="kiriko"  Ko="키리코" KoFull="유코쿠 키리코"     Ja="霧子"   JaFull="幽谷霧子" />
+    <Character Id="kaho"    Ko="카호"   KoFull="코미야 카호"       Ja="果穂"   JaFull="小宮果穂" />
+    <Character Id="chiyoko" Ko="치요코" KoFull="소노다 치요코"     Ja="智代子" JaFull="園田智代子" />
+    <Character Id="juri"    Ko="쥬리"   KoFull="사이조 쥬리"       Ja="樹里"   JaFull="西城樹里" />
+    <Character Id="rinze"   Ko="린제"   KoFull="모리노 린제"       Ja="凛世"   JaFull="杜野凛世" />
+    <Character Id="natsuha" Ko="나츠하" KoFull="아리스가와 나츠하" Ja="夏葉"   JaFull="有栖川夏葉" />
+    <Character Id="amana"   Ko="아마나" KoFull="오사키 아마나"     Ja="甘奈"   JaFull="大崎甘奈" />
+    <Character Id="tenka"   Ko="텐카"   KoFull="오사키 텐카"       Ja="甜花"   JaFull="大崎甜花" />
+    <Character Id="chiyuki" Ko="치유키" KoFull="쿠와야마 치유키"   Ja="千雪"   JaFull="桑山千雪" />
+    <Character Id="asahi"   Ko="아사히" KoFull="세리자와 아사히"   Ja="あさひ" JaFull="芹沢あさひ" />
+    <Character Id="fuyuko"  Ko="후유코" KoFull="마유즈미 후유코"   Ja="冬優子" JaFull="黛冬優子" />
+    <Character Id="mei"     Ko="메이"   KoFull="이즈미 메이"       Ja="愛依"   JaFull="和泉愛依" />
+    <Character Id="toru"    Ko="토오루" KoFull="아사쿠라 토오루"   Ja="透"     JaFull="浅倉透" />
+    <Character Id="madoka"  Ko="마도카" KoFull="히구치 마도카"     Ja="円香"   JaFull="樋口円香" />
+    <Character Id="koito"   Ko="코이토" KoFull="후쿠마루 코이토"   Ja="小糸"   JaFull="福丸小糸" />
+    <Character Id="hinana"  Ko="히나나" KoFull="이치카와 히나나"   Ja="雛菜"   JaFull="市川雛菜" />
+    <Character Id="nichika" Ko="니치카" KoFull="나나쿠사 니치카"   Ja="にちか" JaFull="七草にちか" />
+    <Character Id="mikoto"  Ko="미코토" KoFull="아케타 미코토"     Ja="美琴"   JaFull="緋田美琴" />
+    <Character Id="luca"    Ko="루카"   KoFull="이카루가 루카"     Ja="ルカ"   JaFull="斑鳩ルカ" />
+    <Character Id="hana"    Ko="하나"   KoFull="스즈키 하나"       Ja="羽那"   JaFull="鈴木羽那" />
+    <Character Id="haruki"  Ko="하루키" KoFull="이쿠타 하루키"     Ja="はるき" JaFull="郁田はるき" />
+    <Character Id="hazuki"  Ko="하즈키" KoFull="나나쿠사 하즈키"   Ja="はづき" JaFull="七草はづき" />
+</CharacterData>

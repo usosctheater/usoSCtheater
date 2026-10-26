@@ -437,6 +437,7 @@ GameObject:
   - component: {fileID: 8086484027651498113}
   - component: {fileID: 4078938557473493621}
   - component: {fileID: 8495618146183992356}
+  - component: {fileID: 1490959699687087451}
   m_Layer: 5
   m_Name: CharacterIconArea
   m_TagString: Untagged
@@ -501,6 +502,32 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!114 &1490959699687087451
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1631429006968996740}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 30649d3a9faa99c48a7b1166b86bf2a0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.HorizontalLayoutGroup
+  m_Padding:
+    m_Left: 8
+    m_Right: 0
+    m_Top: 0
+    m_Bottom: 0
+  m_ChildAlignment: 3
+  m_Spacing: 8
+  m_ChildForceExpandWidth: 0
+  m_ChildForceExpandHeight: 0
+  m_ChildControlWidth: 0
+  m_ChildControlHeight: 0
+  m_ChildScaleWidth: 0
+  m_ChildScaleHeight: 0
+  m_ReverseArrangement: 0
 --- !u!1 &4360604937781922934
 GameObject:
   m_ObjectHideFlags: 0
@@ -1265,6 +1292,10 @@ MonoBehaviour:
   scenarioTitle: {fileID: 4935294858195715550}
   tagArea: {fileID: 1573101317330137601}
   characterIconArea: {fileID: 8086484027651498113}
+  tagItemPrefab: {fileID: 9112385552931539198, guid: 71af2efb26b84444592796b9c808fc4d, type: 3}
+  characterIconPrefab: {fileID: 7462095602705327101, guid: 9407554ecb94c8140945c1d29450e75c, type: 3}
+  maxTags: 4
+  maxCharacters: 5
   actList: {fileID: 53895276599350448}
   playAllItem: {fileID: 7043196822005843603}
   actItemPrefab: {fileID: 4292349072773241687, guid: 058f14b54d3285549a8ba3cde84cf9fd, type: 3}
@@ -1355,6 +1386,7 @@ GameObject:
   - component: {fileID: 1573101317330137601}
   - component: {fileID: 3547366456583255157}
   - component: {fileID: 8041835718971459698}
+  - component: {fileID: 1082881030705150172}
   m_Layer: 5
   m_Name: TagArea
   m_TagString: Untagged
@@ -1419,6 +1451,32 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!114 &1082881030705150172
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7686666227463552153}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 30649d3a9faa99c48a7b1166b86bf2a0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.HorizontalLayoutGroup
+  m_Padding:
+    m_Left: 10
+    m_Right: 0
+    m_Top: 8
+    m_Bottom: 0
+  m_ChildAlignment: 0
+  m_Spacing: 10
+  m_ChildForceExpandWidth: 0
+  m_ChildForceExpandHeight: 0
+  m_ChildControlWidth: 0
+  m_ChildControlHeight: 1
+  m_ChildScaleWidth: 0
+  m_ChildScaleHeight: 0
+  m_ReverseArrangement: 0
 --- !u!1 &7884810120603956549
 GameObject:
   m_ObjectHideFlags: 0
