@@ -12,6 +12,8 @@
     <!-- publish 시 네이티브 dll까지 exe 하나에 포함 (RG와 같은 구성) -->
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <DebugType Condition="'$(Configuration)' == 'Release'">none</DebugType>
+    <!-- 추가: exe 아이콘 (창에 Icon을 따로 지정하지 않으면 제목 표시줄·작업 표시줄도 이 아이콘을 씀) -->
+    <ApplicationIcon>Resources\SCTheaterEditor.ico</ApplicationIcon>
   </PropertyGroup>
 
   <!-- 라이선스 탭에 표시할 고지 문구 (exe에 포함) -->
