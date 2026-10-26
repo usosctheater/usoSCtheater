@@ -18,6 +18,9 @@ public interface IDialogService
     /// <summary>추가(6회차): 예/아니오 질문 (둘 다 진행하는 갈림길 — 취소 없음). 예면 true</summary>
     bool AskYesNo(string title, string message);
 
+    /// <summary>추가(9회차): TEXT에 보이스 일괄 추가 미리보기 창. [적용]이면 true</summary>
+    bool ShowVoiceBatch(VoiceBatchViewModel batch);
+
     /// <summary>목록 변경 알림 창</summary>
     void ShowChangeNotice(CatalogDiff diff, DateTime previousAt);
 

@@ -5,8 +5,12 @@ namespace SCTheaterEditor.Script;
 /// <summary>동기화 결과의 캐릭터 1명. Animation이 null이면 아직 애니메이션이 정해진 적 없음 (무대 기본값 wait)</summary>
 public sealed record StageActorState(string CgKey, string Position, string? Animation);
 
-/// <summary>스크립트의 한 줄 시점 무대 상태 (배경 키·보이는 캐릭터·안내)</summary>
-public sealed record StageSnapshot(int LineIndex, string? Background, IReadOnlyList<StageActorState> Actors, IReadOnlyList<string> Notes);
+/// <summary>
+/// 스크립트의 한 줄 시점 무대 상태 (배경 키·보이는 캐릭터·안내).
+/// 추가(9회차): LineActors = 선택한 줄(TEXT·SETCG)이 올린 CG 키 — 그룹이면 멤버 전원(그룹 순서), 없으면 빈 목록 (null = 모름, 직접 만든 스냅샷)
+/// </summary>
+public sealed record StageSnapshot(int LineIndex, string? Background, IReadOnlyList<StageActorState> Actors, IReadOnlyList<string> Notes,
+                                   IReadOnlyList<string>? LineActors = null);
 
 /// <summary>
 /// [스크립트에 무대 동기화]용 무대 상태 계산 — 게임(DialogManager.ShowLine·ProcessSetCG·ClearScreen, CGManager.SetCG)과 같은 규칙.
@@ -46,6 +50,7 @@ public static class StageStateCalculator
         var visible = new List<string>();
         var notes = new List<string>();
         string? background = null;
+        var lineActors = new List<string>();   // 추가(9회차): 선택한 줄이 올린 캐릭터
 
         void Show(string key, string pos, string anim, int line)
         {
@@ -98,15 +103,21 @@ public static class StageStateCalculator
                         break;
                     }
                     if (groups.TryGetValue(cg, out var members))
+                    {
                         foreach (var m in members) Show(m.Cg.Trim(), m.Pos, m.Anim, i);
+                        if (i == index) lineActors.AddRange(members.Select(m => m.Cg.Trim()).Distinct());   // 추가(9회차)
+                    }
                     else
+                    {
                         Show(cg, l.Get("Position"), l.Get("Animation"), i);
+                        if (i == index) lineActors.Add(cg);   // 추가(9회차)
+                    }
                     break;
             }
         }
 
         var actors = visible.Select(k => new StageActorState(k, memory[k].Pos!, memory[k].Anim)).ToList();
-        return new StageSnapshot(index, background, actors, notes);
+        return new StageSnapshot(index, background, actors, notes, lineActors);
     }
 }
 

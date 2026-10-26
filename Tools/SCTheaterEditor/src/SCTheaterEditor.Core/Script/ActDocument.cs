@@ -90,6 +90,25 @@ public sealed class ActDocument
         if (list.Count > 0) Execute(new AttributeEdit(line, list));
     }
 
+    /// <summary>추가(9회차): 여러 줄의 속성을 한 단계로 변경 (보이스 일괄 추가 — Ctrl+Z 한 번에 모두 되돌림). 바뀐 줄 수</summary>
+    public int SetAttributesMany(IReadOnlyList<(ScriptLine Line, IReadOnlyList<(string Name, string? Value)> Changes)> edits)
+    {
+        var parts = new List<AttributeEdit>();
+        foreach (var (line, changes) in edits)
+        {
+            var list = new List<AttrChange>();
+            foreach (var (name, value) in changes)
+            {
+                string? old = line.Find(name);
+                if ((old ?? "") == (value ?? "")) continue;
+                list.Add(new AttrChange(name, old, line.IndexOf(name), string.IsNullOrEmpty(value) ? null : value));
+            }
+            if (list.Count > 0) parts.Add(new AttributeEdit(line, list));
+        }
+        if (parts.Count > 0) Execute(new MultiEdit(parts));
+        return parts.Count;
+    }
+
     /// <summary>
     /// 추가(E-003): 종류 변경 — Type을 바꾸고, 값이 빈 속성 중 keepEmpty가 false인 것을 함께 지움 (되돌리기 1단계, 되돌리면 원래 자리로)
     /// </summary>
@@ -165,6 +184,24 @@ public sealed class ActDocument
         public void Undo()
         {
             for (int i = changes.Count - 1; i >= 0; i--) line.SetValue(changes[i].Name, changes[i].Old, changes[i].OldIndex);
+        }
+    }
+
+    /// <summary>추가(9회차): 여러 줄 속성 변경을 한 단계로</summary>
+    private sealed class MultiEdit(List<AttributeEdit> parts) : IUndoAction
+    {
+        public string Label => $"{parts.Count}줄 변경";
+        public IReadOnlyList<ScriptLine> SelectAfterRedo { get; } = parts.SelectMany(p => p.SelectAfterRedo).ToList();
+        public IReadOnlyList<ScriptLine> SelectAfterUndo => SelectAfterRedo;
+
+        public void Redo()
+        {
+            foreach (var p in parts) p.Redo();
+        }
+
+        public void Undo()
+        {
+            for (int i = parts.Count - 1; i >= 0; i--) parts[i].Undo();
         }
     }
 

@@ -34,6 +34,15 @@ public partial class ScriptView : UserControl
         if (Vm == null) return;
         // 추가(4-1): 스크립트 표 단축키는 탭 어디서나 (무대에 포커스가 있어도)
         bool inAudio = IsInside(e.OriginalSource as DependencyObject, AudioPanel);   // 추가(6회차): 오디오 목록 안의 키
+        // 추가(9회차): 오디오 목록에서 Ctrl+Alt+Enter = [적용] (Voice = 보이스 일괄 추가 창). Alt가 눌리면 WPF는 Key.System + SystemKey로 줌
+        if (inAudio && (e.Key == Key.System ? e.SystemKey : e.Key) == Key.Enter
+            && Keyboard.Modifiers == (ModifierKeys.Control | ModifierKeys.Alt) && e.OriginalSource is not TextBox)
+        {
+            ActEditorView.CommitFocusedBox();
+            Vm.Audio.ApplyCommand.Execute(null);
+            e.Handled = true;
+            return;
+        }
         if (Vm.Editor is { } editor && HandleEditorShortcut(e, editor, Vm, inAudio)) { e.Handled = true; return; }
         if (Keyboard.Modifiers != ModifierKeys.None) return;
         // 추가(4-2): F5 스크립트 → 무대 (입력 중인 칸을 먼저 확정)

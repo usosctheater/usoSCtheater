@@ -15,19 +15,9 @@
         <DockPanel DockPanel.Dock="Top" Margin="0,0,0,4">
             <Button DockPanel.Dock="Right" Content="↻" Padding="6,0" Margin="4,0,0,0" Command="{Binding ReloadCommand}"
                     ToolTip="폴더 다시 읽기"/>
-            <Button DockPanel.Dock="Right" Width="72" Command="{Binding TogglePlayCommand}"
-                    ToolTip="선택한 오디오 재생 / 일시정지 (Space) — 무대 아래 재생 바와 같은 대상 (변경(8회차): 정지 → 일시정지)">
-                <Button.Style>
-                    <Style TargetType="Button">
-                        <Setter Property="Content" Value="▶ 재생"/>
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding IsPlaying}" Value="True">
-                                <Setter Property="Content" Value="❚❚ 일시정지"/>
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </Button.Style>
-            </Button>
+            <!-- 변경(9회차): [▶ 재생] 삭제 (재생은 Space · 더블클릭 · 무대 아래 재생 바) → [적용] -->
+            <Button DockPanel.Dock="Right" Width="56" Content="적용" Command="{Binding ApplyCommand}"
+                    ToolTip="Voice: 스크립트 표에서 선택한 TEXT 줄에 고른 보이스부터 차례로 넣기 (미리보기 창에서 덮어쓰기 / 빈 줄에만, Ctrl+Alt+Enter)&#10;SE · BGM: 선택한 줄에 키 넣기 (Ctrl+Enter와 같음)"/>
             <WrapPanel VerticalAlignment="Center">
                 <RadioButton GroupName="AudioKind" Content="SE" Margin="0,0,8,0" VerticalAlignment="Center"
                              IsChecked="{Binding Kind, Converter={StaticResource Equals}, ConverterParameter=SE}"/>
@@ -41,7 +31,7 @@
             </WrapPanel>
         </DockPanel>
         <TextBlock DockPanel.Dock="Bottom" Text="{Binding StatusText}" Foreground="Gray" Margin="0,2,0,0" TextTrimming="CharacterEllipsis"
-                   ToolTip="Space · [▶] 재생/정지 · 더블클릭 처음부터 · Ctrl+Enter 줄에 넣기 (보이스는 Ctrl+Shift+Enter = 뒤에 이어 붙이기) · 메모 클릭 = 편집(Enter 확정, Esc 취소)"/>
+                   ToolTip="Space 재생/일시정지 · 더블클릭 처음부터 · Ctrl+Enter 줄에 넣기 (보이스는 Ctrl+Shift+Enter = 뒤에 이어 붙이기 · Ctrl+Alt+Enter = 일괄 추가) · 메모 클릭 = 편집(Enter 확정, Esc 취소)"/>
 
         <!-- 변경(7회차): 고정 높이(200) 없앰 → 남은 높이를 모두 씀 -->
         <ListBox x:Name="AudioList" ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}"

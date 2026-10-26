@@ -317,7 +317,8 @@ public sealed partial class ScriptViewModel : ObservableObject
     {
         Send(new RemoveActor(actor.Id));
         Actors.Remove(actor);
-        if (actor == _lineActor) _lineActor = null;   // 추가(8회차)
+        _lineActors.Remove(actor);                     // 추가(9회차)
+        if (actor == _lineActor) _lineActor = _lineActors.FirstOrDefault();   // 추가(8회차) 변경(9회차): 다음 멤버
         if (SelectedActor == actor) SelectedActor = null;
     }
 
@@ -510,7 +511,7 @@ public sealed partial class ScriptViewModel : ObservableObject
         var (moving, still) = _lipRules.Resolve(anims, a.Asset.NickName, names.Contains);
         if (moving == null) return null;
         // 변경(8회차): F5로 맞춘 TEXT 줄의 캐릭터는 보이스 중 가장 긴 길이만큼 말함 (보이스가 없으면 설정대로)
-        double seconds = a == _lineActor && _line is { VoiceSeconds: > 0 } line ? line.VoiceSeconds
+        double seconds = _lineActors.Contains(a) && _line is { VoiceSeconds: > 0 } line ? line.VoiceSeconds   // 변경(9회차): 그룹 멤버 전원
                        : LipAlways ? -1 : _settings.Viewer.LipSeconds;
         return new LipPlay(moving, still, seconds);
     }
@@ -679,7 +680,10 @@ public sealed partial class ScriptViewModel : ObservableObject
         StopLine();                       // 추가(8회차): 이전 줄의 소리
         Audio.Stop();                     // 추가(8회차): 미리 듣기
         _line = line;
-        string? lineSource = line?.CgKey is { } lineCg ? _library.Find(lineCg)?.SourcePath : null;
+        // 변경(9회차): 줄의 Spine = 그 줄이 올린 캐릭터 전원 (CGGROUP이면 멤버 전원 — 무대 계산과 같은 규칙, 그룹 순서)
+        var lineKeys = line == null ? []
+            : snapshot.LineActors ?? (line.CgKey is { } lineCg ? [lineCg] : []);
+        var lineSources = lineKeys.Select(k => _library.Find(k)?.SourcePath).Where(p => p != null).Select(p => p!).ToList();
         var skipped = new List<string>();
 
         // 배경 (게임 Resources\BG에 없으면 배경 없음 + 안내)   변경(5회차): 주석만
@@ -735,9 +739,9 @@ public sealed partial class ScriptViewModel : ObservableObject
                 Array.Copy(tracks, actor.Tracks, Math.Min(tracks.Length, actor.Tracks.Length));
             }
             // 변경(8회차): 줄의 Spine은 늘 처음부터 재생, 그 밖에 바뀐 캐릭터는 끝 상태로 (아직 불러오는 중이면 OnActorLoaded에서)
-            if (asset.SourcePath == lineSource)
+            if (lineSources.Contains(asset.SourcePath))
             {
-                _lineActor = actor;
+                if (!_lineActors.Contains(actor)) _lineActors.Add(actor);
                 actor.SeekEndOnLoad = false;
                 actor.Paused = false;
                 if (actor.IsLoaded)
@@ -764,11 +768,14 @@ public sealed partial class ScriptViewModel : ObservableObject
         if (SelectedActor != null && !Actors.Contains(SelectedActor)) SelectedActor = null;
 
         // 추가(8회차): 줄 재생 시작 — 재생 바 대상 = 줄 (Spine도 소리도 없으면 무대 전체)
+        // 변경(9회차): 그룹이면 그룹 순서의 첫 멤버가 바 기준 (선택), 소리는 멤버를 모두 불러온 뒤
+        _lineActors.Sort((x, y) => lineSources.IndexOf(x.Asset.SourcePath).CompareTo(lineSources.IndexOf(y.Asset.SourcePath)));
+        _lineActor = _lineActors.FirstOrDefault();
         _linePaused = false;
         if (line is { HasContent: true } && (_lineActor != null || line.Sounds.Count > 0))
         {
             SelectedActor = _lineActor;   // 줄의 Spine을 선택 (없으면 선택 해제)
-            if (_lineActor is { IsLoaded: false }) _lineSoundsPending = true;   // 불러온 뒤 Spine과 함께 시작
+            if (_lineActors.Any(a => !a.IsLoaded)) _lineSoundsPending = true;   // 불러온 뒤 Spine과 함께 시작
             else StartSounds(0);
             SetTarget(PlayTarget.Line);
         }
@@ -790,7 +797,8 @@ public sealed partial class ScriptViewModel : ObservableObject
 
     private PlayTarget _target = PlayTarget.Stage;
     private LinePlan? _line;              // F5로 맞춘 줄 (소리 · 립 길이)
-    private StageActor? _lineActor;       // 그 줄의 Spine (없으면 소리만)
+    private StageActor? _lineActor;       // 그 줄의 Spine (없으면 소리만) — 변경(9회차): 그룹이면 첫 멤버 (재생 바 기준)
+    private readonly List<StageActor> _lineActors = new();   // 추가(9회차): 그 줄의 Spine 전원 (그룹 멤버 · 그룹 순서)
     private bool _linePaused;
     private bool _lineSoundsPending;      // 줄의 Spine을 불러오는 중 → 불러온 뒤 소리 시작
     private double _barTime;              // 재생 바가 가리키는 초 (재생 중엔 무대·오디오 알림, 멈춘 뒤엔 드래그한 초)
@@ -801,7 +809,8 @@ public sealed partial class ScriptViewModel : ObservableObject
     /// <summary>재생 바 왼쪽 표시</summary>
     public string TargetText => _target switch
     {
-        PlayTarget.Line when _line != null => $"F5 {_line.LineNumber}번 줄 ({_line.Type})" + (_lineActor != null ? $" · {_lineActor.Label}" : "") +
+        PlayTarget.Line when _line != null => $"F5 {_line.LineNumber}번 줄 ({_line.Type})" +
+                                              (_lineActors.Count > 1 ? $" · 그룹 {_line.CgKey} {_lineActors.Count}명" : _lineActor != null ? $" · {_lineActor.Label}" : "") +
                                               (_line.Sounds.Count > 0 ? $" · 소리 {_line.Sounds.Count}" : ""),
         PlayTarget.Actor when SelectedActor != null => $"캐릭터: {SelectedActor.Label}",
         PlayTarget.Audio => $"오디오: {(Audio.Playing ?? Audio.SelectedItem)?.File.Key ?? "-"}",
@@ -846,6 +855,7 @@ public sealed partial class ScriptViewModel : ObservableObject
             foreach (var s in _line.Sounds) Send(new StopAudio(s.Channel));
         _line = null;
         _lineActor = null;
+        _lineActors.Clear();   // 추가(9회차)
         _linePaused = false;
         _lineSoundsPending = false;
     }
@@ -863,10 +873,10 @@ public sealed partial class ScriptViewModel : ObservableObject
             return;
         }
         _linePaused = !_linePaused;
-        if (_lineActor != null)
+        foreach (var la in _lineActors)   // 변경(9회차): 그룹 멤버 전원
         {
-            _lineActor.Paused = _linePaused;
-            Send(new SetPaused(_linePaused, _lineActor.Id));
+            la.Paused = _linePaused;
+            Send(new SetPaused(_linePaused, la.Id));
         }
         if (_linePaused)
             foreach (var s in _line.Sounds) Send(new PauseAudio(s.Channel, true));
@@ -879,7 +889,7 @@ public sealed partial class ScriptViewModel : ObservableObject
     {
         if (_line == null) return;
         _linePaused = false;
-        if (_lineActor is { IsLoaded: true } a)
+        foreach (var a in _lineActors.Where(x => x.IsLoaded))   // 변경(9회차): 그룹 멤버 전원
         {
             a.Paused = false;
             Send(new Seek(a.Id, 0));
@@ -906,11 +916,8 @@ public sealed partial class ScriptViewModel : ObservableObject
     private void SeekLine(double seconds)
     {
         if (_line == null) return;
-        if (_lineActor is { IsLoaded: true } a)
-        {
-            Send(new Seek(a.Id, seconds));
-            RefreshBones();
-        }
+        foreach (var a in _lineActors.Where(x => x.IsLoaded)) Send(new Seek(a.Id, seconds));   // 변경(9회차): 그룹 멤버 전원
+        if (_lineActors.Count > 0) RefreshBones();
         foreach (var s in _line.Sounds) Send(new SeekAudio(s.Channel, s.Length > 0 ? Math.Min(seconds, s.Length) : seconds));
     }
 
@@ -1025,6 +1032,7 @@ public sealed partial class ScriptViewModel : ObservableObject
         // 추가(8회차): 줄 소리도 사라짐 → 줄 재생 끝
         _line = null;
         _lineActor = null;
+        _lineActors.Clear();   // 추가(9회차)
         _linePaused = false;
         _lineSoundsPending = false;
         if (Target is PlayTarget.Line or PlayTarget.Audio) SetTarget(SelectedActor != null ? PlayTarget.Actor : PlayTarget.Stage);
@@ -1065,7 +1073,7 @@ public sealed partial class ScriptViewModel : ObservableObject
         }
         if (a.Paused) Send(new SetPaused(true, a.Id));   // 추가: 페이지를 새로 불러온 경우 멈춰 있던 캐릭터는 다시 멈춤 (변경(8회차): 리소스 탭에서 연 캐릭터도)
         // 추가(8회차): F5 줄의 Spine을 다 불러옴 → 소리를 함께 시작
-        if (a == _lineActor && _lineSoundsPending)
+        if (_lineActors.Contains(a) && _lineSoundsPending && _lineActors.All(x => x.IsLoaded))   // 변경(9회차): 그룹이면 멤버를 모두 불러온 뒤
         {
             _lineSoundsPending = false;
             StartSounds(0);

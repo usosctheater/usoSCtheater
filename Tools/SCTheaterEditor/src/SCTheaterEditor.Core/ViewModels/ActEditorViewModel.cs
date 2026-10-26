@@ -578,6 +578,36 @@ public sealed partial class ActEditorViewModel : ObservableObject
                      (row != null ? $" ({row.Number}번 줄({row.Type})에는 넣을 칸이 없음)" : "");
     }
 
+    /// <summary>
+    /// 추가(9회차): TEXT에 보이스 일괄 추가 — 선택한 줄 중 TEXT에 keys를 차례로 (미리보기 창에서 덮어쓰기 / 빈 줄에만 고른 뒤 [적용]).
+    /// 되돌리기 1단계. folderText = 창에 보일 보이스 폴더 · 시작 키 안내
+    /// </summary>
+    public void OpenVoiceBatch(IReadOnlyList<string> keys, string folderText)
+    {
+        if (Document is not { } doc) { StatusText = "막을 먼저 여세요"; return; }
+        var lines = _selection.OrderBy(r => r.Number).Select(r => (r.Line, r.Number)).ToList();
+        if (!lines.Any(l => l.Line.Type.Trim().Equals("TEXT", StringComparison.OrdinalIgnoreCase)))
+        {
+            StatusText = "스크립트 표에서 보이스를 넣을 TEXT 줄을 선택하세요 (여러 줄 선택 가능)";
+            return;
+        }
+        if (keys.Count == 0) { StatusText = "오디오 목록(Voice)에서 시작할 보이스를 고르세요"; return; }
+        var batch = new VoiceBatchViewModel(lines, keys, folderText);
+        if (!_dialogs.ShowVoiceBatch(batch)) { StatusText = "보이스 일괄 추가 취소"; return; }
+        ApplyVoiceBatch(doc, batch.Items);
+    }
+
+    /// <summary>추가(9회차): 미리보기 결과 반영 (바뀌는 줄만, 한 단계)</summary>
+    private void ApplyVoiceBatch(ActDocument doc, IReadOnlyList<VoiceBatchItem> items)
+    {
+        var edits = items.Where(i => i.Changes)
+                         .Select(i => (i.Line, (IReadOnlyList<(string Name, string? Value)>)[("Voice", i.NewVoice)]))
+                         .ToList();
+        int changed = doc.SetAttributesMany(edits);
+        StatusText = changed == 0 ? "보이스 일괄 추가: 바뀐 줄 없음"
+            : $"보이스 일괄 추가: {changed}줄 ({items.First(i => i.Changes).Number}~{items.Last(i => i.Changes).Number}번 줄, Ctrl+Z로 한 번에 되돌리기)";
+    }
+
     /// <summary>보이스 키 이어 붙이기 (append이고 기존 값이 있으면 "기존 새", 아니면 새 키)</summary>
     private static string Append(string old, string key, bool append) =>
         append && old.Trim().Length > 0 ? $"{old.Trim()} {key}" : key;

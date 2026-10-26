@@ -299,6 +299,75 @@ public class AudioTests
         Assert.Equal(4, env.Editor.Rows.Count);
     }
 
+    // ------------------------------------------------------------------ 추가(9회차): TEXT에 보이스 일괄 추가
+
+    private static SCTheaterEditor.Script.ScriptLine Text(string name, string voice = "") =>
+        SCTheaterEditor.Script.ScriptLine.Create(("Type", "TEXT"), ("Name", name), ("Text", "대사"), ("Voice", voice));
+
+    [Fact]
+    public void VoiceBatch_Plan_OverwriteEmptyOnly_SkipsNarrationAndNonText_Short()
+    {
+        var lines = new List<(SCTheaterEditor.Script.ScriptLine, int)>
+        {
+            (Text("A"), 5), (SCTheaterEditor.Script.ScriptLine.Create(("Type", "SE"), ("Track", "x")), 2),
+            (Text(""), 6), (Text("B", "old"), 7), (Text("C"), 8),
+        };
+        var over = SCTheaterEditor.Script.VoiceBatch.Plan(lines, ["v1", "v2"], SCTheaterEditor.Script.VoiceBatchMode.Overwrite);
+        Assert.Equal(new[] { 5, 6, 7, 8 }, over.Select(i => i.Number));                 // TEXT만, 막 순서
+        Assert.Equal(new string?[] { "v1", null, "v2", null }, over.Select(i => i.NewVoice));
+        Assert.Equal(SCTheaterEditor.Script.VoiceBatch.NoteNoName, over[1].Note);       // 나레이션은 보이스를 쓰지 않음
+        Assert.Equal(SCTheaterEditor.Script.VoiceBatch.NoteShort, over[3].Note);
+
+        var empty = SCTheaterEditor.Script.VoiceBatch.Plan(lines, ["v1", "v2"], SCTheaterEditor.Script.VoiceBatchMode.EmptyOnly);
+        Assert.Equal(new string?[] { "v1", null, null, "v2" }, empty.Select(i => i.NewVoice));
+        Assert.Equal(SCTheaterEditor.Script.VoiceBatch.NoteHasVoice, empty[2].Note);
+    }
+
+    [Fact]
+    public void VoiceBatch_WindowModeSwitch_ApplyOneUndo_CancelKeeps()
+    {
+        using var env = new Env();
+        var doc = env.Editor.Document!;
+        doc.InsertLines(3, [Text("A"), Text(""), Text("B", "old")]);   // 4 A · 5 나레이션 · 6 B(old)
+        env.Editor.SetSelection([env.Editor.Rows[3], env.Editor.Rows[4], env.Editor.Rows[5]]);
+
+        env.Editor.OpenVoiceBatch(["v1", "v2", "v3"], "IL");                    // 창에서 취소 → 그대로
+        Assert.Equal("", env.Editor.Rows[3].Get("Voice"));
+        Assert.Equal(2, env.Dialogs.LastVoiceBatch!.Items.Count(i => i.NewVoice != null));
+
+        env.Dialogs.VoiceBatchAction = b => { b.IsEmptyOnly = true; return true; };   // 2번(빈 줄에만)으로 바꿔 적용
+        env.Editor.OpenVoiceBatch(["v1", "v2", "v3"], "IL");
+        Assert.Equal(("v1", "", "old"), (env.Editor.Rows[3].Get("Voice"), env.Editor.Rows[4].Get("Voice"), env.Editor.Rows[5].Get("Voice")));
+
+        env.Dialogs.VoiceBatchAction = b => true;                                 // 1번(덮어쓰기)
+        env.Editor.OpenVoiceBatch(["v7", "v8"], "IL");
+        Assert.Equal(("v7", "", "v8"), (env.Editor.Rows[3].Get("Voice"), env.Editor.Rows[4].Get("Voice"), env.Editor.Rows[5].Get("Voice")));
+        env.Editor.UndoCommand.Execute(null);                                     // 한 번에 되돌림
+        Assert.Equal(("v1", "old"), (env.Editor.Rows[3].Get("Voice"), env.Editor.Rows[5].Get("Voice")));
+    }
+
+    [Fact]
+    public void ApplyButton_VoiceOpensBatchFromSelected_SeInsertsKey()
+    {
+        using var env = new Env();
+        env.Dialogs.VoiceBatchAction = b => true;
+        env.SelectLine(3);
+        env.Audio.Kind = AudioKind.Voice;
+        env.Audio.VoiceFolder = "OT";
+        env.Audio.SelectedItem = env.Row("OT001");
+        env.Audio.ApplyCommand.Execute(null);
+        Assert.Contains("OT001부터 1개", env.Dialogs.LastVoiceBatch!.FolderText);
+        Assert.Equal("OT/OT001", env.Editor.Rows[2].Get("Voice"));               // 다른 폴더 = 폴더/키
+
+        env.Audio.Kind = AudioKind.SE;                                            // SE · BGM = 키 1개 넣기 (Ctrl+Enter와 같음)
+        env.SelectLine(1);
+        env.Audio.SelectedItem = env.Row("se_a");
+        int before = env.Editor.Rows.Count;
+        env.Audio.ApplyCommand.Execute(null);
+        Assert.Equal(before + 1, env.Editor.Rows.Count);
+        Assert.Equal(("SE", "se_a"), (env.Editor.Rows[1].Type, env.Editor.Rows[1].Get("Track")));
+    }
+
     [Fact]
     public void Insert_NoMatchingField_AddsLineBelow()
     {

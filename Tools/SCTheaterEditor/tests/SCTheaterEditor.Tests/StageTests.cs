@@ -567,4 +567,53 @@ public class ScriptViewModelTests
         c.Stage.Raise(new StageClicked(a.Id));
         Assert.Equal(PlayTarget.Actor, c.Vm.Target);
     }
+
+    // ---------------------------------------------------------------- 추가(9회차): CGGROUP 줄 F5 재생
+
+    [Fact]
+    public void Calculator_LineActors_GroupMembers_ClearedByTransition()
+    {
+        SCTheaterEditor.Script.ScriptLine L(params (string, string)[] a) => SCTheaterEditor.Script.ScriptLine.Create(a);
+        var lines = new List<SCTheaterEditor.Script.ScriptLine>
+        {
+            L(("Type", "CGGROUP"), ("Name", "duo, 둘"), ("CG", "a_stand_1"), ("Position", "left")),
+            L(("Type", "CGGROUP"), ("Name", "duo"), ("CG", "b_stand_1"), ("Position", "right")),
+            L(("Type", "TEXT"), ("Name", "둘"), ("CG", "duo")),
+            L(("Type", "TEXT"), ("Name", "A"), ("CG", "a_stand_1")),
+            L(("Type", "TEXT"), ("Name", "A"), ("Text", "CG 없음")),
+            L(("Type", "TRANSITION")),
+            L(("Type", "TEXT"), ("Name", "둘"), ("CG", "duo")),
+        };
+        Assert.Equal(new[] { "a_stand_1", "b_stand_1" }, SCTheaterEditor.Script.StageStateCalculator.Compute(lines, 2).LineActors);
+        Assert.Equal(new[] { "a_stand_1" }, SCTheaterEditor.Script.StageStateCalculator.Compute(lines, 3).LineActors);
+        Assert.Empty(SCTheaterEditor.Script.StageStateCalculator.Compute(lines, 4).LineActors!);
+        Assert.Equal(new[] { "duo" }, SCTheaterEditor.Script.StageStateCalculator.Compute(lines, 6).LineActors);   // 게임과 같이 트랜지션 뒤엔 그룹 없음
+    }
+
+    [Fact]
+    public void GroupLineF5_AllMembersPlayWithLip_SoundsAfterAllLoaded_ToggleAll()
+    {
+        using var c = new Ctx();
+        string k0 = c.Asset(0).CgKey, k1 = c.Asset(1).CgKey, k2 = c.Asset(2).CgKey;
+        var snap = new SCTheaterEditor.Script.StageSnapshot(0, null,
+            [new(k2, "center", "wait"), new(k0, "left", "wait"), new(k1, "right", "wait")], [], [k1, k0]);   // 그룹 순서 k1 → k0
+        c.Vm.ApplySnapshot(snap, new LinePlan(7, "TEXT", "duo", [Voice(0, 2)], 2, []));
+        var (a0, a1, a2) = (c.Vm.Actors.Single(a => a.Asset.CgKey == k0), c.Vm.Actors.Single(a => a.Asset.CgKey == k1), c.Vm.Actors.Single(a => a.Asset.CgKey == k2));
+        Assert.Same(a1, c.Vm.LineActor);                          // 그룹 순서의 첫 멤버가 바 기준 · 선택
+        Assert.Same(a1, c.Vm.SelectedActor);
+        Assert.Contains("그룹 duo 2명", c.Vm.TargetText);
+        Assert.True(a2.SeekEndOnLoad);                            // 그룹 밖 캐릭터는 end-loop
+        Assert.False(a0.SeekEndOnLoad || a1.SeekEndOnLoad);
+
+        c.Load(a1);
+        Assert.Empty(c.Stage.Sent.OfType<PlayAudio>());          // 멤버를 모두 불러온 뒤 소리 시작
+        c.Load(a0);
+        Assert.Single(c.Stage.Sent.OfType<PlayAudio>());
+        Assert.All(new[] { a0, a1 }, m => Assert.Equal(2, c.Stage.Sent.OfType<PlayAnims>().Last(p => p.Id == m.Id).Lip!.Seconds));
+
+        c.Stage.Sent.Clear();
+        c.Vm.HandleKey(" ");                                     // 일시정지: 멤버 전원 + 소리
+        Assert.Equal(new[] { a1.Id, a0.Id }, c.Stage.Sent.OfType<SetPaused>().Select(p => p.Id!.Value));
+        Assert.True(a0.Paused && a1.Paused && !a2.Paused);
+    }
 }

@@ -271,6 +271,22 @@ public sealed partial class AudioListViewModel : ObservableObject
         _editor.InsertAudioKey(row.File.Kind, KeyFor(row), append && row.File.Kind == AudioKind.Voice);
         StatusText = _editor.StatusText;
     }
+
+    /// <summary>
+    /// 추가(9회차): [적용] · Ctrl+Alt+Enter — Voice면 TEXT에 보이스 일괄 추가 창 (고른 보이스부터 목록 순서대로),
+    /// SE · BGM이면 Ctrl+Enter와 같이 키 1개 넣기
+    /// </summary>
+    [RelayCommand]
+    private void Apply()
+    {
+        if (SelectedItem is not { } row) { StatusText = "목록에서 넣을 오디오를 고르세요"; return; }
+        if (_editor == null) return;
+        if (row.File.Kind != AudioKind.Voice) { InsertSelected(append: false); return; }
+        int start = Items.ToList().IndexOf(row);
+        var keys = Items.Skip(Math.Max(0, start)).Select(KeyFor).ToList();
+        _editor.OpenVoiceBatch(keys, $"보이스 폴더 {VoiceFolder} · {row.File.Key}부터 {keys.Count}개");
+        StatusText = _editor.StatusText;
+    }
 }
 
 /// <summary>추가(6회차): 오디오 목록 한 줄 — 키 · 길이 · 메모(오른쪽, 클릭하면 바로 편집 · Enter 확정 · Esc 취소)</summary>

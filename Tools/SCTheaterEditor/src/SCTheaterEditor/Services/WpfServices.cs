@@ -29,6 +29,10 @@ public sealed class WpfDialogService : IDialogService
             ? MessageBox.Show(Owner, message, title, MessageBoxButton.YesNo, MessageBoxImage.Question)
             : MessageBox.Show(message, title, MessageBoxButton.YesNo, MessageBoxImage.Question)) == MessageBoxResult.Yes;
 
+    // 추가(9회차): 보이스 일괄 추가 미리보기
+    public bool ShowVoiceBatch(VoiceBatchViewModel batch) =>
+        new Views.VoiceBatchWindow(Owner, batch).ShowDialog() == true;
+
     public void ShowChangeNotice(CatalogDiff diff, DateTime previousAt) =>
         new ChangeNoticeWindow(Owner, diff, previousAt).ShowDialog();
 

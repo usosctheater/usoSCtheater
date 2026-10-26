@@ -70,6 +70,11 @@ internal sealed class FakeDialogs : IDialogService
     public bool YesNoResult { get; set; } = true;
     public int YesNoCount { get; private set; }
     public bool AskYesNo(string title, string message) { YesNoCount++; return YesNoResult; }
+
+    // 추가(9회차): 보이스 일괄 추가 창 — VoiceBatchAction으로 창에서 고르는 동작을 흉내 (없으면 취소)
+    public Func<VoiceBatchViewModel, bool>? VoiceBatchAction;
+    public VoiceBatchViewModel? LastVoiceBatch;
+    public bool ShowVoiceBatch(VoiceBatchViewModel batch) { LastVoiceBatch = batch; return VoiceBatchAction?.Invoke(batch) ?? false; }
     public void ShowChangeNotice(CatalogDiff diff, DateTime previousAt) => NoticeCount++;
     public void OpenInExplorer(string path) { }
 
