@@ -346,6 +346,25 @@ public class AudioTests
         Assert.Equal(("v1", "old"), (env.Editor.Rows[3].Get("Voice"), env.Editor.Rows[5].Get("Voice")));
     }
 
+    // 추가: Delete 칸 비우기
+    [Fact]
+    public void ClearField_SelectedRowsSameField_OneUndo_OutsideSelectionOnlyThatRow()
+    {
+        using var env = new Env();
+        ScriptRow R(int i) => env.Editor.Rows[i];
+        env.Editor.Document!.InsertLines(3, [Text("A", "v1"), Text("B", "v2"), Text("C", "v3"),
+            SCTheaterEditor.Script.ScriptLine.Create(("Type", "SE"), ("Track", "x"), ("Voice", "keep"))]);   // 4~6 TEXT · 7 SE(Voice는 기타)
+        env.Editor.SetSelection([R(3), R(4), R(6)]);
+
+        env.Editor.ClearField(R(3), "Voice");                    // 선택 안의 줄 → 선택한 줄 중 Voice 칸이 있는 줄 모두
+        Assert.Equal(("", "", "v3", "keep"), (R(3).Get("Voice"), R(4).Get("Voice"), R(5).Get("Voice"), R(6).Get("Voice")));
+        env.Editor.UndoCommand.Execute(null);                    // 한 번에 되돌림
+        Assert.Equal(("v1", "v2"), (R(3).Get("Voice"), R(4).Get("Voice")));
+
+        env.Editor.ClearField(R(5), "Voice");                    // 선택 밖의 줄 → 그 줄만
+        Assert.Equal(("v1", "v2", ""), (R(3).Get("Voice"), R(4).Get("Voice"), R(5).Get("Voice")));
+    }
+
     [Fact]
     public void ApplyButton_VoiceOpensBatchFromSelected_SeInsertsKey()
     {

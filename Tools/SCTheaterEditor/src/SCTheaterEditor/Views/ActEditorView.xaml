@@ -7,7 +7,7 @@
     <!-- 스크립트 표 (변경: 종류별 팔레트). DataContext = ActEditorViewModel
          행 = # · 종류(드롭다운) · 그 종류의 속성 칸들(LineTypes.xml) · 기타(팔레트에 없는 속성, 읽기 전용)
          제목 줄 = 선택한 줄의 종류 기준. 경계선을 드래그하면 그 종류의 칸 폭이 바뀌고 설정에 저장
-         칸 입력: 클릭해서 바로 입력, Enter 확정 · Esc 취소 · ↑/↓ 위아래 줄의 같은 칸 · Ctrl+↑/↓ 맨 위/맨 아래 줄 · Tab 다음 칸
+         칸 입력: 클릭해서 바로 입력, Enter 확정 · Esc 취소 · ↑/↓ 위아래 줄의 같은 칸 · Ctrl+↑/↓ 맨 위/맨 아래 줄 · Tab 다음 칸 · Delete 칸 비우기(선택한 여러 줄이면 같은 칸 모두)
          줄 조작: 번호(#) 쪽을 클릭해 줄 선택 → Delete 삭제 · Alt+↑/↓ 이동 (Ctrl+S·O·Z·Y는 ScriptView에서) -->
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>

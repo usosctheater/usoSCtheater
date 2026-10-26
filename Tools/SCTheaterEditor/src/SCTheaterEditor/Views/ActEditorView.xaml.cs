@@ -192,6 +192,15 @@ public partial class ActEditorView : UserControl
                 box.SelectAll();
                 e.Handled = true;
                 break;
+            // 추가: Delete = 칸 통째로 비우기 (커서 뒤 한 글자 삭제 대신). 선택한 여러 줄이면 같은 칸 모두
+            case Key.Delete:
+                if (FindAncestor<ListBoxItem>(box)?.DataContext is ScriptRow delRow && Vm != null)
+                {
+                    Vm.ClearField(delRow, attr);
+                    box.GetBindingExpression(TextBox.TextProperty)?.UpdateTarget();   // 확정 안 된 입력 글자도 버리고 빈 칸으로
+                }
+                e.Handled = true;
+                break;
             case Key.Up:
             case Key.Down:
                 if (FindAncestor<ListBoxItem>(box)?.DataContext is ScriptRow row && Vm != null)

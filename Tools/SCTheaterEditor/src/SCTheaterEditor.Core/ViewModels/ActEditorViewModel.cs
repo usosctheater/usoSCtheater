@@ -403,6 +403,23 @@ public sealed partial class ActEditorViewModel : ObservableObject
         Document?.SetAttribute(row.Line, attribute, value);
 
     /// <summary>
+    /// 추가: 칸 비우기 (칸에서 Delete). 그 줄이 선택에 들어 있으면 선택한 줄 중 같은 칸이 있는 종류의 줄 모두, 아니면 그 줄만.
+    /// 되돌리기 1단계 (SetAttributesMany)
+    /// </summary>
+    public void ClearField(ScriptRow row, string attribute)
+    {
+        if (Document is not { } doc) return;
+        IEnumerable<ScriptRow> rows = _selection.Contains(row)
+            ? _selection.Where(r => r.Def?.Has(attribute) == true)
+            : new[] { row };
+        var edits = rows.OrderBy(r => r.Number)
+                        .Select(r => (r.Line, (IReadOnlyList<(string Name, string? Value)>)[(attribute, null)]))
+                        .ToList();
+        int changed = doc.SetAttributesMany(edits);
+        if (changed > 1) StatusText = $"{attribute} 칸 비움: {changed}줄 (Ctrl+Z로 한 번에 되돌리기)";
+    }
+
+    /// <summary>
     /// 종류 변경 (드롭다운). 변경(E-003): 새 종류에 없는 빈 속성은 함께 지움 —
     /// 값이 있는 속성은 그대로 두어 새 팔레트에 없으면 기타에 보임. 되돌리기 1단계
     /// </summary>
