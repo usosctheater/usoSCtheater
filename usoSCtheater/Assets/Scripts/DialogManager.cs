@@ -102,6 +102,7 @@ public class DialogManager : MonoBehaviour
     public void LoadAct(TextAsset xmlAsset)   //[용어 정리] LoadScene → LoadAct
     {
         scriptNodes.Clear();
+        cgGroupDict.Clear();   //[CGGROUP 생명주기] 그룹 정의는 막(스크립트) 단위 — 새 막을 읽을 때만 비움 (TRANSITION에서는 유지)
         currentIndex = 0;
         currentActName = xmlAsset.name;   // [캡처] 캡처 폴더명으로 사용
 
@@ -436,8 +437,7 @@ public class DialogManager : MonoBehaviour
         // normal 트랜지션 시 BGM 유지를 위해 조건부 정지
         if (stopBGM) audioManager.StopAllAudio();
 
-        //안전을 위해서 CGGroupDict도 초기화
-        cgGroupDict.Clear();
+        //[CGGROUP 생명주기] cgGroupDict는 여기서 비우지 않음 — 막 동안 유지, LoadAct에서만 초기화
     }
 
     //속성이 없거나 비어있는 경우엔 빈 문자열 반환하는 함수

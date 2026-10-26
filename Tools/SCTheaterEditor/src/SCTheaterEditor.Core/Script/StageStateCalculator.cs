@@ -19,32 +19,28 @@ public sealed record StageSnapshot(int LineIndex, string? Background, IReadOnlyL
 ///   → 위치가 비었거나 모르는 값이면 마지막 위치, 애니메이션이 비었으면 마지막 애니메이션 (그것도 없으면 위치 center + 안내)
 /// - 보이는 캐릭터·배경은 TRANSITION에서 비움 (ClearScreen)
 /// - CG="none"(TEXT·SETCG) = 모두 내림, SETCG Effect="clean" = 그 캐릭터(그룹이면 멤버)만 내림
-/// - CGGROUP: 게임은 막을 읽을 때 모든 CGGROUP 줄을 그룹으로 등록하고 첫 TRANSITION에서 지움(ClearScreen의 cgGroupDict.Clear)
-///   → 지금 게임과 똑같이 따름 (핸드오프 미결 #7 '스크립트 동안 유지'로 바뀌면 GroupsSurviveTransition만 true로)
+/// - CGGROUP: 게임은 막을 읽을 때 모든 CGGROUP 줄을 그룹으로 등록하고 막 동안 유지 (TRANSITION에서 지우지 않음, 새 막 LoadAct에서만 초기화)
+///   → 게임과 똑같이 따름 (핸드오프 미결 #7 '스크립트 동안 유지', 2026-10-26)
 /// 줌·플래시백 등 효과는 반영하지 않음
 /// </summary>
 public static class StageStateCalculator
 {
     public const string DefaultPosition = "center";
 
-    /// <summary>CGGROUP 정의가 TRANSITION 뒤에도 남는지 (지금 게임: false)</summary>
-    public const bool GroupsSurviveTransition = false;
-
     public static StageSnapshot Compute(IReadOnlyList<ScriptLine> lines, int index)
     {
         if (lines.Count == 0) return new StageSnapshot(-1, null, [], []);
         index = Math.Clamp(index, 0, lines.Count - 1);
 
-        // 그룹 정의: 막 전체의 CGGROUP 줄 (게임 LoadAct와 같음)
-        var allGroups = new Dictionary<string, List<(string Cg, string Pos, string Anim)>>(StringComparer.Ordinal);
+        // 그룹 정의: 막 전체의 CGGROUP 줄 (게임 LoadAct와 같음, 막 동안 유지)
+        var groups = new Dictionary<string, List<(string Cg, string Pos, string Anim)>>(StringComparer.Ordinal);
         foreach (var l in lines)
         {
             if (!l.Type.Equals("CGGROUP", StringComparison.OrdinalIgnoreCase)) continue;
             string name = l.Get("Name").Split(',', 2)[0].Trim();
-            if (!allGroups.TryGetValue(name, out var list)) allGroups[name] = list = new();
+            if (!groups.TryGetValue(name, out var list)) groups[name] = list = new();
             list.Add((l.Get("CG"), l.Get("Position"), l.Get("Animation")));
         }
-        var groups = allGroups;
 
         var memory = new Dictionary<string, (string? Pos, string? Anim)>(StringComparer.Ordinal);
         var visible = new List<string>();
@@ -78,8 +74,7 @@ public static class StageStateCalculator
             {
                 case "TRANSITION":
                     visible.Clear();
-                    background = null;
-                    if (!GroupsSurviveTransition) groups = new(StringComparer.Ordinal);
+                    background = null;   // 그룹 정의는 유지 (미결 #7)
                     break;
 
                 case "BG":

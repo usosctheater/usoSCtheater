@@ -571,7 +571,7 @@ public class ScriptViewModelTests
     // ---------------------------------------------------------------- 추가(9회차): CGGROUP 줄 F5 재생
 
     [Fact]
-    public void Calculator_LineActors_GroupMembers_ClearedByTransition()
+    public void Calculator_LineActors_GroupMembers_SurviveTransition()
     {
         SCTheaterEditor.Script.ScriptLine L(params (string, string)[] a) => SCTheaterEditor.Script.ScriptLine.Create(a);
         var lines = new List<SCTheaterEditor.Script.ScriptLine>
@@ -587,7 +587,7 @@ public class ScriptViewModelTests
         Assert.Equal(new[] { "a_stand_1", "b_stand_1" }, SCTheaterEditor.Script.StageStateCalculator.Compute(lines, 2).LineActors);
         Assert.Equal(new[] { "a_stand_1" }, SCTheaterEditor.Script.StageStateCalculator.Compute(lines, 3).LineActors);
         Assert.Empty(SCTheaterEditor.Script.StageStateCalculator.Compute(lines, 4).LineActors!);
-        Assert.Equal(new[] { "duo" }, SCTheaterEditor.Script.StageStateCalculator.Compute(lines, 6).LineActors);   // 게임과 같이 트랜지션 뒤엔 그룹 없음
+        Assert.Equal(new[] { "a_stand_1", "b_stand_1" }, SCTheaterEditor.Script.StageStateCalculator.Compute(lines, 6).LineActors);   // 게임과 같이 그룹은 막 동안 유지 (미결 #7)
     }
 
     [Fact]

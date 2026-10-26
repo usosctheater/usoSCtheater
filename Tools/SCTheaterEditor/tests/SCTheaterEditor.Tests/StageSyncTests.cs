@@ -48,7 +48,7 @@ public class StageStateCalculatorTests
     }
 
     [Fact]
-    public void Group_ShowsMembers_AndIsClearedAtTransition()
+    public void Group_ShowsMembers_AndSurvivesTransition()
     {
         var lines = new[]
         {
@@ -61,11 +61,11 @@ public class StageStateCalculatorTests
         var s = StageStateCalculator.Compute(lines, 2);
         Assert.Equal(new[] { ("a", "left"), ("b", "right") }, s.Actors.Select(a => (a.CgKey, a.Position)));
 
-        // 지금 게임과 같이 첫 TRANSITION 뒤에는 그룹이 없음 → g1을 캐릭터 키로 봄 (위치 없음 → center)
+        // 게임과 같이 그룹은 막 동안 유지 → TRANSITION 뒤에도 g1 = 멤버 a·b (미결 #7)
         var after = StageStateCalculator.Compute(lines, 4);
-        Assert.False(StageStateCalculator.GroupsSurviveTransition);
-        Assert.Equal("g1", Assert.Single(after.Actors).CgKey);
-        Assert.Single(after.Notes);
+        Assert.Equal(new[] { ("a", "left"), ("b", "right") }, after.Actors.Select(a => (a.CgKey, a.Position)));
+        Assert.Equal(new[] { "a", "b" }, after.LineActors);
+        Assert.Empty(after.Notes);
     }
 
     [Fact]
