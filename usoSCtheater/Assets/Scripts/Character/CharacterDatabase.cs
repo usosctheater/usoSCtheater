@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Xml;
+using Spine.Unity;   //[Spine 인덱스] SkeletonDataAsset
 using UnityEngine;
 
 namespace UsoSCTheater.Character
@@ -53,13 +54,18 @@ namespace UsoSCTheater.Character
 
         private static Dictionary<string, CharacterEntry> byId;   // 대소문자 무시
         private static Dictionary<string, Sprite> iconCache;      // 없는 아이콘(null)도 저장 → 경고·로드 반복 방지
+        private static Dictionary<string, List<SpineKeyInfo>> spinesById;   //[Spine 인덱스] 캐릭터 Id → Spine 목록 (대소문자 무시)
 
         //Domain Reload 비활성 → Play 시작마다 static 초기화
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        private static void ResetOnPlay()
+        private static void ResetOnPlay() => Reload();
+
+        //[Spine 인덱스] 캐시 비우기 (다음 조회 때 XML 다시 읽음). 등록 도구가 인덱스·CharacterData를 고친 뒤 호출
+        public static void Reload()
         {
             byId = null;
             iconCache = null;
+            spinesById = null;
         }
 
         //Id로 조회 (대소문자 무시), 없으면 null
@@ -87,6 +93,57 @@ namespace UsoSCTheater.Character
             if (sprite == null) Debug.LogWarning($"[CharacterDatabase] 아이콘 없음: Resources/{IconRoot}/{entry.Id}");
             iconCache[entry.Id] = sprite;
             return sprite;
+        }
+
+        //[Spine 인덱스] 캐릭터의 Spine 키 목록 (인덱스만 읽음, Spine 파일은 불러오지 않음). 없으면 빈 목록
+        //includeCostume = false면 _costume 타입 제외
+        public static List<string> GetSpineKeys(string id, SpineKind kind, bool includeCostume = true)
+        {
+            var result = new List<string>();
+            if (string.IsNullOrWhiteSpace(id)) return result;
+            EnsureSpineIndexLoaded();
+
+            if (!spinesById.TryGetValue(id.Trim(), out var list)) return result;
+            foreach (SpineKeyInfo info in list)
+            {
+                if (info.Kind != kind) continue;
+                if (!includeCostume && info.IsCostume) continue;
+                result.Add(info.Key);
+            }
+            return result;
+        }
+
+        //[Spine 인덱스] 키 → SkeletonDataAsset (Resources/Spine/{Id}/{Key}_SkeletonData). 이때만 Spine이 메모리에 올라옴. 없으면 null + 경고
+        public static SkeletonDataAsset LoadSkeletonData(string key)
+        {
+            if (!SpineKeys.TryParse(key, out SpineKeyInfo info))
+            {
+                Debug.LogWarning($"[CharacterDatabase] Spine 키 형식이 맞지 않음: '{key}'");
+                return null;
+            }
+            SkeletonDataAsset data = Resources.Load<SkeletonDataAsset>(info.ResourcePath);
+            if (data == null) Debug.LogWarning($"[CharacterDatabase] SkeletonData 없음: Resources/{info.ResourcePath} (인덱스와 파일이 어긋남 → 등록 도구에서 [인덱스 다시 만들기])");
+            return data;
+        }
+
+        private static void EnsureSpineIndexLoaded()
+        {
+            if (spinesById != null) return;
+            spinesById = new Dictionary<string, List<SpineKeyInfo>>(StringComparer.OrdinalIgnoreCase);
+
+            TextAsset xml = Resources.Load<TextAsset>(CharacterSpineData.DataPath);
+            if (xml == null)
+            {
+                Debug.LogWarning($"[CharacterDatabase] Resources/{CharacterSpineData.DataPath}.xml 없음 → Tools > Spine > Register Spine에서 [인덱스 다시 만들기]");
+                return;   //빈 사전 유지 → 경고는 1번만
+            }
+
+            foreach (SpineKeyInfo info in CharacterSpineData.Parse(xml.text))
+            {
+                if (!spinesById.TryGetValue(info.CharacterId, out var list))
+                    spinesById[info.CharacterId] = list = new List<SpineKeyInfo>();
+                list.Add(info);
+            }
         }
 
         private static void EnsureLoaded()

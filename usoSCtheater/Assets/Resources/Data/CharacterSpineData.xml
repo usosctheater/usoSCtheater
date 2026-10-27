@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 자동 생성: Tools > Spine > Register Spine. 직접 고치지 않음 -->
+<CharacterSpineData>
+    <Spine Key="asahi_cb_1040170010" Character="asahi" Type="cb" Kind="SD" />
+    <Spine Key="asahi_stand_1040170010" Character="asahi" Type="stand" Kind="LD" />
+    <Spine Key="asahi_stand_1040170030" Character="asahi" Type="stand" Kind="LD" />
+    <Spine Key="asahi_stand_3000170060" Character="asahi" Type="stand" Kind="LD" />
+    <Spine Key="asahi_stand_costume_1040170030" Character="asahi" Type="stand_costume" Kind="LD" />
+    <Spine Key="fuyuko_cb_1050180010" Character="fuyuko" Type="cb" Kind="SD" />
+    <Spine Key="fuyuko_stand_1030180010" Character="fuyuko" Type="stand" Kind="LD" />
+    <Spine Key="fuyuko_stand_1040180100" Character="fuyuko" Type="stand" Kind="LD" />
+    <Spine Key="fuyuko_stand_1050180010" Character="fuyuko" Type="stand" Kind="LD" />
+    <Spine Key="fuyuko_stand_3000180060" Character="fuyuko" Type="stand" Kind="LD" />
+    <Spine Key="fuyuko_stand_3000180260" Character="fuyuko" Type="stand" Kind="LD" />
+    <Spine Key="fuyuko_stand_costume_1040180030" Character="fuyuko" Type="stand_costume" Kind="LD" />
+    <Spine Key="fuyuko_support_stand_2040180170" Character="fuyuko" Type="support_stand" Kind="LD" />
+    <Spine Key="hazuki_stand_4000910022" Character="hazuki" Type="stand" Kind="LD" />
+    <Spine Key="kaho_cb_1040090110" Character="kaho" Type="cb" Kind="SD" />
+    <Spine Key="mei_stand_3000190030" Character="mei" Type="stand" Kind="LD" />
+    <Spine Key="mei_stand_3000190060" Character="mei" Type="stand" Kind="LD" />
+    <Spine Key="mei_stand_costume_1040190030" Character="mei" Type="stand_costume" Kind="LD" />
+    <Spine Key="nichika_stand_1030240020" Character="nichika" Type="stand" Kind="LD" />
+    <Spine Key="nichika_stand_1040240020" Character="nichika" Type="stand" Kind="LD" />
+    <Spine Key="rinze_cb_1040120060" Character="rinze" Type="cb" Kind="SD" />
+    <Spine Key="rinze_cb_costume_1040120060" Character="rinze" Type="cb_costume" Kind="SD" />
+    <Spine Key="rinze_stand_1040120060" Character="rinze" Type="stand" Kind="LD" />
+</CharacterSpineData>

@@ -338,6 +338,7 @@ MonoBehaviour:
   sdSpineController: {fileID: 1595144351}
   bgmPlayer: {fileID: 162691741}
   language: 0
+  skipInputDelay: 1
 --- !u!114 &162691741
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -585,7 +586,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d247ba06193faa74d9335f5481b2b56c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Spine.Unity.SkeletonAnimation
-  skeletonDataAsset: {fileID: 11400000, guid: 3d9e485af70f3af478e6171fc5049fdf, type: 2}
+  skeletonDataAsset: {fileID: 11400000, guid: 56f7caadce7c23549ae9467a73c64010, type: 2}
   initialSkinName: normal
   initialFlipX: 0
   initialFlipY: 0
@@ -629,7 +630,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 76c2444aedd04d24fad8ba5f30d1338c, type: 2}
+  - {fileID: 2100000, guid: 5e509d97e9e00b941b3e3c194a6d8ee7, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -1584,6 +1585,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UsoSCTheater.Ending.EndingSDSpineController
   skeletonAnimation: {fileID: 571506872}
   crossFadeDuration: 0.2
+  includeCostumeSD: 1
 --- !u!223 &1595144352
 Canvas:
   m_ObjectHideFlags: 0
