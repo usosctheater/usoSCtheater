@@ -50,22 +50,8 @@ dotnet publish -c Release -r win-x64 --self-contained false -p:PublishSingleFile
   - 메인 창에서 목록을 비워도 다운로드 창 목록은 남음 (그 항목의 캐시 파일은 지우지 않고, 종료 시 세션 캐시와 함께 삭제)
 
 ## 단축키
-`settings.json`의 `"Hotkeys"`에서 바꿀 수 있음 (수정 후 프로그램 재시작, 빈 문자열이면 해제). 글자 입력 칸에 포커스가 있을 때는 동작하지 않음.
-
-| 동작 이름 | 기본 키 | 메인 창 | 추적 창 | 상세 창 | 다운로드 창 |
-|---|---|---|---|---|---|
-| `SaveChecked` | Ctrl+S | 체크한 항목 저장 | 체크한 항목 저장 | 이 리소스 저장 | 모두 저장 (입력 중에도 동작) |
-| `ToggleTracking` | Ctrl+R | 추적 창 열기/닫기 | 추적 창 닫기 | - | - |
-| `ClearList` | Ctrl+L | 목록 비우기 | 목록 비우기 | - | - |
-| `SendToDownload` | Ctrl+D | 체크한 항목을 다운로드 창으로 | 같음 | - | - |
-| `ToggleMute` | Ctrl+M | 게임 소리 끄기/켜기 | 같음 | - | - |
-
-목록 키 (바꿀 수 없음, 메인·추적 창 목록에 포커스가 있을 때):
-- Space: 선택한(파란색) 항목 체크/해제 — 하나라도 체크가 안 돼 있으면 모두 체크, 다 돼 있으면 모두 해제. 버튼 [선택 항목 체크]와 같음
-- Enter / 더블클릭: 상세 창
-- Ctrl+A: 전체 선택 (목록 기본 동작), Shift·Ctrl+클릭: 여러 개 선택
-
-없앤 동작: `ToggleAllChecks`(보이는 항목 전체 체크, 2026-10-28) — settings.json에 남아 있으면 읽을 때 지움 (`HotkeyMap.Removed`)
+`settings.json`의 `"Hotkeys"`에서 바꿀 수 있음 (수정 후 프로그램 재시작, 빈 문자열이면 해제). 동작 이름은 `Services/HotkeyMap.cs`의 `Defaults`.
+키 목록은 개발 문서에서 관리 (릴리즈 때 정리).
 
 새 동작 추가: `HotkeyMap`에 이름·기본값 한 줄 추가 → 각 창 `OnPreviewKeyDown`의 switch에 처리 추가 (기존 settings.json에는 기본값이 자동으로 채워짐)
 
