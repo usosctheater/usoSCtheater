@@ -7,7 +7,7 @@ using System.Windows.Media.Imaging;
 namespace SCResourceGrabber.Models;
 
 /// <summary>선언 순서 = 필터·정렬 순서</summary>
-public enum ResourceCategory { Image, Audio, Video, Spine, Json, Font, Encrypted, Other }
+public enum ResourceCategory { Image, Audio, Video, Json, Font, Encrypted, Other }   // Spine은 2026-10-28 삭제
 
 /// <summary>
 /// 네트워크에서 캡처한 리소스 1건. 본문은 메모리가 아니라 세션 캐시 파일(CachePath)에 보관한다.
@@ -21,8 +21,6 @@ public class CapturedResource : INotifyPropertyChanged
     public required ResourceCategory Category { get; init; }
     /// <summary>점 없는 확장자 (예: "png"). URL에 없으면 내용 기준으로 추정한 값.</summary>
     public required string Extension { get; init; }
-    /// <summary>Spine 세부 구분 등 보조 정보 (예: "atlas", "skeleton json").</summary>
-    public string SubType { get; init; } = "";
     public required string CachePath { get; init; }
     public DateTime CapturedAt { get; init; } = DateTime.Now;
     public string CapturedAtText => CapturedAt.ToString("HH:mm:ss");
@@ -38,7 +36,7 @@ public class CapturedResource : INotifyPropertyChanged
         }
     }
 
-    public string CategoryLabel => CategoryLabels[Category] + (SubType.Length > 0 ? $" ({SubType})" : "");
+    public string CategoryLabel => CategoryLabels[Category];
 
     public string SizeText => Size switch
     {
@@ -52,7 +50,6 @@ public class CapturedResource : INotifyPropertyChanged
         [ResourceCategory.Image] = "이미지",
         [ResourceCategory.Audio] = "오디오",
         [ResourceCategory.Video] = "비디오",
-        [ResourceCategory.Spine] = "Spine",
         [ResourceCategory.Json] = "JSON",
         [ResourceCategory.Font] = "폰트",
         [ResourceCategory.Encrypted] = "암호화",

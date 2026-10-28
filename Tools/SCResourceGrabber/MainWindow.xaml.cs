@@ -14,15 +14,9 @@ using SCResourceGrabber.Services;
 
 namespace SCResourceGrabber;
 
-/// <summary>창 종류: 게임 리소스 수집(시작 창) / Spine 뷰어 사이트 수집</summary>
-public enum CollectorKind { Game, Spine }
-
+// Spine 수집 창은 2026-10-28 삭제 (Spine 관리는 TE로 이관)
 public partial class MainWindow : Window
 {
-    private readonly CollectorKind _kind;
-    private bool IsGame => _kind == CollectorKind.Game;
-    private MainWindow? _spineWindow;
-
     private readonly AppSettings _settings = AppSettings.Shared;
     private readonly ObservableCollection<CapturedResource> _resources = new();
     private readonly ICollectionView _view;
@@ -32,6 +26,7 @@ public partial class MainWindow : Window
     private ResourceCapture? _capture;
     private PageAudioMonitor? _audio;
     private TrackingWindow? _tracking;
+    private DownloadWindow? _download;   // 다운로드 창 (2026-10-28, 창마다 1개)
     private readonly Dictionary<string, CapturedResource> _byUrl = new();
 
     private static readonly string AudioLogPath = Path.Combine(
@@ -45,29 +40,15 @@ public partial class MainWindow : Window
     internal IReadOnlyList<ResourceCategory> FilterCategories { get; }
     internal IReadOnlyList<ResourceCategory> DefaultCategories { get; }
 
-    // 게임은 Spine 데이터를 암호화해서 보내므로 게임 창에는 Spine 분류를 두지 않는다
-    private static readonly ResourceCategory[] GameFilter =
-        [ResourceCategory.Image, ResourceCategory.Audio, ResourceCategory.Video, ResourceCategory.Json,
-         ResourceCategory.Font, ResourceCategory.Encrypted, ResourceCategory.Other];
-    private static readonly ResourceCategory[] GameDefaults =
+    private static readonly ResourceCategory[] Defaults =
         [ResourceCategory.Image, ResourceCategory.Audio, ResourceCategory.Video];
-    private static readonly ResourceCategory[] SpineDefaults =
-        [ResourceCategory.Image, ResourceCategory.Spine];
 
-    public MainWindow() : this(CollectorKind.Game) { }
-
-    public MainWindow(CollectorKind kind)
+    public MainWindow()
     {
-        _kind = kind;
-        FilterCategories = IsGame ? GameFilter : Enum.GetValues<ResourceCategory>();
-        DefaultCategories = IsGame ? GameDefaults : SpineDefaults;
+        FilterCategories = Enum.GetValues<ResourceCategory>();
+        DefaultCategories = Defaults;
 
         InitializeComponent();
-        if (!IsGame)
-        {
-            Title = "SC Resource Grabber — Spine 수집";
-            SpineButton.Visibility = Visibility.Collapsed;
-        }
 
         _view = CollectionViewSource.GetDefaultView(_resources);
         _view.Filter = o => o is CapturedResource r && PassesFilter(r);
@@ -87,6 +68,7 @@ public partial class MainWindow : Window
 
         _hotkeys = new HotkeyMap(_settings.Hotkeys);
         ApplyHotkeyTooltips();
+        ShowMute();
 
         Loaded += async (_, _) =>
         {
@@ -112,8 +94,9 @@ public partial class MainWindow : Window
         {
             case HotkeyMap.SaveChecked: SaveChecked_Click(this, e); break;
             case HotkeyMap.ToggleTracking: ToggleTracking(); break;
-            case HotkeyMap.ToggleAllChecks: ToggleAll_Click(this, e); break;
             case HotkeyMap.ClearList: Clear_Click(this, e); break;
+            case HotkeyMap.SendToDownload: SendDownload_Click(this, e); break;
+            case HotkeyMap.ToggleMute: ToggleMute(); break;
             default: return;
         }
         e.Handled = true;
@@ -125,8 +108,9 @@ public partial class MainWindow : Window
         SaveCheckedButton.ToolTip = Tip("체크한 항목 저장", _hotkeys.GestureText(HotkeyMap.SaveChecked));
         TrackingButton.ToolTip = Tip("추적 창 열기/닫기 — 이후 새로 받은 리소스와 재생된 오디오를 따로 모아 봅니다",
                                      _hotkeys.GestureText(HotkeyMap.ToggleTracking));
-        ToggleAllButton.ToolTip = Tip("보이는 항목 전체 체크/해제", _hotkeys.GestureText(HotkeyMap.ToggleAllChecks));
+        CheckSelectedButton.ToolTip = CheckSelectedTip;
         ClearButton.ToolTip = Tip("목록 비우기", _hotkeys.GestureText(HotkeyMap.ClearList));
+        SendDownloadButton.ToolTip = Tip("체크한 항목을 다운로드 창으로 보내 이름을 붙여 저장", _hotkeys.GestureText(HotkeyMap.SendToDownload));
     }
 
     // =====================================================================
@@ -137,36 +121,33 @@ public partial class MainWindow : Window
     {
         try
         {
-            if (IsGame) CleanupOldCaches(); // Spine 창이 지우면 게임 창의 캐시까지 지워짐
+            CleanupOldCaches();
             Directory.CreateDirectory(_settings.ProfileFolder);
             var env = await CoreWebView2Environment.CreateAsync(null, _settings.ProfileFolder);
             await WebView.EnsureCoreWebView2Async(env);
 
             var core = WebView.CoreWebView2;
+            core.IsMuted = _settings.Muted;
+            ShowMute();
             core.Settings.AreDevToolsEnabled = true;
             core.SourceChanged += (_, _) => AddressBox.Text = core.Source;
 
-            string sessionCache = Path.Combine(CacheRoot, DateTime.Now.ToString("yyyyMMdd_HHmmss") + "_" + _kind);
+            string sessionCache = Path.Combine(CacheRoot, DateTime.Now.ToString("yyyyMMdd_HHmmss"));
             _capture = new ResourceCapture(core, _settings, sessionCache);
             _capture.Captured += OnCaptured;
             _capture.Log += msg => Debug.WriteLine("[Capture] " + msg);
 
-            // 오디오 재생 추적 (게임 창만. 페이지 생성 시점에 스크립트 주입 → 탐색 전에 설정해야 함)
-            if (IsGame)
-            {
-                _audio = new PageAudioMonitor(core);
-                _audio.Played += (id, url, loop) => _tracking?.OnPlayed(id, url, loop);
-                _audio.Ended += id => _tracking?.OnEnded(id);
-                _audio.PageReset += () => _tracking?.ResetPlaying();
-                _audio.Log += WriteAudioLog;
-                try { File.WriteAllText(AudioLogPath, $"=== {DateTime.Now:yyyy-MM-dd HH:mm:ss} 시작\n"); } catch { }
-                await _audio.InitializeAsync();
-            }
+            // 오디오 재생 추적 (페이지 생성 시점에 스크립트 주입 → 탐색 전에 설정해야 함)
+            _audio = new PageAudioMonitor(core);
+            _audio.Played += (id, url, loop) => _tracking?.OnPlayed(id, url, loop);
+            _audio.Ended += id => _tracking?.OnEnded(id);
+            _audio.PageReset += () => _tracking?.ResetPlaying();
+            _audio.Log += WriteAudioLog;
+            try { File.WriteAllText(AudioLogPath, $"=== {DateTime.Now:yyyy-MM-dd HH:mm:ss} 시작\n"); } catch { }
+            await _audio.InitializeAsync();
 
-            core.Navigate(StartUrl);
-            SetStatus(IsGame
-                ? "준비됨. 처음 실행이면 게임 화면에서 로그인해 주세요 (이후 자동 유지)."
-                : "준비됨. 뷰어에서 캐릭터를 고르면 atlas·json·텍스처가 목록에 쌓입니다. 저장 시 URL 폴더 구조를 유지합니다.");
+            core.Navigate(_settings.StartUrl);
+            SetStatus("준비됨. 처음 실행이면 게임 화면에서 로그인해 주세요 (이후 자동 유지).");
         }
         catch (Exception ex)
         {
@@ -195,8 +176,8 @@ public partial class MainWindow : Window
     private void OnClosingCleanup()
     {
         _settings.Save();
-        _spineWindow?.Close();   // Spine 창도 정리(캐시 삭제)되도록 먼저 닫음
         _tracking?.Close();
+        _download?.Close();
         CloseAllDetailWindows(); // 재생 중인 캐시 파일 잠금 해제 후 캐시 삭제
         try
         {
@@ -224,7 +205,7 @@ public partial class MainWindow : Window
 
     private void Back_Click(object sender, RoutedEventArgs e) { if (WebView.CanGoBack) WebView.GoBack(); }
     private void Reload_Click(object sender, RoutedEventArgs e) => WebView.CoreWebView2?.Reload();
-    private void Home_Click(object sender, RoutedEventArgs e) => WebView.CoreWebView2?.Navigate(StartUrl);
+    private void Home_Click(object sender, RoutedEventArgs e) => WebView.CoreWebView2?.Navigate(_settings.StartUrl);
     private void DevTools_Click(object sender, RoutedEventArgs e) => WebView.CoreWebView2?.OpenDevToolsWindow();
     private void Go_Click(object sender, RoutedEventArgs e) => NavigateToAddress();
     private void AddressBox_KeyDown(object sender, KeyEventArgs e) { if (e.Key == Key.Enter) NavigateToAddress(); }
@@ -235,6 +216,27 @@ public partial class MainWindow : Window
         if (url.Length == 0 || WebView.CoreWebView2 == null) return;
         if (!url.Contains("://")) url = "https://" + url;
         try { WebView.CoreWebView2.Navigate(url); } catch (Exception ex) { SetStatus("이동 실패: " + ex.Message); }
+    }
+
+    // ---------- 음소거 (2026-10-28: 게임 화면 소리만, 상태 기억) ----------
+
+    private void Mute_Click(object sender, RoutedEventArgs e) => ToggleMute();
+
+    /// <summary>게임 소리 끄기/켜기 (추적 창 단축키에서도 호출). 출력만 끄므로 추적 창의 재생 기록은 그대로 동작</summary>
+    internal void ToggleMute()
+    {
+        _settings.Muted = !_settings.Muted;
+        if (WebView.CoreWebView2 != null) WebView.CoreWebView2.IsMuted = _settings.Muted;
+        _settings.Save();
+        ShowMute();
+    }
+
+    private void ShowMute()
+    {
+        MuteButton.Content = _settings.Muted ? "🔇 음소거" : "🔊 소리";
+        MuteButton.FontWeight = _settings.Muted ? FontWeights.Bold : FontWeights.Normal;
+        string? key = _hotkeys.GestureText(HotkeyMap.ToggleMute);
+        MuteButton.ToolTip = "게임 소리 끄기/켜기" + (key != null ? $" ({key})" : "") + " — 추적 창의 재생 기록은 그대로 동작";
     }
 
     // =====================================================================
@@ -254,15 +256,12 @@ public partial class MainWindow : Window
 
     private IEnumerable<CapturedResource> VisibleItems => _view.Cast<CapturedResource>();
 
-    private void ToggleAll_Click(object sender, RoutedEventArgs e)
-    {
-        var visible = VisibleItems.ToList();
-        bool check = visible.Any(r => !r.IsChecked);
-        foreach (var r in visible) r.IsChecked = check;
-        UpdateStatus();
-    }
+    /// <summary>[선택 항목 체크] 버튼 툴팁 (추적 창도 사용)</summary>
+    internal const string CheckSelectedTip =
+        "목록에서 선택한(파란색) 항목을 한꺼번에 체크/해제 (목록에서 Space). Shift·Ctrl+클릭으로 여러 개 선택, Ctrl+A 전체 선택";
 
-    private void ResourceList_KeyDown(object sender, KeyEventArgs e)
+    // Preview: 목록 기본 Space 동작(선택을 한 줄로 바꿈)·체크박스 단일 토글보다 먼저 처리
+    private void ResourceList_PreviewKeyDown(object sender, KeyEventArgs e)
     {
         // Enter: 선택된 행의 상세 창 열기
         if (e.Key == Key.Enter && ResourceList.SelectedItem is CapturedResource cur)
@@ -272,13 +271,23 @@ public partial class MainWindow : Window
             return;
         }
 
-        // 스페이스: 선택(하이라이트)된 행들의 체크 토글
-        if (e.Key != Key.Space) return;
+        // Space: 선택(하이라이트)된 행들의 체크 토글
+        if (e.Key == Key.Space && Keyboard.Modifiers == ModifierKeys.None)
+        {
+            CheckSelected();
+            e.Handled = true;
+        }
+    }
+
+    private void CheckSelected_Click(object sender, RoutedEventArgs e) => CheckSelected();
+
+    /// <summary>선택한 항목 중 하나라도 체크가 안 돼 있으면 모두 체크, 다 체크돼 있으면 모두 해제</summary>
+    private void CheckSelected()
+    {
         var sel = ResourceList.SelectedItems.Cast<CapturedResource>().ToList();
-        if (sel.Count == 0) return;
+        if (sel.Count == 0) { SetStatus("체크할 항목을 목록에서 먼저 선택해 주세요."); return; }
         bool check = sel.Any(r => !r.IsChecked);
         foreach (var r in sel) r.IsChecked = check;
-        e.Handled = true;
         UpdateStatus();
     }
 
@@ -286,8 +295,11 @@ public partial class MainWindow : Window
     {
         if (_busy) return;
         CloseAllDetailWindows();
+        // 다운로드 창에 있는 항목의 캐시 파일은 남김 (다운로드 목록 유지, 종료 시 세션 캐시와 함께 삭제)
+        var held = _download?.HeldResourceIds ?? new HashSet<int>();
         foreach (var r in _resources)
-            try { File.Delete(r.CachePath); } catch { }
+            if (!held.Contains(r.Id))
+                try { File.Delete(r.CachePath); } catch { }
         _resources.Clear();
         _byUrl.Clear();
         _tracking?.DetachResources();
@@ -296,32 +308,10 @@ public partial class MainWindow : Window
         UpdateStatus();
     }
 
-    // =====================================================================
-    // 창 종류별 값 / Spine 수집 창
-    // =====================================================================
-
-    private string StartUrl => IsGame ? _settings.StartUrl : _settings.SpineStartUrl;
-
     private string SaveFolder
     {
-        get => IsGame ? _settings.SaveFolder : _settings.SpineSaveFolder;
-        set { if (IsGame) _settings.SaveFolder = value; else _settings.SpineSaveFolder = value; }
-    }
-
-    /// <summary>Spine 창은 data.json·data.atlas처럼 이름이 겹치므로 URL 폴더 구조를 유지해서 저장</summary>
-    private bool KeepUrlPath => !IsGame;
-
-    private void Spine_Click(object sender, RoutedEventArgs e)
-    {
-        if (_spineWindow != null)
-        {
-            if (_spineWindow.WindowState == WindowState.Minimized) _spineWindow.WindowState = WindowState.Normal;
-            _spineWindow.Activate();
-            return;
-        }
-        _spineWindow = new MainWindow(CollectorKind.Spine);
-        _spineWindow.Closed += (_, _) => _spineWindow = null;
-        _spineWindow.Show();
+        get => _settings.SaveFolder;
+        set => _settings.SaveFolder = value;
     }
 
     // =====================================================================
@@ -369,6 +359,36 @@ public partial class MainWindow : Window
     private static void WriteAudioLog(string msg)
     {
         try { File.AppendAllText(AudioLogPath, $"{DateTime.Now:HH:mm:ss.fff} {msg}\n"); } catch { }
+    }
+
+    // =====================================================================
+    // 다운로드 창 (2026-10-28)
+    // =====================================================================
+
+    private void SendDownload_Click(object sender, RoutedEventArgs e) =>
+        SendToDownload(_resources.Where(r => r.IsChecked).ToList());
+
+    /// <summary>항목을 다운로드 창으로 보냄 (창이 없으면 열고, 있으면 앞으로). 추적 창에서도 호출</summary>
+    internal void SendToDownload(List<CapturedResource> list)
+    {
+        if (list.Count == 0)
+        {
+            SetStatus("다운로드 창으로 보낼 항목을 체크해 주세요.");
+            return;
+        }
+        if (_download == null)
+        {
+            _download = new DownloadWindow(_hotkeys) { Title = "다운로드" };
+            _download.Closed += (_, _) => _download = null;
+            _download.Show();
+        }
+        else
+        {
+            if (_download.WindowState == WindowState.Minimized) _download.WindowState = WindowState.Normal;
+            _download.Activate();
+        }
+        int added = _download.AddItems(list);
+        SetStatus($"다운로드 창으로 {added}개 보냄");
     }
 
     // =====================================================================
@@ -465,11 +485,11 @@ public partial class MainWindow : Window
         int saved = 0, skipped = 0, failed = 0;
         string? lastError = null;
         string folder = SaveFolder;
-        bool keepPath = KeepUrlPath, overwrite = _settings.OverwriteExisting;
+        bool overwrite = _settings.OverwriteExisting;
 
         foreach (var r in list)
         {
-            var (outcome, _, error) = await Task.Run(() => ResourceSaver.Save(r, folder, keepPath, overwrite));
+            var (outcome, _, error) = await Task.Run(() => ResourceSaver.Save(r, folder, overwrite));
             switch (outcome)
             {
                 case ResourceSaver.Outcome.Saved: saved++; r.Status = "저장됨"; break;

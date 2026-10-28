@@ -10,10 +10,6 @@ public class AppSettings
 {
     public string StartUrl { get; set; } = "https://shinycolors.enza.fun/";
 
-    /// <summary>Spine 수집 창 시작 주소 / 저장 폴더 (URL 경로 구조를 유지해서 저장)</summary>
-    public string SpineStartUrl { get; set; } = "https://spine.shinycolors.moe/";
-    public string SpineSaveFolder { get; set; } = @"D:\usosctheater\resource\Grabber\Spine";
-
     /// <summary>WebView2 사용자 데이터(로그인 쿠키 등) 폴더. 이 폴더가 유지되는 한 로그인도 유지된다.</summary>
     public string ProfileFolder { get; set; } =
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SCResourceGrabber", "Profile");
@@ -24,6 +20,19 @@ public class AppSettings
 
 
     public bool OverwriteExisting { get; set; } = false;
+
+    /// <summary>게임 화면(WebView2) 음소거 (2026-10-28). 상세 창 미리 듣기·추적은 영향 없음</summary>
+    public bool Muted { get; set; } = false;
+
+    // ---------- 다운로드 창 (2026-10-28, 마지막 설정 기억) ----------
+    /// <summary>다운로드 창 저장 폴더 (기본은 일반 저장 폴더와 같음, 창에서 따로 바꿀 수 있음)</summary>
+    public string DownloadSaveFolder { get; set; } = DefaultSaveFolder;
+    public bool DownloadOverwrite { get; set; } = false;
+    public bool DownloadConvertPng { get; set; } = true;
+    public bool DownloadTrim { get; set; } = false;
+    public bool DownloadSquare { get; set; } = false;
+    /// <summary>여백 (%, 긴 변 기준)</summary>
+    public double DownloadPadding { get; set; } = 6;
 
     /// <summary>캡처할 호스트(부분 일치, ; 구분). 비우면 전부 캡처.</summary>
     public string HostFilter { get; set; } = "";
@@ -42,7 +51,7 @@ public class AppSettings
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
     private static AppSettings? _shared;
-    /// <summary>모든 창이 같은 설정 객체를 쓴다 (게임 창·Spine 수집 창)</summary>
+    /// <summary>모든 창이 같은 설정 객체를 쓴다</summary>
     public static AppSettings Shared => _shared ??= Load();
 
     public static AppSettings Load()
@@ -57,6 +66,7 @@ public class AppSettings
                     s.SaveFolder = DefaultSaveFolder;
                 // 새로 추가된 단축키 동작은 기본값으로 채움 (사용자가 바꾼 값은 유지)
                 s.Hotkeys ??= new();
+                foreach (var old in HotkeyMap.Removed) s.Hotkeys.Remove(old);
                 foreach (var (action, key) in HotkeyMap.Defaults)
                     s.Hotkeys.TryAdd(action, key);
                 return s;

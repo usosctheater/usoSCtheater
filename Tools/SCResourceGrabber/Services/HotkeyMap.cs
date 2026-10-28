@@ -13,17 +13,22 @@ public sealed class HotkeyMap
     // 동작 이름 (settings.json 키와 같음)
     public const string SaveChecked = "SaveChecked";         // 체크한 항목 저장
     public const string ToggleTracking = "ToggleTracking";   // 추적 모드 열기/닫기
-    public const string ToggleAllChecks = "ToggleAllChecks"; // 전체 선택/해제
     public const string ClearList = "ClearList";             // 목록 비우기
+    public const string SendToDownload = "SendToDownload";   // 체크한 항목을 다운로드 창으로 (2026-10-28)
+    public const string ToggleMute = "ToggleMute";           // 게임 소리 끄기/켜기 (2026-10-28)
 
     /// <summary>기본값. 새 동작을 추가하면 여기에 한 줄 추가 → 기존 settings.json에도 자동으로 채워짐.</summary>
     public static readonly IReadOnlyDictionary<string, string> Defaults = new Dictionary<string, string>
     {
         [SaveChecked] = "Ctrl+S",
         [ToggleTracking] = "Ctrl+R",
-        [ToggleAllChecks] = "Ctrl+A",
         [ClearList] = "Ctrl+L",
+        [SendToDownload] = "Ctrl+D",
+        [ToggleMute] = "Ctrl+M",
     };
+
+    /// <summary>없앤 동작 — settings.json에 남아 있으면 읽을 때 지움 (경고 방지)</summary>
+    public static readonly IReadOnlyList<string> Removed = ["ToggleAllChecks"];   // 2026-10-28 보이는 항목 전체 체크 삭제
 
     private readonly List<(KeyGesture gesture, string action)> _bindings = new();
 
@@ -55,6 +60,18 @@ public sealed class HotkeyMap
     public string? Resolve(KeyEventArgs e)
     {
         if (Keyboard.FocusedElement is TextBoxBase or PasswordBox or ComboBox { IsEditable: true }) return null;
+        var key = e.Key == Key.System ? e.SystemKey : e.Key;
+        foreach (var (g, action) in _bindings)
+            if (g.Key == key && g.Modifiers == Keyboard.Modifiers) return action;
+        return null;
+    }
+
+    /// <summary>
+    /// 글자 입력 칸에 포커스가 있어도 확인하는 버전 (다운로드 창: 이름 입력 중에도 Ctrl+S 저장).
+    /// 편집 키(Ctrl+A 등)를 가로채지 않도록 호출하는 쪽에서 필요한 동작만 처리할 것
+    /// </summary>
+    public string? ResolveIgnoringFocus(KeyEventArgs e)
+    {
         var key = e.Key == Key.System ? e.SystemKey : e.Key;
         foreach (var (g, action) in _bindings)
             if (g.Key == key && g.Modifiers == Keyboard.Modifiers) return action;

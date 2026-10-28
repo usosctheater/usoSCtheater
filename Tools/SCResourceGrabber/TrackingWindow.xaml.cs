@@ -51,6 +51,7 @@ public partial class TrackingWindow : Window
         });
         _filter.Changed += Refresh;
         PreviewKeyDown += OnPreviewKeyDown;
+        CheckSelectedButton.ToolTip = MainWindow.CheckSelectedTip;
         UpdateStatus();
     }
 
@@ -61,8 +62,9 @@ public partial class TrackingWindow : Window
         {
             case HotkeyMap.SaveChecked: SaveChecked_Click(this, e); break;
             case HotkeyMap.ToggleTracking: Close(); break;
-            case HotkeyMap.ToggleAllChecks: ToggleAll_Click(this, e); break;
             case HotkeyMap.ClearList: Clear_Click(this, e); break;
+            case HotkeyMap.SendToDownload: SendDownload_Click(this, e); break;
+            case HotkeyMap.ToggleMute: _main.ToggleMute(); break;
             default: return;
         }
         e.Handled = true;
@@ -166,11 +168,30 @@ public partial class TrackingWindow : Window
         }
     }
 
-    private void ToggleAll_Click(object sender, RoutedEventArgs e)
+    // 선택 항목 체크 (메인 창과 같은 규칙) + Enter = 상세 창 (2026-10-28)
+    private void TrackList_PreviewKeyDown(object sender, KeyEventArgs e)
     {
-        var visible = VisibleItems.ToList();
-        bool check = visible.Any(i => !i.IsChecked);
-        foreach (var i in visible) i.IsChecked = check;
+        if (e.Key == Key.Enter && TrackList.SelectedItem is TrackedItem { Resource: { } res })
+        {
+            _openDetail(res);
+            e.Handled = true;
+            return;
+        }
+        if (e.Key == Key.Space && Keyboard.Modifiers == ModifierKeys.None)
+        {
+            CheckSelected();
+            e.Handled = true;
+        }
+    }
+
+    private void CheckSelected_Click(object sender, RoutedEventArgs e) => CheckSelected();
+
+    private void CheckSelected()
+    {
+        var sel = TrackList.SelectedItems.Cast<TrackedItem>().ToList();
+        if (sel.Count == 0) return;
+        bool check = sel.Any(i => !i.IsChecked);
+        foreach (var i in sel) i.IsChecked = check;
     }
 
     private async void SaveChecked_Click(object sender, RoutedEventArgs e) =>
@@ -182,6 +203,10 @@ public partial class TrackingWindow : Window
         if (list.Count == 0) return;
         await _saveMany(list);
     }
+
+    // 체크한 항목을 메인 창의 다운로드 창으로 (2026-10-28)
+    private void SendDownload_Click(object sender, RoutedEventArgs e) =>
+        _main.SendToDownload(_items.Where(i => i.IsChecked && i.Resource != null).Select(i => i.Resource!).Distinct().ToList());
 
     private void Clear_Click(object sender, RoutedEventArgs e)
     {

@@ -26,6 +26,11 @@
     <EmbeddedResource Include="Scripts\audio_hook.js" LogicalName="audio_hook.js" />
   </ItemGroup>
 
+  <!-- 다운로드 창 이름 자동 완성 후보 (exe 옆에 둠. 개발 실행(dotnet run) 때도 출력 폴더에 복사) -->
+  <ItemGroup>
+    <None Include="names.txt" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.*" />
   </ItemGroup>

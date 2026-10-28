@@ -93,7 +93,6 @@ public sealed class ResourceCapture
                 Size = data.Length,
                 Category = result.Category,
                 Extension = result.Extension,
-                SubType = result.SubType,
                 CachePath = cachePath,
             });
         }

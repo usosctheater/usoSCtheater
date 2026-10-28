@@ -1,0 +1,44 @@
+# SC Resource Grabber 다운로드 창 이름 자동 완성 후보 (한 줄에 하나, # 뒤는 설명)
+# 게임 CharacterData.xml / UnitData.xml의 Id 복사본 (도구 독립 규칙). 바뀌면 이 파일도 고침
+
+# 캐릭터 (283 + 하즈키)
+mano       # 사쿠라기 마노
+hiori      # 카자노 히오리
+meguru     # 하치미야 메구루
+kogane     # 츠키오카 코가네
+mamimi     # 타나카 마미미
+sakuya     # 시라세 사쿠야
+yuika      # 미츠미네 유이카
+kiriko     # 유코쿠 키리코
+kaho       # 코미야 카호
+chiyoko    # 소노다 치요코
+juri       # 사이조 쥬리
+rinze      # 모리노 린제
+natsuha    # 아리스가와 나츠하
+amana      # 오사키 아마나
+tenka      # 오사키 텐카
+chiyuki    # 쿠와야마 치유키
+asahi      # 세리자와 아사히
+fuyuko     # 마유즈미 후유코
+mei        # 이즈미 메이
+toru       # 아사쿠라 토오루
+madoka     # 히구치 마도카
+koito      # 후쿠마루 코이토
+hinana     # 이치카와 히나나
+nichika    # 나나쿠사 니치카
+mikoto     # 아케타 미코토
+luca       # 이카루가 루카
+hana       # 스즈키 하나
+haruki     # 이쿠타 하루키
+hazuki     # 나나쿠사 하즈키
+temp	# 테스트용
+
+# 유닛
+illumination   # 일루미네이션 스타즈
+antica         # 안티카
+houkago        # 방과후 클라이맥스 걸즈
+alstroemeria   # 알스트로메리아
+straylight     # 스트레이라이트
+noctchill      # 녹칠
+shhis          # 시즈
+cometik        # 코메틱

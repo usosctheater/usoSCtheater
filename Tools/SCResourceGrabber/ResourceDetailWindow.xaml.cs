@@ -78,7 +78,6 @@ public partial class ResourceDetailWindow : Window
                 break;
 
             case ResourceCategory.Json:
-            case ResourceCategory.Spine when Resource.Extension is "json" or "atlas":
             case ResourceCategory.Other:
                 ShowText(ReadText(Resource.CachePath));
                 break;

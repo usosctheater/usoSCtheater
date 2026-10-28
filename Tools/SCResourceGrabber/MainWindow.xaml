@@ -30,6 +30,7 @@
                 <Button DockPanel.Dock="Left" Content="⟳" ToolTip="새로고침 (F5)" Click="Reload_Click"/>
                 <Button DockPanel.Dock="Left" Content="홈" ToolTip="시작 주소로 이동" Click="Home_Click"/>
                 <Button DockPanel.Dock="Right" Content="DevTools" Click="DevTools_Click"/>
+                <Button DockPanel.Dock="Right" x:Name="MuteButton" Content="🔊 소리" Click="Mute_Click" MinWidth="70"/>
                 <Button DockPanel.Dock="Right" Content="이동" Click="Go_Click"/>
                 <TextBox x:Name="AddressBox" VerticalContentAlignment="Center" Margin="2" KeyDown="AddressBox_KeyDown"/>
             </DockPanel>
@@ -55,14 +56,12 @@
                           Checked="CaptureToggle_Changed" Unchecked="CaptureToggle_Changed"/>
                 <Button DockPanel.Dock="Right" x:Name="ClearButton" Content="목록 비우기" Click="Clear_Click"/>
                 <Button DockPanel.Dock="Right" x:Name="TrackingButton" Content="● 추적 모드" Click="Tracking_Click"/>
-                <Button DockPanel.Dock="Right" x:Name="ToggleAllButton" Content="전체 선택/해제" Click="ToggleAll_Click"/>
-                <Button DockPanel.Dock="Left" x:Name="SpineButton" Content="Spine 수집" Click="Spine_Click" Margin="12,2,2,2"
-                        ToolTip="Spine 뷰어 사이트를 별도 창으로 열어 atlas·json·텍스처를 수집합니다"/>
+                <Button DockPanel.Dock="Right" x:Name="CheckSelectedButton" Content="선택 항목 체크" Click="CheckSelected_Click"/>
             </DockPanel>
 
             <ListView x:Name="ResourceList" Grid.Row="2"
                       VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
-                      SelectionMode="Extended" KeyDown="ResourceList_KeyDown"
+                      SelectionMode="Extended" PreviewKeyDown="ResourceList_PreviewKeyDown"
                       ToolTip="더블클릭 또는 Enter: 리소스 상세 창 열기">
                 <ListView.ItemContainerStyle>
                     <Style TargetType="ListViewItem">
@@ -106,6 +105,7 @@
                 <WrapPanel>
                     <CheckBox x:Name="OverwriteCheck" Content="같은 이름 덮어쓰기" Checked="SaveOption_Changed" Unchecked="SaveOption_Changed"/>
                     <Button x:Name="SaveCheckedButton" Content="체크한 항목 저장" FontWeight="Bold" Click="SaveChecked_Click"/>
+                    <Button x:Name="SendDownloadButton" Content="다운로드 창으로 ▶" Click="SendDownload_Click"/>
                 </WrapPanel>
             </StackPanel>
 

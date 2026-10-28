@@ -18,8 +18,9 @@
         <!-- 상단: 상태 + 필터 + 동작 -->
         <DockPanel DockPanel.Dock="Top">
             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                <Button Content="전체 선택/해제" Click="ToggleAll_Click"/>
+                <Button x:Name="CheckSelectedButton" Content="선택 항목 체크" Click="CheckSelected_Click"/>
                 <Button Content="체크한 항목 저장" FontWeight="Bold" Click="SaveChecked_Click"/>
+                <Button Content="다운로드 창으로 ▶" Click="SendDownload_Click" ToolTip="체크한 항목을 다운로드 창으로 보내 이름을 붙여 저장"/>
                 <Button Content="목록 비우기" Click="Clear_Click"/>
             </StackPanel>
             <TextBlock x:Name="StatusText" VerticalAlignment="Center" Margin="2,0,8,0" FontWeight="Bold"/>
@@ -29,9 +30,9 @@
         <WrapPanel x:Name="CategoryPanel" DockPanel.Dock="Top" Margin="0,2"/>
 
         <TextBlock DockPanel.Dock="Bottom" Foreground="#666" Margin="2,4,2,0" TextWrapping="Wrap"
-                   Text="추적 시작 후 새로 받은 리소스와 재생된 오디오가 위에서부터 쌓이고, 다시 재생된 오디오는 맨 위로 올라옵니다. 이미 받아 둔 이미지를 게임이 다시 쓰면 나타나지 않습니다. 더블클릭: 상세 창 · 창을 닫으면 추적 종료"/>
+                   Text="추적 시작 후 새로 받은 리소스와 재생된 오디오가 위에서부터 쌓이고, 다시 재생된 오디오는 맨 위로 올라옵니다. 이미 받아 둔 이미지를 게임이 다시 쓰면 나타나지 않습니다. 더블클릭·Enter: 상세 창 · Space: 선택 항목 체크 · 창을 닫으면 추적 종료"/>
 
-        <ListView x:Name="TrackList" SelectionMode="Extended"
+        <ListView x:Name="TrackList" SelectionMode="Extended" PreviewKeyDown="TrackList_PreviewKeyDown"
                   VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling">
             <ListView.ItemContainerStyle>
                 <Style TargetType="ListViewItem">

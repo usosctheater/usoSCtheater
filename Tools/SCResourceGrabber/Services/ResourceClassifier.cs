@@ -10,7 +10,7 @@ namespace SCResourceGrabber.Services;
 /// </summary>
 public static class ResourceClassifier
 {
-    public record Result(ResourceCategory Category, string Extension, string SubType = "");
+    public record Result(ResourceCategory Category, string Extension);
 
     private static readonly Dictionary<string, ResourceCategory> ExtMap = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -23,13 +23,9 @@ public static class ResourceClassifier
         ["mp4"] = ResourceCategory.Video, ["webm"] = ResourceCategory.Video, ["m4v"] = ResourceCategory.Video,
         ["woff"] = ResourceCategory.Font, ["woff2"] = ResourceCategory.Font, ["ttf"] = ResourceCategory.Font,
         ["otf"] = ResourceCategory.Font,
-        ["atlas"] = ResourceCategory.Spine, ["skel"] = ResourceCategory.Spine,
         ["json"] = ResourceCategory.Json,
+        // Spine 분류(atlas·skel·skeleton json)는 2026-10-28 삭제 — atlas·skel은 기타, skeleton json은 JSON
     };
-
-    private static readonly Regex AtlasHeader = new(
-        @"^\s*\S+\.(png|webp|jpg|jpeg)\s*\r?\n(\s*\w+\s*:.*\r?\n){0,6}?\s*(size|format|filter)\s*:",
-        RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     public static Result Classify(string url, string mime, byte[] data)
     {
@@ -39,16 +35,11 @@ public static class ResourceClassifier
         // 1) 내용 기반 판정
         var sniffed = Sniff(data);
         if (sniffed != null)
-        {
-            // 텍스트 계열(JSON)이고 URL이 .atlas/.skel처럼 더 구체적이면 URL 쪽 우선
-            if (sniffed.Category == ResourceCategory.Json && urlExt.Length > 0 && ExtMap.TryGetValue(urlExt, out var c) && c == ResourceCategory.Spine)
-                return new Result(ResourceCategory.Spine, urlExt, urlExt);
             return sniffed with { Extension = urlExt.Length > 0 && ExtMap.ContainsKey(urlExt) ? urlExt : sniffed.Extension };
-        }
 
         // 2) URL 확장자
         if (urlExt.Length > 0 && ExtMap.TryGetValue(urlExt, out var cat))
-            return new Result(cat, urlExt, cat == ResourceCategory.Spine ? urlExt : "");
+            return new Result(cat, urlExt);
 
         // 3) Content-Type
         if (mime.StartsWith("image/")) return new Result(ResourceCategory.Image, MimeExt(mime) ?? "img");
@@ -91,13 +82,7 @@ public static class ResourceClassifier
 
         // 텍스트 계열: 앞부분만 보고 판정
         string head = Encoding.UTF8.GetString(d, 0, Math.Min(d.Length, 64 * 1024)).TrimStart('﻿', ' ', '\t', '\r', '\n');
-        if (head.StartsWith('{') || head.StartsWith('['))
-        {
-            if (head.Contains("\"skeleton\"") && head.Contains("\"bones\""))
-                return new(ResourceCategory.Spine, "json", "skeleton json");
-            return new(ResourceCategory.Json, "json");
-        }
-        if (AtlasHeader.IsMatch(head)) return new(ResourceCategory.Spine, "atlas", "atlas");
+        if (head.StartsWith('{') || head.StartsWith('[')) return new(ResourceCategory.Json, "json");
         if (head.StartsWith("<svg") || (head.StartsWith("<?xml") && head.Contains("<svg"))) return new(ResourceCategory.Image, "svg");
 
         // 알려진 형식이 아니고 무작위에 가까운 바이너리 → 암호화(또는 알 수 없는 압축)로 본다
