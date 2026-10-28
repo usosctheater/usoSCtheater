@@ -22,18 +22,50 @@ namespace UsoSCTheater.Character
         /// 언어별 이름. full = true면 성까지 포함한 이름({언어}Full).
         /// 없으면 같은 언어의 다른 형식 → 기본 언어(Ko) → Id 순으로 대체
         /// </summary>
-        public string GetName(string language, bool full = false)
+        public string GetName(string language, bool full = false) => LocalizedNames.Get(names, Id, language, full);   //[유닛] 이름 대체 규칙을 유닛과 공유
+    }
+
+    //[유닛] 추가: 유닛 1개 (UnitData.xml의 Unit 한 줄). Members = 캐릭터 ID (소문자)
+    public class UnitEntry
+    {
+        public string Id { get; }
+        public IReadOnlyList<string> Members { get; }
+        private readonly Dictionary<string, string> names;
+
+        internal UnitEntry(string id, List<string> members, Dictionary<string, string> names)
+        {
+            Id = id;
+            Members = members;
+            this.names = names;
+        }
+
+        public string GetName(string language, bool full = false) => LocalizedNames.Get(names, Id, language, full);
+
+        //멤버 전원이 목록에 들어 있음 (게스트가 더 있어도 true, 대소문자 무시)
+        public bool IsFullyIn(IEnumerable<string> characterIds)
+        {
+            if (Members.Count == 0 || characterIds == null) return false;
+            var set = new HashSet<string>(characterIds, StringComparer.OrdinalIgnoreCase);
+            foreach (string m in Members) if (!set.Contains(m)) return false;
+            return true;
+        }
+    }
+
+    //[유닛] 언어별 이름 대체 규칙 (캐릭터·유닛 공용): 요청 형식 → 같은 언어 다른 형식 → 기본 언어(Ko) → Id
+    internal static class LocalizedNames
+    {
+        public static string Get(Dictionary<string, string> names, string id, string language, bool full)
         {
             if (string.IsNullOrEmpty(language)) language = CharacterDatabase.DefaultLanguage;
 
-            if (TryGet(language, full, out string name)) return name;
-            if (TryGet(language, !full, out name)) return name;
-            if (TryGet(CharacterDatabase.DefaultLanguage, full, out name)) return name;
-            if (TryGet(CharacterDatabase.DefaultLanguage, !full, out name)) return name;
-            return Id;
+            if (TryGet(names, language, full, out string name)) return name;
+            if (TryGet(names, language, !full, out name)) return name;
+            if (TryGet(names, CharacterDatabase.DefaultLanguage, full, out name)) return name;
+            if (TryGet(names, CharacterDatabase.DefaultLanguage, !full, out name)) return name;
+            return id;
         }
 
-        private bool TryGet(string language, bool full, out string name)
+        private static bool TryGet(Dictionary<string, string> names, string language, bool full, out string name)
         {
             return names.TryGetValue(full ? language + CharacterDatabase.FullSuffix : language, out name)
                    && !string.IsNullOrEmpty(name);
@@ -56,6 +88,10 @@ namespace UsoSCTheater.Character
         private static Dictionary<string, Sprite> iconCache;      // 없는 아이콘(null)도 저장 → 경고·로드 반복 방지
         private static Dictionary<string, List<SpineKeyInfo>> spinesById;   //[Spine 인덱스] 캐릭터 Id → Spine 목록 (대소문자 무시)
 
+        public const string UnitDataPath = "Data/UnitData";   //[유닛] Resources.Load 경로
+        private static List<UnitEntry> units;                  //[유닛] 파일 순서 유지
+        private static Dictionary<string, UnitEntry> unitsById;   //[유닛] 대소문자 무시
+
         //Domain Reload 비활성 → Play 시작마다 static 초기화
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetOnPlay() => Reload();
@@ -66,6 +102,74 @@ namespace UsoSCTheater.Character
             byId = null;
             iconCache = null;
             spinesById = null;
+            units = null;       //[유닛]
+            unitsById = null;   //[유닛]
+        }
+
+        //[유닛] 전체 유닛 (UnitData.xml 순서)
+        public static IReadOnlyList<UnitEntry> GetUnits()
+        {
+            EnsureUnitsLoaded();
+            return units;
+        }
+
+        //[유닛] Id로 조회 (대소문자 무시), 없으면 null
+        public static UnitEntry FindUnit(string unitId)
+        {
+            if (string.IsNullOrWhiteSpace(unitId)) return null;
+            EnsureUnitsLoaded();
+            return unitsById.TryGetValue(unitId.Trim(), out var unit) ? unit : null;
+        }
+
+        private static void EnsureUnitsLoaded()
+        {
+            if (units != null) return;
+            units = new List<UnitEntry>();
+            unitsById = new Dictionary<string, UnitEntry>(StringComparer.OrdinalIgnoreCase);
+
+            TextAsset xml = Resources.Load<TextAsset>(UnitDataPath);
+            if (xml == null)
+            {
+                Debug.LogWarning($"[CharacterDatabase] Resources/{UnitDataPath}.xml 없음 → 유닛 없음으로 처리");
+                return;
+            }
+
+            XmlDocument doc = new XmlDocument();
+            doc.LoadXml(xml.text);
+            foreach (XmlNode node in doc.DocumentElement.ChildNodes)
+            {
+                if (node.NodeType != XmlNodeType.Element || node.Name != "Unit") continue;
+
+                string id = node.Attributes["Id"]?.Value?.Trim();
+                if (string.IsNullOrEmpty(id) || unitsById.ContainsKey(id))
+                {
+                    Debug.LogWarning($"[CharacterDatabase] UnitData.xml: Id 없음 또는 중복('{id}') → 건너뜀");
+                    continue;
+                }
+
+                var members = new List<string>();
+                var names = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                foreach (XmlAttribute attr in node.Attributes)
+                {
+                    if (attr.Name == "Id") continue;
+                    if (attr.Name == "Member")
+                    {
+                        foreach (string m in attr.Value.Split(','))
+                        {
+                            string memberId = m.Trim().ToLowerInvariant();
+                            if (memberId.Length == 0) continue;
+                            if (Find(memberId) == null) Debug.LogWarning($"[CharacterDatabase] UnitData.xml '{id}': 멤버 '{memberId}'가 CharacterData.xml에 없음");
+                            members.Add(memberId);
+                        }
+                        continue;
+                    }
+                    names[attr.Name] = attr.Value.Trim();   //Id·Member 외 속성 = 언어별 표기
+                }
+
+                var unit = new UnitEntry(id, members, names);
+                units.Add(unit);
+                unitsById[id] = unit;
+            }
         }
 
         //Id로 조회 (대소문자 무시), 없으면 null

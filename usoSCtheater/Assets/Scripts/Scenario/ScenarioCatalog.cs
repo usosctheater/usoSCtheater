@@ -25,6 +25,10 @@ namespace UsoSCTheater.Scenario
         //[시나리오 데이터] Resources/Data/ScenarioData.xml에서 동기화 때 자동 저장 (인스펙터에서 고쳐도 동기화 시 덮어씀)
         public List<string> tags = new List<string>();           // 태그 문구, 표시 순서 (자동)
         public List<string> characters = new List<string>();     // 캐릭터 ID(소문자), 표시 순서 (자동)
+        public List<string> irisIcons = new List<string>();      //[Iris 아이콘] ScenarioData.xml Iris 속성 = 유닛 ID 또는 캐릭터 ID. 비어 있으면 자동 판정 (자동)
+
+        //[엔딩 SD] 막 XML에서 사용한 CG 키 (막 순서·등장 순서, 중복 없음, none 제외) — 동기화 때 자동
+        public List<string> spineKeys = new List<string>();
 
         //[목록 UI] 표시명 (비어 있으면 폴더명)
         public string DisplayNameOrFolder => string.IsNullOrEmpty(displayName) ? folderName : displayName;

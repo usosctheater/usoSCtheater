@@ -76,6 +76,20 @@ namespace UsoSCTheater.Character
             if (SdTypes.Contains(baseType)) return SpineKind.SD;
             return SpineKind.Unknown;
         }
+
+        //[엔딩 SD] LD 타입 → 같은 카드의 SD 타입 (stand → cb, stand_costume → cb_costume, awake_ 접두어 유지). 짝이 없으면 null (support_stand 등)
+        public static string GetPairedSDType(string ldType)
+        {
+            if (string.IsNullOrEmpty(ldType)) return null;
+            bool awake = ldType.StartsWith(AwakePrefix, StringComparison.OrdinalIgnoreCase);
+            string baseType = awake ? ldType.Substring(AwakePrefix.Length) : ldType;
+
+            string sdType;
+            if (string.Equals(baseType, "stand", StringComparison.OrdinalIgnoreCase)) sdType = "cb";
+            else if (string.Equals(baseType, "stand_costume", StringComparison.OrdinalIgnoreCase)) sdType = "cb_costume";
+            else return null;
+            return awake ? AwakePrefix + sdType : sdType;
+        }
     }
 
     /// <summary>

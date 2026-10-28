@@ -48,7 +48,10 @@ public class EffectManager : MonoBehaviour
 
     [Header("Iris Simple 설정")]
     [SerializeField] private UnityEngine.UI.Image irisImage;                                            //패널 이미지
-    [SerializeField] private UnityEngine.UI.Image irisIcon;                                             //유닛 아이콘
+    [SerializeField] private UnityEngine.UI.Image irisIcon;                                             //배경 원 (멤버 사인일 때만 보임)   //[Iris 아이콘] 주석 변경
+    [SerializeField] private UnityEngine.UI.Image irisIconImage;                                        //[Iris 아이콘] 추가: IrisIcon 아래 Icon — 아이콘 Sprite는 여기에만
+    [SerializeField] private float unitIconScale = 1f;                                                  //[Iris 아이콘] 추가: 유닛 아이콘 배율 (배경 원 없음)
+    [SerializeField] private float memberIconScale = 0.8f;                                              //[Iris 아이콘] 추가: 멤버 사인 배율 (배경 원 위, 여백)
     [SerializeField] private float irisOutDuration = 1.0f;
     [SerializeField] private float irisInDuration = 1.0f;
     [SerializeField] private float irisMinScale = 1.0f;
@@ -56,6 +59,11 @@ public class EffectManager : MonoBehaviour
 
     [SerializeField] private AnimationCurve irisOutCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
     [SerializeField] private AnimationCurve irisInCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
+
+    //[Iris 아이콘] 시나리오 시작 때 ScenarioPlayer가 전달. 트랜지션마다 후보 중 랜덤 (없으면 irisIconImage·배경 원의 인스펙터 상태 유지)
+    private UsoSCTheater.Scenario.IrisIconSet irisIconSet;
+
+    public void SetIrisIcons(UsoSCTheater.Scenario.IrisIconSet set) => irisIconSet = set;
 
     void Awake()
     {
@@ -223,6 +231,21 @@ public class EffectManager : MonoBehaviour
 
     }
 
+    //[Iris 아이콘] 추가: 유닛 = 배경 원 없이 unitIconScale / 멤버 사인 = 배경 원 위에 memberIconScale
+    //배경 원은 Image 컴포넌트만 끔 (GameObject는 켜 둬야 하위 Icon이 보임)
+    private void ApplyIrisIcon(Sprite sprite, bool isUnit)
+    {
+        if (irisIconImage == null)
+        {
+            Debug.LogWarning("[EffectManager] irisIconImage 미연결 — IrisIcon 아래 Icon을 연결하세요");
+            return;
+        }
+        irisIconImage.sprite = sprite;
+        irisIcon.enabled = !isUnit;
+        float scale = isUnit ? unitIconScale : memberIconScale;
+        irisIconImage.rectTransform.localScale = new UnityEngine.Vector3(scale, scale, 1f);
+    }
+
     private IEnumerator IrisCoroutine(string se, Action onComplete)
     {
         // | 구분자 있을 경우, se를 out과 in으로 분리해서 사용
@@ -232,6 +255,13 @@ public class EffectManager : MonoBehaviour
 
         if (!string.IsNullOrEmpty(se_out)) audioManager.PlaySE(se_out);
         else Debug.Log("[EffectManager] SE_out is null");
+
+        //[Iris 아이콘] 트랜지션마다 새로 선정
+        if (irisIconSet != null && irisIconSet.TryPick(out Sprite pickedIcon, out string pickedKey, out bool isUnit))
+        {
+            ApplyIrisIcon(pickedIcon, isUnit);
+            Debug.Log($"[EffectManager] Iris 아이콘: {pickedKey} ({(isUnit ? "유닛" : "멤버")})");
+        }
 
         irisIcon.gameObject.SetActive(true);        
 

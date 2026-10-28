@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    유닛 데이터 (사람이 직접 편집). 코드: UsoSCTheater.Character.CharacterDatabase (GetUnits / FindUnit)
+    Id = 유닛 ID (대소문자 무시, Resources/IrisIcon/{Id} 아이콘 이름), Member = 캐릭터 ID 목록 (CharacterData.xml의 Id, 쉼표 구분)
+    Id·Member 외의 속성은 모두 언어별 표기 ({언어 코드} = 이름, {언어 코드}Full = 긴 이름)
+-->
+<UnitData>
+    <Unit Id="illumination" Ko="일루미네이션 스타즈"     Ja="イルミネーションスターズ"     Member="mano, hiori, meguru" />
+    <Unit Id="antica"       Ko="안티카"                 Ja="アンティーカ"                 Member="kogane, mamimi, sakuya, yuika, kiriko" />
+    <Unit Id="houkago"      Ko="방과후 클라이맥스 걸즈" Ja="放課後クライマックスガールズ" Member="kaho, chiyoko, juri, rinze, natsuha" />
+    <Unit Id="alstroemeria" Ko="알스트로메리아"         Ja="アルストロメリア"             Member="amana, tenka, chiyuki" />
+    <Unit Id="straylight"   Ko="스트레이라이트"         Ja="ストレイライト"               Member="asahi, fuyuko, mei" />
+    <Unit Id="noctchill"    Ko="녹칠"                   Ja="ノクチル"                     Member="toru, madoka, koito, hinana" />
+    <Unit Id="shhis"        Ko="시즈"                   Ja="SHHis"                        Member="nichika, mikoto" />
+    <Unit Id="cometik"      Ko="코메틱"                 Ja="CoMETIK"                      Member="luca, hana, haruki" />
+</UnitData>

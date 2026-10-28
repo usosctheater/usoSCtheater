@@ -10,7 +10,8 @@ public class BGTexturePostprocessor : AssetPostprocessor
     {
         "Assets/Resources/BG/",
         "Assets/Resources/Image/",
-        "Assets/Resources/CharacterIcon/"   //[캐릭터 DB] 추가: 시나리오 목록 등장인물 아이콘
+        "Assets/Resources/CharacterIcon/",  //[캐릭터 DB] 추가: 시나리오 목록 등장인물 아이콘
+        "Assets/Resources/IrisIcon/"        //[Iris 아이콘] 추가: Iris 트랜지션 가운데 아이콘
     };
 
     private void OnPreprocessTexture()

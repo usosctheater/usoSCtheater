@@ -17,6 +17,7 @@ public class ScenarioPlayer : MonoBehaviour
     [SerializeField] BGManager bgManager;
     [SerializeField] CGManager cgManager;
     [SerializeField] AudioManager audioManager;   //[시나리오] 시나리오별 보이스 폴더 지정용
+    [SerializeField] EffectManager effectManager; //[Iris 아이콘] 시나리오별 Iris 아이콘 후보 전달용
 
     [Header("기본 시나리오")]
     //[시나리오] 목록 씬을 거치지 않고 CommunicationScene을 직접 Play할 때만 사용 (선택값이 있으면 무시)
@@ -42,6 +43,8 @@ public class ScenarioPlayer : MonoBehaviour
         //[시나리오] 시나리오 폴더명을 보이스 폴더로 지정
         if (audioManager != null) audioManager.SetScenarioVoiceFolder(activeScenarioFolder);
         else Debug.LogWarning("[ScenarioPlayer] AudioManager 미연결 — 보이스는 Voice 루트에서만 검색합니다.");
+
+        ApplyIrisIcons();   //[Iris 아이콘]
 
         //[녹화] 재생 시작 신호 (녹화 모드일 때만 녹화 도구가 녹화 시작 + 자동재생 On). 모두 재생이면 막 이름 null
         RecordingSignal.RequestStart(activeScenarioFolder, ScenarioSelection.IsPlayAll ? null : actFiles[currentActIndex].name);
@@ -96,6 +99,47 @@ public class ScenarioPlayer : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.PageUp)) DebugNextAct();
         else if (Input.GetKeyDown(KeyCode.PageDown)) DebugPreviousAct();
         else if (Input.GetKeyDown(KeyCode.Backspace)) dialogManager.DebugPrevLine();
+        else if (Input.GetKeyDown(KeyCode.End)) DebugJumpToEnd();   //[디버그] End: 엔딩 직행 (단일 막이면 막 종료)
+    }
+
+    //[Iris 아이콘] 재생 시나리오(직접 Play 포함)의 등장인물·유닛으로 아이콘 후보를 1번 만들어 EffectManager에 전달
+    private void ApplyIrisIcons()
+    {
+        if (effectManager == null)
+        {
+            Debug.LogWarning("[ScenarioPlayer] EffectManager 미연결 — Iris 아이콘은 인스펙터 기본 아이콘만 사용합니다.");
+            return;
+        }
+        ScenarioCatalog catalog = ScenarioCatalog.Load();
+        IrisIconSet iris = IrisIconSet.Build(catalog != null ? catalog.Find(activeScenarioFolder) : null);
+        effectManager.SetIrisIcons(iris);
+        Debug.Log($"[ScenarioPlayer] Iris 아이콘 후보 {iris.Count}개 — {iris.Rule}{(iris.Count > 0 ? $" ({string.Join(", ", iris.Keys)})" : "")}");
+    }
+
+    //[디버그] End: 진행 상태 정리 → 모두 재생이면 남은 막을 건너뛰고 엔딩 씬 (녹화는 엔딩 종료 때 정지) / 단일 막이면 막 종료와 같게 목록 씬
+    private void DebugJumpToEnd()
+    {
+        if (isExiting) return;
+        isExiting = true;
+
+        dialogManager.DebugResetState();
+        if (audioManager != null)
+        {
+            audioManager.StopVoice();
+            audioManager.StopAllAudio();
+        }
+
+        if (ScenarioSelection.IsPlayAll)
+        {
+            Debug.Log("[ScenarioPlayer] End 디버그: 남은 막 건너뜀 → 엔딩 씬");
+            SceneTransitionManager.GoToEndingScene();
+        }
+        else
+        {
+            Debug.Log("[ScenarioPlayer] End 디버그: 단일 막 종료 → 목록 씬");
+            RecordingSignal.RequestStop();
+            SceneTransitionManager.GoToScenarioSelectScene();
+        }
     }
 
     private void LoadActFiles()

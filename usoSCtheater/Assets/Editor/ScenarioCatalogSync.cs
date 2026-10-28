@@ -33,7 +33,12 @@ public class ScenarioCatalogSync : AssetPostprocessor
     private const string DataIdAttr = "Id";
     private const string DataTagAttr = "Tag";
     private const string DataCharacterAttr = "Character";
-    private static readonly char[] DataListSeparator = { ',' };   // Tag / Character 목록 구분자
+    private const string DataIrisAttr = "Iris";                   //[Iris 아이콘] 직접 지정 (유닛 ID 또는 캐릭터 ID, 쉼표 구분)
+    private static readonly char[] DataListSeparator = { ',' };   // Tag / Character / Iris 목록 구분자
+
+    //[엔딩 SD] 막 XML에서 사용한 CG 키 수집
+    private const string ActCgAttr = "CG";
+    private const string ActCgNone = "none";
 
     private static bool syncPending = false;
 
@@ -45,6 +50,8 @@ public class ScenarioCatalogSync : AssetPostprocessor
         public string scenarioTitle = "";
         public List<string> tags = new List<string>();         //[시나리오 데이터]
         public List<string> characters = new List<string>();   //[시나리오 데이터]
+        public List<string> irisIcons = new List<string>();    //[Iris 아이콘]
+        public List<string> spineKeys = new List<string>();    //[엔딩 SD]
     }
 
     //[시나리오 데이터] ScenarioData.xml의 시나리오 1개
@@ -52,6 +59,7 @@ public class ScenarioCatalogSync : AssetPostprocessor
     {
         public List<string> tags = new List<string>();
         public List<string> characters = new List<string>();
+        public List<string> irisIcons = new List<string>();    //[Iris 아이콘]
     }
 
     // ── 자동 트리거 ──────────────────────────────────────────────────────
@@ -122,7 +130,7 @@ public class ScenarioCatalogSync : AssetPostprocessor
             var scan = new ScanResult();
             foreach (string path in actPaths)
             {
-                ReadActHeader(path, out string mainTitle, out string subTitle);
+                ReadActHeader(path, out string mainTitle, out string subTitle, scan.spineKeys);   //[엔딩 SD] CG 키도 함께 수집
                 scan.acts.Add(Path.GetFileNameWithoutExtension(path));
                 scan.actTitles.Add(subTitle);
                 if (string.IsNullOrEmpty(scan.scenarioTitle) && !string.IsNullOrEmpty(mainTitle)) scan.scenarioTitle = mainTitle;
@@ -140,6 +148,7 @@ public class ScenarioCatalogSync : AssetPostprocessor
                 {
                     kv.Value.tags = item.tags;
                     kv.Value.characters = item.characters;
+                    kv.Value.irisIcons = item.irisIcons;   //[Iris 아이콘]
                 }
                 else Debug.LogWarning($"[ScenarioCatalogSync] '{kv.Key}': ScenarioData.xml에 항목 없음 → 태그/등장인물 비움");
             }
@@ -186,6 +195,16 @@ public class ScenarioCatalogSync : AssetPostprocessor
                 entry.characters = scan.characters;
                 changed = true;
             }
+            if (entry.irisIcons == null || !entry.irisIcons.SequenceEqual(scan.irisIcons))   //[Iris 아이콘]
+            {
+                entry.irisIcons = scan.irisIcons;
+                changed = true;
+            }
+            if (entry.spineKeys == null || !entry.spineKeys.SequenceEqual(scan.spineKeys))   //[엔딩 SD]
+            {
+                entry.spineKeys = scan.spineKeys;
+                changed = true;
+            }
             merged.Add(entry);
             added.Add(entry.folderName);
         }
@@ -197,6 +216,7 @@ public class ScenarioCatalogSync : AssetPostprocessor
                 folderName = kv.Key, displayName = kv.Key, hidden = false,
                 actNames = kv.Value.acts, actTitles = kv.Value.actTitles, scenarioTitle = kv.Value.scenarioTitle,   //[목록 UI]
                 tags = kv.Value.tags, characters = kv.Value.characters,   //[시나리오 데이터]
+                irisIcons = kv.Value.irisIcons, spineKeys = kv.Value.spineKeys,   //[Iris 아이콘] [엔딩 SD]
             });
             changed = true;
         }
@@ -214,7 +234,8 @@ public class ScenarioCatalogSync : AssetPostprocessor
     }
 
     //[목록 UI] 막 XML 루트의 mainTitle / subTitle 읽기 (파싱 실패 시 빈 값 + 경고)
-    private static void ReadActHeader(string assetPath, out string mainTitle, out string subTitle)
+    //[엔딩 SD] spineKeys: 막 안 모든 요소의 CG 값(쉼표 구분)을 등장 순서대로 추가 (중복·none 제외, 대소문자 무시)
+    private static void ReadActHeader(string assetPath, out string mainTitle, out string subTitle, List<string> spineKeys)
     {
         mainTitle = "";
         subTitle = "";
@@ -230,6 +251,16 @@ public class ScenarioCatalogSync : AssetPostprocessor
             //[제목 읽기] 대소문자 구분 없이 조회
             mainTitle = ActXml.GetAttrIgnoreCase(root, ActXml.MainTitleAttr);
             subTitle  = ActXml.GetAttrIgnoreCase(root, ActXml.SubTitleAttr);
+
+            //[엔딩 SD] 사용한 CG 키 수집
+            foreach (XmlNode node in doc.GetElementsByTagName("*"))
+            {
+                foreach (string key in SplitList(ActXml.GetAttrIgnoreCase(node, ActCgAttr)))
+                {
+                    if (string.Equals(key, ActCgNone, StringComparison.OrdinalIgnoreCase)) continue;
+                    if (!spineKeys.Contains(key, StringComparer.OrdinalIgnoreCase)) spineKeys.Add(key);
+                }
+            }
         }
         catch (XmlException e)
         {
@@ -282,10 +313,17 @@ public class ScenarioCatalogSync : AssetPostprocessor
                     else item.characters.Add(charId);
                 }
 
+                //[Iris 아이콘] 직접 지정 (유닛 ID 또는 캐릭터 ID, 소문자로 저장)
+                foreach (string value in SplitList(ActXml.GetAttrIgnoreCase(node, DataIrisAttr)))
+                {
+                    string iconId = value.ToLowerInvariant();
+                    if (!item.irisIcons.Contains(iconId)) item.irisIcons.Add(iconId);
+                }
+
                 //속성 이름 오타 확인 (예: Charactor → 읽히지 않으므로 경고)
                 foreach (XmlAttribute attr in node.Attributes)
                 {
-                    if (!IsName(attr, DataIdAttr) && !IsName(attr, DataTagAttr) && !IsName(attr, DataCharacterAttr))
+                    if (!IsName(attr, DataIdAttr) && !IsName(attr, DataTagAttr) && !IsName(attr, DataCharacterAttr) && !IsName(attr, DataIrisAttr))   //[Iris 아이콘] Iris 허용
                         Debug.LogWarning($"[ScenarioCatalogSync] ScenarioData.xml '{id}': 알 수 없는 속성 '{attr.Name}' → 무시");
                 }
                 result[id] = item;

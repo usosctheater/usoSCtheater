@@ -34,6 +34,18 @@ MonoBehaviour:
     - asahi
     - fuyuko
     - mei
+    irisIcons: []
+    spineKeys:
+    - mei_stand_costume_1040190030
+    - fuyuko_stand_costume_1040180030
+    - asahi_stand_costume_1040170030
+    - fuyuko_stand_3000180260
+    - fuyuko_stand_3000180060
+    - fuyuko_stand_1050180010
+    - asahi_stand_1040170030
+    - asahi_stand_3000170060
+    - mei_stand_3000190060
+    - mei_stand_3000190030
   - folderName: NKS
     displayName: NKS
     hidden: 0
@@ -48,6 +60,10 @@ MonoBehaviour:
     characters:
     - nichika
     - hazuki
+    irisIcons: []
+    spineKeys:
+    - nichika_stand_1040240020
+    - hazuki_stand_4000910022
   - folderName: SC
     displayName: SC
     hidden: 0
@@ -63,3 +79,33 @@ MonoBehaviour:
     characters:
     - asahi
     - fuyuko
+    irisIcons: []
+    spineKeys:
+    - asahi_stand_1040170010
+    - fuyuko_stand_1030180010
+    - fuyuko_support_stand_2040180170
+    - fuyuko_stand_1040180100
+    - nichika_stand_1030240020
+  - folderName: TEMP
+    displayName: TEMP
+    hidden: 0
+    actNames:
+    - TEMP01
+    - TEMP02
+    scenarioTitle: "\uC784\uC2DC \uBB38\uC11C"
+    actTitles:
+    - "\uC2A4\uD06C\uB9BD\uD2B8 \uD14C\uC2A4\uD2B8"
+    - "\uC2A4\uD06C\uB9BD\uD2B8 \uD14C\uC2A4\uD2B8"
+    tags: []
+    characters: []
+    irisIcons: []
+    spineKeys:
+    - nichika_stand_1040240020
+    - hazuki_stand_4000910022
+    - NNKS
+    - nichika_stand_1040240040
+    - nichika_stand_costume_1040240040
+    - nichika_stand_1040240010
+    - madoka_stand_1050210010
+    - fuyuko_stand_1050180010
+    - fuyumado

@@ -103,11 +103,13 @@ namespace UsoSCTheater.Ending
                 return;
             }
 
-            var candidates = new List<List<string>>();   // 인물별 SD 키 목록 (SD가 있는 인물만)
-            foreach (string id in entry.characters)
+            //[엔딩 SD] ① 막에서 사용한 LD와 짝인 SD → ② 등장인물의 SD → ③ 기본 SD
+            string rule = "사용 Spine 짝";
+            List<List<string>> candidates = BuildUsedSpinePairs(entry);
+            if (candidates.Count == 0)
             {
-                List<string> keys = CharacterDatabase.GetSpineKeys(id, SpineKind.SD, includeCostumeSD);
-                if (keys.Count > 0) candidates.Add(keys);
+                rule = "등장인물 SD";
+                candidates = BuildCharacterSDs(entry);
             }
             if (candidates.Count == 0)
             {
@@ -123,7 +125,47 @@ namespace UsoSCTheater.Ending
 
             skeletonAnimation.skeletonDataAsset = data;
             skeletonAnimation.Initialize(true);
-            Debug.Log($"[EndingSDSpineController] SD 선택: {key} (후보 {candidates.Count}명)");
+            Debug.Log($"[EndingSDSpineController] SD 선택: {key} ({rule}, 후보 {candidates.Count}명)");
+        }
+
+        //[엔딩 SD] 추가: 막에서 사용한 LD(카탈로그 spineKeys)와 같은 카드(캐릭터·enzaId)의 SD 중 등록된 것만, 인물별로 묶음 (짝 없는 카드는 건너뜀)
+        private List<List<string>> BuildUsedSpinePairs(ScenarioEntry entry)
+        {
+            var byCharacter = new Dictionary<string, List<string>>(System.StringComparer.OrdinalIgnoreCase);
+            var order = new List<List<string>>();
+            if (entry.spineKeys == null) return order;
+
+            foreach (string ldKey in entry.spineKeys)
+            {
+                if (!SpineKeys.TryParse(ldKey, out SpineKeyInfo info) || info.Kind != SpineKind.LD) continue;
+                string sdType = SpineKeys.GetPairedSDType(info.Type);
+                if (sdType == null) continue;   //support_stand 등 짝 타입 없음
+
+                string sdKey = $"{info.CharacterId}_{sdType}_{info.EnzaId}";
+                List<string> registered = CharacterDatabase.GetSpineKeys(info.CharacterId, SpineKind.SD, includeCostumeSD);
+                string match = registered.Find(k => string.Equals(k, sdKey, System.StringComparison.OrdinalIgnoreCase));
+                if (match == null) continue;    //SD 미등록(카드에 SD 없음 포함) → 건너뜀
+
+                if (!byCharacter.TryGetValue(info.CharacterId, out var list))
+                {
+                    byCharacter[info.CharacterId] = list = new List<string>();
+                    order.Add(list);
+                }
+                if (!list.Contains(match)) list.Add(match);
+            }
+            return order;
+        }
+
+        //[엔딩 SD] 등장인물별 등록된 SD 전체 (SD가 있는 인물만)
+        private List<List<string>> BuildCharacterSDs(ScenarioEntry entry)
+        {
+            var candidates = new List<List<string>>();
+            foreach (string id in entry.characters)
+            {
+                List<string> keys = CharacterDatabase.GetSpineKeys(id, SpineKind.SD, includeCostumeSD);
+                if (keys.Count > 0) candidates.Add(keys);
+            }
+            return candidates;
         }
 
         public void StopAndClear()
