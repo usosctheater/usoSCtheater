@@ -217,6 +217,20 @@ namespace UsoSCTheater.Character
             return result;
         }
 
+        //[LD 불러오기] 인덱스에 등록된 키인지 확인 + 인덱스의 정식 키 정보 반환 (대소문자 무시). 분류가 다르면 false
+        public static bool TryGetSpine(string key, SpineKind kind, out SpineKeyInfo info)
+        {
+            info = null;
+            if (!SpineKeys.TryParse(key, out SpineKeyInfo parsed)) return false;
+            EnsureSpineIndexLoaded();
+            if (!spinesById.TryGetValue(parsed.CharacterId, out var list)) return false;
+
+            SpineKeyInfo found = list.Find(e => string.Equals(e.Key, parsed.Key, StringComparison.OrdinalIgnoreCase));
+            if (found == null || found.Kind != kind) return false;
+            info = found;
+            return true;
+        }
+
         //[Spine 인덱스] 키 → SkeletonDataAsset (Resources/Spine/{Id}/{Key}_SkeletonData). 이때만 Spine이 메모리에 올라옴. 없으면 null + 경고
         public static SkeletonDataAsset LoadSkeletonData(string key)
         {

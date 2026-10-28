@@ -5,18 +5,21 @@ using System.Linq;
 using System.Collections;
 using Spine;
 using System.Xml;   // 추가: DefaultLipData.xml 파싱용
+using UsoSCTheater.Character;   //[LD 불러오기] Spine 인덱스·로드는 CharacterDatabase 경유
 
 public class CGManager : MonoBehaviour
 {
-    [System.Serializable]
-    public class SpineEntry
-    {
-        public string key;                  //XML의 CG 값과 매칭되는 이름
-        public GameObject spineObject;      //해당 Spine의 GameObject
-    }
+    //[LD 불러오기] 삭제: SpineEntry 클래스 + spineEntries(씬에 직렬화된 키 → Spine 오브젝트 목록)
+    //  → 막 시작 때 PrepareAct가 Spine 인덱스(CharacterSpineData.xml) + 경로 규칙으로 필요한 Spine만 만듦
 
     [Header("Spine 오브젝트")]
-    [SerializeField] private List<SpineEntry> spineEntries;
+    //[LD 불러오기] 추가: 막 시작 때 만드는 LD Spine의 부모 (Canvas > CG)
+    [SerializeField] private Transform spineParent;
+
+    //[LD 불러오기] 실행 중 생성 설정 (구 SpineRegisterTool이 씬에 만들던 오브젝트와 동일)
+    private const string SPINE_SORTING_LAYER = "CG";
+    private const int SPINE_SORTING_ORDER = 1;
+    private const bool SPINE_PMA_VERTEX_COLORS = true;   //[E-004] 등록 도구에서 이동 — Straight Alpha 셰이더여도 항상 켬
 
     [Header("Spine Pos 설정")]
     [SerializeField] private float screenWidth = 1920f;
@@ -26,18 +29,21 @@ public class CGManager : MonoBehaviour
     [SerializeField] private float zoomYOffsetScale = 5f;     //줌인 할 때 Y축 보정계수
 
     //키 > GameObj 빠른 접근용 딕셔너리
-    private Dictionary<string, GameObject> spineDict = new Dictionary<string, GameObject>();
+    //[LD 불러오기] 수정: CG 키 관련 사전은 모두 대소문자 무시 (ID 규칙·Spine 인덱스와 통일)
+    private Dictionary<string, GameObject> spineDict = new Dictionary<string, GameObject>(System.StringComparer.OrdinalIgnoreCase);
+    //[LD 불러오기] 추가: 인덱스에 없거나 불러오기 실패한 키 (경고는 1번만)
+    private readonly HashSet<string> failedKeys = new HashSet<string>(System.StringComparer.OrdinalIgnoreCase);
     //포지션 문자열 > X 좌표 (ScreenWidth 기준 비율)
     private Dictionary<string, float> positionDict = new Dictionary<string, float>();
 
-    private Dictionary<string, Coroutine> zoomDict = new Dictionary<string, Coroutine>();
+    private Dictionary<string, Coroutine> zoomDict = new Dictionary<string, Coroutine>(System.StringComparer.OrdinalIgnoreCase);
 
     //EndLoop용 Loop_Start 시간 저장
-    private Dictionary<string, float> endLoopStartDict = new Dictionary<string, float>();
+    private Dictionary<string, float> endLoopStartDict = new Dictionary<string, float>(System.StringComparer.OrdinalIgnoreCase);
     //EndLoop용 애니메이션 이름 저장
-    private Dictionary<string, string> endLoopAnimDict = new Dictionary<string, string>();
+    private Dictionary<string, string> endLoopAnimDict = new Dictionary<string, string>(System.StringComparer.OrdinalIgnoreCase);
     //립 연동용 코루틴 관리
-    private Dictionary<string, Coroutine> lipCoroutineDict = new Dictionary<string, Coroutine>();
+    private Dictionary<string, Coroutine> lipCoroutineDict = new Dictionary<string, Coroutine>(System.StringComparer.OrdinalIgnoreCase);
 
     private static readonly string[] DEFAULT_LIP_ANIM = { "lip_wait" };
     private static readonly string[] DEFAULT_LIP_S_ANIM = { "lip_wait_s" };
@@ -73,12 +79,8 @@ public class CGManager : MonoBehaviour
 
     void Awake()
     {
-        //Spine 오브젝트 딕셔너리 구성
-        foreach (SpineEntry entry in spineEntries)
-        {
-            spineDict[entry.key] = entry.spineObject;
-            entry.spineObject.SetActive(false);
-        }
+        //[LD 불러오기] 삭제: spineEntries → spineDict 구성 (이제 PrepareAct에서 필요한 Spine만 만듦)
+        if (spineParent == null) Debug.LogError("[CGManager] spineParent(Canvas > CG) 미연결 — LD Spine을 만들 수 없습니다.");
 
         //포지션의 x좌표 등록 (화면 중심 기준, 단위는 px)
         //3분할
@@ -126,16 +128,84 @@ public class CGManager : MonoBehaviour
     }
 #endif
 
-    public void SetCG (string cgKey, string position, string animation, float voiceDuration = 0f)
+    //[LD 불러오기] 막에서 쓰는 LD Spine을 미리 만듦. 이미 만든 키는 건너뜀 — 씬이 끝나면 씬과 함께 해제
+    public void PrepareAct(IEnumerable<string> cgKeys)
     {
-        //예외 처리
-        if (!spineDict.ContainsKey(cgKey))
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        int created = 0;
+        foreach (string key in cgKeys)
+            if (!spineDict.ContainsKey(key) && TryCreateSpine(key, out _)) created++;
+        sw.Stop();
+        Debug.Log($"[CGManager] 막 Spine 준비: 새로 {created}개 / 보유 {spineDict.Count}개 — {sw.ElapsedMilliseconds}ms");   //막 시작 멈춤 관찰용
+    }
+
+    //[LD 불러오기] 키 → 오브젝트. 미리 못 만든 키면 그 자리에서 만듦 (경고)
+    private bool TryGetSpine(string cgKey, out GameObject obj)
+    {
+        obj = null;
+        if (string.IsNullOrEmpty(cgKey) || failedKeys.Contains(cgKey)) return false;
+        if (spineDict.TryGetValue(cgKey, out obj)) return true;
+
+        Debug.LogWarning($"[CGManager] 막 시작 때 준비되지 않은 CG 키 → 지금 불러옴: {cgKey}");
+        return TryCreateSpine(cgKey, out obj);
+    }
+
+    //[LD 불러오기] 인덱스 확인 → SkeletonData 로드 → CG/{캐릭터}/{키} 오브젝트 생성 (비활성)
+    private bool TryCreateSpine(string cgKey, out GameObject obj)
+    {
+        obj = null;
+        if (failedKeys.Contains(cgKey)) return false;
+        if (!CharacterDatabase.TryGetSpine(cgKey, SpineKind.LD, out SpineKeyInfo info))
         {
-            Debug.LogWarning($"[CGManager] 등록되지 않은 CG 키: {cgKey}");
-            return;
+            failedKeys.Add(cgKey);
+            Debug.LogWarning($"[CGManager] 등록되지 않은 CG 키 (인덱스에 LD로 없음 → Tools > Spine > Register Spine): {cgKey}");
+            return false;
+        }
+        if (spineDict.TryGetValue(info.Key, out obj)) return true;   //대소문자만 다른 키
+
+        SkeletonDataAsset data = CharacterDatabase.LoadSkeletonData(info.Key);   //실패 경고는 DB에서
+        if (data == null || spineParent == null)
+        {
+            failedKeys.Add(cgKey);
+            return false;
         }
 
-        GameObject spineObj = spineDict[cgKey];
+        obj = new GameObject(info.Key);
+        obj.SetActive(false);   //AddComponent 직후 Awake(Initialize)가 데이터 없이 돌지 않도록 먼저 끔
+        obj.transform.SetParent(GetCharacterFolder(info.CharacterId), false);
+
+        SkeletonAnimation skAnim = obj.AddComponent<SkeletonAnimation>();   //MeshRenderer·MeshFilter는 자동 추가
+        skAnim.skeletonDataAsset = data;
+        skAnim.pmaVertexColors = SPINE_PMA_VERTEX_COLORS;
+        skAnim.Initialize(false);
+
+        MeshRenderer meshRenderer = obj.GetComponent<MeshRenderer>();
+        if (meshRenderer != null)
+        {
+            meshRenderer.sortingLayerName = SPINE_SORTING_LAYER;
+            meshRenderer.sortingOrder = SPINE_SORTING_ORDER;
+        }
+
+        spineDict[info.Key] = obj;
+        return true;
+    }
+
+    //[LD 불러오기] CG 아래 캐릭터 폴더 (없으면 생성)
+    private Transform GetCharacterFolder(string characterId)
+    {
+        foreach (Transform child in spineParent)
+            if (string.Equals(child.name, characterId, System.StringComparison.OrdinalIgnoreCase)) return child;
+
+        Transform folder = new GameObject(characterId).transform;
+        folder.SetParent(spineParent, false);
+        return folder;
+    }
+
+    public void SetCG (string cgKey, string position, string animation, float voiceDuration = 0f)
+    {
+        //[LD 불러오기] 수정: 미등록 경고 + spineDict[cgKey] → TryGetSpine (경고는 그 안에서)
+        if (!TryGetSpine(cgKey, out GameObject spineObj)) return;
+
         spineObj.SetActive(true);
 
         //위치 적용
@@ -306,13 +376,8 @@ public class CGManager : MonoBehaviour
 
     public void SetZoom(string cgKey, string position, float targetScale, float duration)
     {
-        if (!spineDict.ContainsKey(cgKey))
-        {
-            Debug.LogWarning($"[CGManager] 등록되지 않은 CG 키: {cgKey}");
-            return;
-        }
-
-        GameObject spineObj = spineDict[cgKey];
+        //[LD 불러오기] 수정: ContainsKey + 경고 → TryGetSpine
+        if (!TryGetSpine(cgKey, out GameObject spineObj)) return;
 
         float baseScale = position.StartsWith("wide_") ? scale5 : scale3;
         float finalScale = baseScale * targetScale;

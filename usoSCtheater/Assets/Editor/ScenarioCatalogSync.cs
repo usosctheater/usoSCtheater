@@ -39,6 +39,9 @@ public class ScenarioCatalogSync : AssetPostprocessor
     //[엔딩 SD] 막 XML에서 사용한 CG 키 수집
     private const string ActCgAttr = "CG";
     private const string ActCgNone = "none";
+    private const string ActTypeAttr = "Type";          //[LD 불러오기] CGGROUP 그룹 이름 제외용
+    private const string ActNameAttr = "Name";
+    private const string ActCgGroupType = "CGGROUP";
 
     private static bool syncPending = false;
 
@@ -221,6 +224,9 @@ public class ScenarioCatalogSync : AssetPostprocessor
             changed = true;
         }
 
+        //[LD 불러오기] 추가: 막이 쓰는 CG 키가 인덱스에 LD로 등록돼 있는지 검사 (빌드는 막지 않고 경고만)
+        ValidateSpineKeys(merged);
+
         if (changed)
         {
             catalog.scenarios = merged;
@@ -231,6 +237,22 @@ public class ScenarioCatalogSync : AssetPostprocessor
         if (verbose || changed)
             Debug.Log($"[ScenarioCatalogSync] 동기화 {(changed ? "완료(변경 있음)" : "완료(변경 없음)")}: "
                     + string.Join(", ", merged.Select(e => $"{e.folderName}[{e.actNames.Count}]{(e.hidden ? "(hidden)" : "")}")));
+    }
+
+    //[LD 불러오기] 인덱스(CharacterSpineData.xml)에 LD로 없는 CG 키 경고 — 게임에서는 그 캐릭터가 나오지 않음
+    //TE 막 저장 → Register Spine 등록 빠뜨림을 플레이 전에 발견. 빌드 직전 동기화에서도 실행 (빌드는 막지 않음, 2026-10-28 결정)
+    private static void ValidateSpineKeys(List<ScenarioEntry> entries)
+    {
+        UsoSCTheater.Character.CharacterDatabase.Reload();   //등록 도구가 바꾼 인덱스 반영
+        foreach (ScenarioEntry e in entries)
+        {
+            if (e.spineKeys == null) continue;
+            var missing = e.spineKeys
+                .Where(k => !UsoSCTheater.Character.CharacterDatabase.TryGetSpine(k, UsoSCTheater.Character.SpineKind.LD, out _))
+                .ToList();
+            if (missing.Count > 0)
+                Debug.LogWarning($"[ScenarioCatalogSync] '{e.folderName}': 등록되지 않은 LD Spine {missing.Count}개 → Tools > Spine > Register Spine\n  {string.Join("\n  ", missing)}");
+        }
     }
 
     //[목록 UI] 막 XML 루트의 mainTitle / subTitle 읽기 (파싱 실패 시 빈 값 + 경고)
@@ -253,11 +275,20 @@ public class ScenarioCatalogSync : AssetPostprocessor
             subTitle  = ActXml.GetAttrIgnoreCase(root, ActXml.SubTitleAttr);
 
             //[엔딩 SD] 사용한 CG 키 수집
+            //[LD 불러오기] 수정: CGGROUP 그룹 이름은 Spine 키가 아니므로 제외 (멤버 키는 CGGROUP 줄의 CG로 수집됨)
+            var groupNames = new HashSet<string>(StringComparer.Ordinal);
+            foreach (XmlNode node in doc.GetElementsByTagName("*"))
+            {
+                if (string.Equals(ActXml.GetAttrIgnoreCase(node, ActTypeAttr), ActCgGroupType, StringComparison.OrdinalIgnoreCase))
+                    groupNames.Add(ActXml.GetAttrIgnoreCase(node, ActNameAttr).Split(',')[0].Trim());
+            }
+
             foreach (XmlNode node in doc.GetElementsByTagName("*"))
             {
                 foreach (string key in SplitList(ActXml.GetAttrIgnoreCase(node, ActCgAttr)))
                 {
                     if (string.Equals(key, ActCgNone, StringComparison.OrdinalIgnoreCase)) continue;
+                    if (groupNames.Contains(key)) continue;   //[LD 불러오기] 추가: 그룹 이름 제외
                     if (!spineKeys.Contains(key, StringComparer.OrdinalIgnoreCase)) spineKeys.Add(key);
                 }
             }

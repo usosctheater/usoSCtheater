@@ -186,8 +186,30 @@ public class DialogManager : MonoBehaviour
 
         Debug.Log($"총 {scriptNodes.Count}개 노드 로드 완료");
 
+        cgManager.PrepareAct(CollectSpineKeys());   //[LD 불러오기] 추가: 첫 줄 출력 전에 이 막의 LD Spine 준비
+
         //로드 완료 후에 자동으로 첫번째 Line을 출력
         ProcessNext();
+    }
+
+    //[LD 불러오기] 이 막에서 쓰는 CG 키: TEXT·SETCG의 CG(CGGROUP 이름은 제외 — 멤버로 수집) + CGGROUP 멤버, none 제외, 중복 제거
+    private HashSet<string> CollectSpineKeys()
+    {
+        var keys = new HashSet<string>(System.StringComparer.OrdinalIgnoreCase);
+        void Add(string key)
+        {
+            if (string.IsNullOrEmpty(key) || key.ToLower() == "none" || cgGroupDict.ContainsKey(key)) return;
+            keys.Add(key);
+        }
+
+        foreach (ScriptNode node in scriptNodes)
+        {
+            if (node.type == ScriptNode.NodeType.Line) Add(node.line.cgKey);
+            else if (node.type == ScriptNode.NodeType.SetCG) Add(node.setCgKey);
+        }
+        foreach (var group in cgGroupDict.Values)
+            foreach (var entry in group) Add(entry.cgKey);
+        return keys;
     }
 
     private void ShowLine(DialogLine line)

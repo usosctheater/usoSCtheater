@@ -16,6 +16,7 @@
     <Spine Key="fuyuko_support_stand_2040180170" Character="fuyuko" Type="support_stand" Kind="LD" />
     <Spine Key="hazuki_stand_4000910022" Character="hazuki" Type="stand" Kind="LD" />
     <Spine Key="kaho_cb_1040090110" Character="kaho" Type="cb" Kind="SD" />
+    <Spine Key="madoka_stand_1050210010" Character="madoka" Type="stand" Kind="LD" />
     <Spine Key="mei_stand_3000190030" Character="mei" Type="stand" Kind="LD" />
     <Spine Key="mei_stand_3000190060" Character="mei" Type="stand" Kind="LD" />
     <Spine Key="mei_stand_costume_1040190030" Character="mei" Type="stand_costume" Kind="LD" />

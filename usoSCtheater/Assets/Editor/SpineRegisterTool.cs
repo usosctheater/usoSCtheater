@@ -11,7 +11,8 @@ using UsoSCTheater.Character;
 /// Spine 등록 에디터 창 (구 SpineAutoImporter — 2026-10-27 이름 변경·개편, Atlas Converter 탭 삭제: TE가 atlas 이미지 이름을 맞춰 내보냄)
 /// 메뉴: Tools > Spine > Register Spine
 /// TE [게임으로 내보내기]로 들어온 Resources/Spine/{id}/의 Spine을 키 타입으로 LD/SD 분류 → 선택 항목 등록 → 인덱스(CharacterSpineData.xml) 기록
-///   공통: 머티리얼 셰이더 변경 / LD: CommunicationScene에 오브젝트 생성 + CGManager.spineEntries 등록 / SD: 씬 변경 없음
+///   등록 = 머티리얼 셰이더 변경 + 인덱스 기록 (LD·SD 공통, 씬 변경 없음)
+///   [LD 불러오기] 2026-10-28: LD도 씬 오브젝트·CGManager.spineEntries를 만들지 않음 → 게임(CGManager.PrepareAct)이 막 시작 때 인덱스 + 경로 규칙으로 생성
 /// 스캔은 창을 열 때·버튼을 누를 때·적용 뒤에만 함 (OnGUI는 캐시된 목록만 그림)
 /// </summary>
 public class SpineRegisterTool : EditorWindow
@@ -27,7 +28,6 @@ public class SpineRegisterTool : EditorWindow
         public Status status;
         public string folder;                 // Assets/Resources/Spine/{폴더}
         public string skeletonDataPath;       // 없으면 null
-        public bool inScene;                  // LD: CGManager.spineEntries에 있음
         public bool selectable;
         public bool selected;
         public string note;                   // 상태 보충 설명 (경고 등)
@@ -36,14 +36,8 @@ public class SpineRegisterTool : EditorWindow
     // ── 상수 ─────────────────────────────────────────────────────────────
     private const string SPINE_RESOURCE_PATH = "Assets/Resources/Spine";
     private const string SHADER_NAME = "Spine/Straight Alpha/Skeleton Fill";
-    private const string CANVAS_NAME = "Canvas";
-    private const string CG_NAME = "CG";
-    private const string CGMANAGER_NAME = "CGManager";
-    private const string SORTING_LAYER = "CG";
-    private const int ORDER_IN_LAYER = 1;
-    // [E-004] 셰이더를 Straight Alpha로 바꾼 뒤 InstantiateSkeletonAnimation을 부르면 spine-unity가 PMA Vertex Colors를 끔
-    //         (셰이더 이름에 "Spine/Skeleton"이 없으면 끄는 규칙) → 직접 만든 오브젝트(기본값 켜짐)와 같게 항상 켬
-    private const bool PMA_VERTEX_COLORS = true;
+    //[LD 불러오기] 삭제: CANVAS_NAME·CG_NAME·CGMANAGER_NAME·SORTING_LAYER·ORDER_IN_LAYER·PMA_VERTEX_COLORS(E-004)
+    //  → LD 오브젝트는 게임이 실행 중에 만듦 (생성 설정은 CGManager의 SPINE_* 상수)
 
     private static readonly string[] KIND_FILTER_LABELS = { "전체", "LD", "SD", "알 수 없음" };
 
@@ -51,7 +45,6 @@ public class SpineRegisterTool : EditorWindow
     private readonly List<Row> rows = new List<Row>();
     private readonly Dictionary<string, bool> foldouts = new Dictionary<string, bool>();
     private string[] characterOptions = { "전체" };
-    private bool sceneAvailable;              // CommunicationScene(CGManager)이 열려 있음
     private string scanLog = "";
     private Vector2 scrollPos;
 
@@ -78,7 +71,7 @@ public class SpineRegisterTool : EditorWindow
     {
         EditorGUILayout.HelpBox(
             "Resources/Spine/{캐릭터}/의 Spine을 LD(커뮤니케이션)·SD(엔딩)로 분류해 등록합니다.\n" +
-            "LD 등록은 CommunicationScene이 열려 있어야 합니다. SD는 씬이 필요 없습니다.",
+            "등록 = 셰이더 적용 + 인덱스 기록 (씬은 필요 없음 — LD는 게임이 막 시작 때 불러옴)",
             MessageType.Info);
 
         EditorGUILayout.BeginHorizontal();
@@ -86,9 +79,7 @@ public class SpineRegisterTool : EditorWindow
         if (GUILayout.Button("인덱스 다시 만들기", GUILayout.Height(26), GUILayout.Width(150))) RebuildIndex();
         EditorGUILayout.EndHorizontal();
 
-        EditorGUILayout.LabelField(sceneAvailable
-            ? "CommunicationScene: 열림 (LD 등록 가능)"
-            : "CommunicationScene: 닫힘 — LD는 등록·검증 불가 (SD만 가능)", EditorStyles.miniLabel);
+        //[LD 불러오기] 삭제: CommunicationScene 열림/닫힘 표시
         if (!string.IsNullOrEmpty(scanLog)) EditorGUILayout.HelpBox(scanLog, MessageType.None);
 
         DrawFilters();
@@ -180,9 +171,7 @@ public class SpineRegisterTool : EditorWindow
     private void RunScan()
     {
         rows.Clear();
-        CGManager cgManager = FindCGManager();
-        sceneAvailable = cgManager != null;
-        HashSet<string> sceneKeys = GetRegisteredKeys(cgManager);
+        //[LD 불러오기] 삭제: CGManager 찾기·spineEntries 키 목록 (씬과 무관하게 판정)
         HashSet<string> indexKeys = new HashSet<string>(LoadIndex().Select(e => e.Key), System.StringComparer.OrdinalIgnoreCase);
         var warnings = new List<string>();
 
@@ -212,7 +201,6 @@ public class SpineRegisterTool : EditorWindow
                 seen.Add(key);
                 var r = new Row { key = key, folder = folder, characterId = folderName };
                 dataPaths.TryGetValue(key, out r.skeletonDataPath);
-                r.inScene = sceneKeys.Contains(key);
 
                 if (!SpineKeys.TryParse(key, out r.info) || r.info.Kind == SpineKind.Unknown)
                 {
@@ -230,17 +218,12 @@ public class SpineRegisterTool : EditorWindow
                 if (CharacterDatabase.Find(r.info.CharacterId) == null)
                     r.note = $"CharacterData.xml에 '{r.info.CharacterId}' 없음 (등록은 가능, 이름·아이콘 없음)";
 
+                //[LD 불러오기] 수정: LD도 SD와 같은 기준 (인덱스에 있음 + 셰이더 적용)
                 bool inIndex = indexKeys.Contains(key);
                 if (r.skeletonDataPath == null) r.status = Status.WaitingImport;
-                else if (r.kind == SpineKind.LD)
-                    r.status = inIndex && (r.inScene || !sceneAvailable) ? Status.Registered : Status.Unregistered;
-                else
-                    r.status = inIndex && IsShaderApplied(r) ? Status.Registered : Status.Unregistered;
+                else r.status = inIndex && IsShaderApplied(r) ? Status.Registered : Status.Unregistered;
 
-                //LD는 씬이 필요 (이미 씬에 있으면 인덱스 기록만 하므로 씬 없이도 가능)
-                r.selectable = r.status == Status.Unregistered && (r.kind == SpineKind.SD || sceneAvailable || r.inScene);
-                if (r.kind == SpineKind.LD && r.status == Status.Unregistered && !r.selectable)
-                    r.note = "CommunicationScene을 열어야 등록 가능";
+                r.selectable = r.status == Status.Unregistered;
                 rows.Add(r);
             }
         }
@@ -291,46 +274,25 @@ public class SpineRegisterTool : EditorWindow
         Shader shader = Shader.Find(SHADER_NAME);
         if (shader == null) Debug.LogWarning($"[SpineRegister] 셰이더를 찾을 수 없습니다: {SHADER_NAME}");
 
-        CGManager cgManager = FindCGManager();
-        Transform cgTransform = null;
-        if (targets.Any(r => r.kind == SpineKind.LD && !r.inScene))
-        {
-            GameObject canvasObj = GameObject.Find(CANVAS_NAME);
-            cgTransform = canvasObj != null ? canvasObj.transform.Find(CG_NAME) : null;
-            if (cgManager == null || cgTransform == null)
-            {
-                Debug.LogError("[SpineRegister] LD 등록에는 CommunicationScene(Canvas > CG, CGManager)이 필요합니다. 씬을 열고 다시 스캔하세요.");
-                return;
-            }
-        }
-
+        //[LD 불러오기] 삭제: LD용 CommunicationScene(Canvas > CG, CGManager) 확인 · 씬 오브젝트 생성 · 씬 dirty 처리
         var registered = new List<SpineKeyInfo>();
-        bool sceneChanged = false;
         foreach (Row r in targets)
         {
-            ApplyShader(r, shader);   //① 공통: 셰이더 (씬 dirty 전에 머티리얼 먼저 저장)
-
-            if (r.kind == SpineKind.LD && !r.inScene)   //② LD: 씬 오브젝트 + spineEntries (이미 씬에 있으면 인덱스 기록만)
-            {
-                if (!CreateLDObject(r, cgTransform, cgManager)) continue;
-                sceneChanged = true;
-            }
+            ApplyShader(r, shader);   //① 셰이더 (LD·SD 공통)
             registered.Add(r.info);
             Debug.Log($"[SpineRegister] 등록: [{r.kind}] {r.key}");
         }
 
-        //③ 인덱스 기록 (기존 + 이번 등록분)
+        //② 인덱스 기록 (기존 + 이번 등록분)
         var index = LoadIndex().ToDictionary(e => e.Key, System.StringComparer.OrdinalIgnoreCase);
         foreach (SpineKeyInfo info in registered) index[info.Key] = info;
         WriteIndex(index.Values);
 
         int capturedCount = registered.Count;
-        EditorApplication.delayCall += () =>   //씬 저장 타이밍 충돌 방지 (기존 방식 유지)
+        EditorApplication.delayCall += () =>   //에셋 저장 직후 다시 스캔 (기존 방식 유지)
         {
-            if (sceneChanged)
-                UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(UnityEngine.SceneManagement.SceneManager.GetActiveScene());
             RunScan();
-            scanLog = $"✅ 등록 {capturedCount}개" + (sceneChanged ? " — 씬을 저장해 주세요." : "") + "\n" + scanLog;
+            scanLog = $"✅ 등록 {capturedCount}개\n" + scanLog;
             Repaint();
         };
     }
@@ -346,67 +308,28 @@ public class SpineRegisterTool : EditorWindow
         AssetDatabase.SaveAssetIfDirty(mat);
     }
 
-    //LD: Canvas > CG > {캐릭터} 아래 SkeletonAnimation 생성 + CGManager.spineEntries 등록 (기존 Auto Setup과 같은 처리)
-    private bool CreateLDObject(Row r, Transform cgTransform, CGManager cgManager)
-    {
-        Transform idolFolder = FindChildIgnoreCase(cgTransform, r.characterId);
-        if (idolFolder == null)
-        {
-            GameObject newFolder = new GameObject(r.characterId);
-            newFolder.transform.SetParent(cgTransform, false);
-            idolFolder = newFolder.transform;
-            Undo.RegisterCreatedObjectUndo(newFolder, "Create Idol Folder");
-        }
-
-        SkeletonDataAsset skeletonData = AssetDatabase.LoadAssetAtPath<SkeletonDataAsset>(r.skeletonDataPath);
-        if (skeletonData == null) { Debug.LogError($"[SpineRegister] SkeletonDataAsset 로드 실패: {r.skeletonDataPath}"); return false; }
-
-        SkeletonAnimation skelAnim = Spine.Unity.Editor.SpineEditorUtilities.InstantiateSkeletonAnimation(skeletonData);
-        if (skelAnim == null) { Debug.LogError($"[SpineRegister] SkeletonAnimation 생성 실패: {r.key}"); return false; }
-        skelAnim.pmaVertexColors = PMA_VERTEX_COLORS;   // [E-004]
-
-        GameObject spineObj = skelAnim.gameObject;
-        spineObj.name = r.key;
-        spineObj.transform.SetParent(idolFolder, false);
-        Undo.RegisterCreatedObjectUndo(spineObj, "Create Spine Object");
-
-        MeshRenderer meshRenderer = spineObj.GetComponent<MeshRenderer>();
-        if (meshRenderer != null)
-        {
-            meshRenderer.sortingLayerName = SORTING_LAYER;
-            meshRenderer.sortingOrder = ORDER_IN_LAYER;
-            EditorUtility.SetDirty(meshRenderer);
-        }
-
-        RegisterToCGManager(cgManager, r.key, spineObj);
-        return true;
-    }
+    //[LD 불러오기] 삭제: CreateLDObject (Canvas > CG에 SkeletonAnimation 생성 + spineEntries 등록) → CGManager.TryCreateSpine이 실행 중에 생성
 
     // ─────────────────────────────────────────────────────────────────────
     // 인덱스 다시 만들기 — 실제 상태 기준으로 처음부터 다시 씀
-    //   LD: spineEntries에 있고 SkeletonData가 있음 (씬이 닫혀 있으면 기존 인덱스의 LD 중 SkeletonData가 있는 것 유지)
-    //   SD: 셰이더가 적용돼 있고 SkeletonData가 있음
+    //   [LD 불러오기] 수정: LD·SD 공통 — 셰이더가 적용돼 있고 SkeletonData가 있음 (이전: LD는 spineEntries 기준, 씬이 닫혀 있으면 기존 인덱스 유지)
     // ─────────────────────────────────────────────────────────────────────
     private void RebuildIndex()
     {
         RunScan();
-        var oldIndex = new HashSet<string>(LoadIndex().Select(e => e.Key), System.StringComparer.OrdinalIgnoreCase);
         var entries = new List<SpineKeyInfo>();
 
         foreach (Row r in rows)
         {
             if (r.info == null || r.skeletonDataPath == null || r.kind == SpineKind.Unknown) continue;
-            bool include = r.kind == SpineKind.LD
-                ? (sceneAvailable ? r.inScene : oldIndex.Contains(r.key))
-                : IsShaderApplied(r);
-            if (include) entries.Add(r.info);
+            if (IsShaderApplied(r)) entries.Add(r.info);
         }
 
         WriteIndex(entries);
         RunScan();
         int ld = entries.Count(e => e.Kind == SpineKind.LD), sd = entries.Count(e => e.Kind == SpineKind.SD);
-        scanLog = $"✅ 인덱스 다시 만들기: LD {ld} · SD {sd}" + (sceneAvailable ? "" : " (씬이 닫혀 있어 LD는 기존 인덱스 유지)") + "\n" + scanLog;
-        Debug.Log($"[SpineRegister] 인덱스 다시 만들기: LD {ld} · SD {sd} (씬 {(sceneAvailable ? "열림" : "닫힘")})");
+        scanLog = $"✅ 인덱스 다시 만들기: LD {ld} · SD {sd}\n" + scanLog;
+        Debug.Log($"[SpineRegister] 인덱스 다시 만들기: LD {ld} · SD {sd}");
     }
 
     // ─────────────────────────────────────────────────────────────────────
@@ -427,59 +350,5 @@ public class SpineRegisterTool : EditorWindow
         CharacterDatabase.Reload();
     }
 
-    // ─────────────────────────────────────────────────────────────────────
-    // 씬 헬퍼 (기존 Auto Setup과 동일)
-    // ─────────────────────────────────────────────────────────────────────
-    private static CGManager FindCGManager()
-    {
-        GameObject gmObj = GameObject.Find(CGMANAGER_NAME);
-        return gmObj != null ? gmObj.GetComponent<CGManager>() : null;
-    }
-
-    private static Transform FindChildIgnoreCase(Transform parent, string name)
-    {
-        foreach (Transform child in parent)
-            if (string.Equals(child.name, name, System.StringComparison.OrdinalIgnoreCase)) return child;
-        return null;
-    }
-
-    //CGManager.spineEntries의 key 목록 (씬이 닫혀 있으면 빈 목록)
-    private static HashSet<string> GetRegisteredKeys(CGManager cgManager)
-    {
-        var keys = new HashSet<string>(System.StringComparer.OrdinalIgnoreCase);
-        if (cgManager == null) return keys;
-
-        SerializedProperty entries = new SerializedObject(cgManager).FindProperty("spineEntries");
-        if (entries == null) return keys;
-        for (int i = 0; i < entries.arraySize; i++)
-        {
-            SerializedProperty keyProp = entries.GetArrayElementAtIndex(i).FindPropertyRelative("key");
-            if (keyProp != null) keys.Add(keyProp.stringValue);
-        }
-        return keys;
-    }
-
-    private static void RegisterToCGManager(CGManager cgManager, string key, GameObject spineObj)
-    {
-        SerializedObject so = new SerializedObject(cgManager);
-        so.Update();
-        SerializedProperty entries = so.FindProperty("spineEntries");
-        if (entries == null) { Debug.LogError("[SpineRegister] spineEntries 프로퍼티를 찾을 수 없습니다."); return; }
-
-        for (int i = 0; i < entries.arraySize; i++)
-        {
-            if (entries.GetArrayElementAtIndex(i).FindPropertyRelative("key").stringValue == key)
-            {
-                Debug.LogWarning($"[SpineRegister] 이미 등록된 key: {key}");
-                return;
-            }
-        }
-
-        entries.arraySize++;
-        SerializedProperty newEntry = entries.GetArrayElementAtIndex(entries.arraySize - 1);
-        newEntry.FindPropertyRelative("key").stringValue = key;
-        newEntry.FindPropertyRelative("spineObject").objectReferenceValue = spineObj;
-        so.ApplyModifiedProperties();
-        EditorUtility.SetDirty(cgManager);
-    }
+    //[LD 불러오기] 삭제: 씬 헬퍼 (FindCGManager·FindChildIgnoreCase·GetRegisteredKeys·RegisterToCGManager) — LD 등록이 씬을 쓰지 않음
 }
