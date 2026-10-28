@@ -10,6 +10,9 @@ namespace UsoSCTheater.Recording
     /// </summary>
     public static class RecordingSignal
     {
+        //[녹화 표시] 녹화 모드 켜짐 여부 — 에디터의 VNRecorderTool이 채움 (빌드에서는 항상 false). 목록 씬 표시용
+        public static bool RecordingModeEnabled { get; set; }
+
         //[녹화] 재생 시작 신호: (시나리오 폴더명, 막 이름). 막 이름 null = 모두 재생
         public static event Action<string, string> OnRecordingStartRequested;
 

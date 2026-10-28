@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;          //[목록 UI] ScrollRect, LayoutRebuilder
 using UsoSCTheater.SceneFlow;
+using UsoSCTheater.Recording;   //[녹화 표시]
 
 namespace UsoSCTheater.Scenario
 {
@@ -22,6 +23,9 @@ namespace UsoSCTheater.Scenario
         [SerializeField] private bool showHiddenInEditor = true;  // 에디터에서만 hidden 시나리오도 표시 (빌드에서는 항상 숨김)
         [SerializeField] private bool restoreScrollToLastScenario = true;   //[목록 UI] 목록 복귀 시 직전 재생 시나리오 위치로 스크롤 (온/오프 비교용)
 
+        [Header("녹화 표시")]   //[녹화 표시] 녹화 모드를 켜 둔 채 디버그하는 실수 방지
+        [SerializeField] private GameObject recordingModeIndicator;   // "● 녹화 모드 켜짐" 같은 작은 글자 오브젝트 (비워 두면 표시 안 함)
+
         private readonly List<ScenarioEntry> scenarios = new List<ScenarioEntry>();
         public IReadOnlyList<ScenarioEntry> Scenarios => scenarios;
 
@@ -37,6 +41,7 @@ namespace UsoSCTheater.Scenario
         {
             BuildList();
             if (restoreScrollToLastScenario) RestoreScrollToLastScenario();
+            if (recordingModeIndicator != null) recordingModeIndicator.SetActive(RecordingSignal.RecordingModeEnabled);   //[녹화 표시]
         }
 
         // ── 목록 데이터 ──────────────────────────────────────────────────

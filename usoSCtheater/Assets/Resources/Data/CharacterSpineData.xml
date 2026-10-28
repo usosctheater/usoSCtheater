@@ -20,8 +20,12 @@
     <Spine Key="mei_stand_3000190060" Character="mei" Type="stand" Kind="LD" />
     <Spine Key="mei_stand_costume_1040190030" Character="mei" Type="stand_costume" Kind="LD" />
     <Spine Key="nichika_stand_1030240020" Character="nichika" Type="stand" Kind="LD" />
+    <Spine Key="nichika_stand_1040240010" Character="nichika" Type="stand" Kind="LD" />
     <Spine Key="nichika_stand_1040240020" Character="nichika" Type="stand" Kind="LD" />
+    <Spine Key="nichika_stand_1040240040" Character="nichika" Type="stand" Kind="LD" />
+    <Spine Key="nichika_stand_costume_1040240040" Character="nichika" Type="stand_costume" Kind="LD" />
     <Spine Key="rinze_cb_1040120060" Character="rinze" Type="cb" Kind="SD" />
     <Spine Key="rinze_cb_costume_1040120060" Character="rinze" Type="cb_costume" Kind="SD" />
     <Spine Key="rinze_stand_1040120060" Character="rinze" Type="stand" Kind="LD" />
+    <Spine Key="rinze_stand_costume_1040120060" Character="rinze" Type="stand_costume" Kind="LD" />
 </CharacterSpineData>

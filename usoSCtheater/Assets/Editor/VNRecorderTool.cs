@@ -31,6 +31,7 @@ namespace UsoSCTheater.EditorTools
 
         static VNRecorderTool()
         {
+            RecordingSignal.RecordingModeEnabled = IsRecordingModeEnabled();   //[녹화 표시] 에디터를 열 때·컴파일 뒤 현재 값 전달
             EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
             RecordingSignal.OnRecordingStartRequested += OnRecordingStartRequested;   // [녹화 대응] 재생 시작 신호로 녹화 시작
             RecordingSignal.OnRecordingStopRequested += StopRecording;
@@ -41,6 +42,7 @@ namespace UsoSCTheater.EditorTools
         {
             bool current = IsRecordingModeEnabled();
             EditorPrefs.SetBool(PrefKey, !current);
+            RecordingSignal.RecordingModeEnabled = !current;   //[녹화 표시] 메뉴로 바꾸면 바로 전달
         }
 
         [MenuItem(MenuPath, true)]

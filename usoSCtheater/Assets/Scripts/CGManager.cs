@@ -188,9 +188,18 @@ public class CGManager : MonoBehaviour
             return;
         }
 
+        //[수정] 이 캐릭터의 줌 코루틴이 돌고 있으면 멈춤 (아래에서 정한 크기·Y를 코루틴이 다시 덮어쓰지 않도록)
+        string cgKey = spineDict.FirstOrDefault(kvp => kvp.Value == spineObj).Key;
+        if (cgKey != null && zoomDict.TryGetValue(cgKey, out Coroutine zoom) && zoom != null)
+        {
+            StopCoroutine(zoom);
+            zoomDict[cgKey] = null;
+        }
+
         //위치 적용
         Vector3 pos = spineObj.transform.localPosition;
         pos.x = positionDict[position];
+        pos.y = basePosY;   //[수정] Y도 기준값으로 — 크기를 기본값으로 되돌리므로 줌 보정 Y도 함께 되돌림 (씬에 놓인 Y가 첫 CG에 그대로 나오던 문제)
         spineObj.transform.localPosition = pos;
 
         //스케일 적용
