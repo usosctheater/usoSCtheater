@@ -7,9 +7,8 @@ using UsoSCTheater.SceneFlow; // [씬 전환] 엔딩 종료 후 목록 씬 복�
 namespace UsoSCTheater.Ending
 {
     /// <summary>
-    /// 엔딩 씬(스탭 롤) 전체 진행을 관리한다.
-    /// 트랜지션 종료 후 외부에서 StartEnding()을 호출하면
-    /// 크레딧 로드 → 스크롤/SD Spine/BGM 동시 시작 → 계산된 시간 후 전체 비활성화 순으로 진행한다.
+    /// 엔딩 씬 전체 진행을 관리한다.
+    /// 씬 시작 시 SD Spine/BGM을 시작하고, 정해진 시간이 지나거나 좌클릭 스킵하면 종료 후 목록 씬으로 돌아간다.   // [크레딧 폐기] 설명 수정
     /// </summary>
     public class EndingSceneController : MonoBehaviour
     {
@@ -17,12 +16,8 @@ namespace UsoSCTheater.Ending
         [SerializeField] private GameObject endingPanelRoot; // 좌/우 패널을 포함하는 최상위 오브젝트
 
         [Header("Components")]
-        [SerializeField] private EndingCreditsScroller creditsScroller;
         [SerializeField] private EndingSDSpineController sdSpineController;
         [SerializeField] private EndingBGMPlayer bgmPlayer;
-
-        [Header("Settings")]
-        [SerializeField] private EndingCreditsLoader.Language language = EndingCreditsLoader.Language.KR;
 
         [Header("Skip")]
         [SerializeField] private float skipInputDelay = 1f;   // [스킵] 엔딩 시작 후 이 시간(초) 동안은 좌클릭 스킵 무시 (대사 연타 클릭이 넘어오는 것 방지)
@@ -57,14 +52,10 @@ namespace UsoSCTheater.Ending
             _endingStartTime = Time.time;      // [스킵]
             endingPanelRoot.SetActive(true);
 
-            // [임시 비활성화] LeftPanel 미사용
-            // List<string> lines = EndingCreditsLoader.LoadLines(language);
-            // float totalTime = creditsScroller.Setup(lines);
-            float totalTime = 30f; // 임시: 크레딧 없이 SD Spine만 무한 재생
+            float totalTime = 30f;   // [크레딧 폐기] 엔딩 재생 시간 (좌클릭으로 스킵 가능)
 
             sdSpineController.Setup();
             bgmPlayer.Play();
-            // creditsScroller.StartScrolling(); // [임시 비활성화]
 
             if (_endingRoutine != null)
             {
@@ -91,7 +82,6 @@ namespace UsoSCTheater.Ending
                 _endingRoutine = null;
             }
 
-            creditsScroller.StopScrolling();
             sdSpineController.StopAndClear();
             bgmPlayer.Stop();
             endingPanelRoot.SetActive(false);

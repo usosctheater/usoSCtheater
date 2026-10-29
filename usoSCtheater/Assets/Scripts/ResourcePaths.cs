@@ -16,7 +16,6 @@ namespace UsoSCTheater
         public const string Spine = "Spine";
         public const string Scenario = "Scenario";
         public const string Data = "Data";
-        public const string EndingCredits = "EndingCredits";
         public const string AudioBGM = "Audio/BGM";
         public const string AudioSE = "Audio/SE";
         public const string AudioVoice = "Audio/Voice";

@@ -102,8 +102,7 @@ MonoBehaviour:
     - fuyuko
     - madoka
     - nichika
-    irisIcons:
-    - houkago
+    irisIcons: []
     spineKeys:
     - nichika_stand_1040240010
     - nichika_stand_1040240040
