@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    트랜지션 연출 값 (사람이 직접 편집). 코드: UsoSCTheater.Transition.TransitionData
+    IrisIconDefault: Iris 가운데 아이콘 기본 배율 (배경 원 지름 대비). Unit = 유닛 아이콘, Member = 멤버 사인, Default = 기본 아이콘(283프로)
+    IrisIcon: 아이콘별 보정. Id = Resources/IrisIcon/{Id} 이름 (기본 아이콘은 default)
+      Scale = 배율 (없으면 기본 배율), OffsetY = 위로 올리는 양, 배경 원 반지름 대비 비율 (없으면 0)
+-->
+<TransitionData>
+    <IrisIconDefault Unit="0.9" Member="0.8" Default="0.9" />
+    <IrisIcon Id="houkago"      Scale="0.8"  OffsetY="0.148" />
+    <IrisIcon Id="alstroemeria" Scale="0.88" />
+    <IrisIcon Id="cometik"      Scale="0.79" />
+</TransitionData>

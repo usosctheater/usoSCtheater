@@ -13,7 +13,8 @@ namespace UsoSCTheater.Scenario
     ///   0. ScenarioData.xml Iris 직접 지정 (유닛 ID 또는 캐릭터 ID)
     ///   1. 멤버 전원이 등장인물에 들어 있는 유닛 (게스트가 있어도 됨, 2개 이상이면 그중 랜덤)
     ///   2. 등장인물 전원 (유닛 없는 게스트도 이때만 포함)
-    ///   후보가 없으면 EffectManager 인스펙터 기본 아이콘
+    ///   후보가 없으면 EffectManager 인스펙터 기본 아이콘 (283프로). Iris="Default"로 기본 아이콘을 직접 지정 가능 (2026-10-29)
+    /// 표시: 모든 아이콘을 배경 원 위에, 배율·Y 보정은 Resources/Data/TransitionData.xml
     /// 아이콘: Resources/IrisIcon/{유닛 ID 또는 캐릭터 ID} (파일 없는 후보는 제외 + 경고)
     /// </summary>
     public class IrisIconSet
@@ -22,7 +23,7 @@ namespace UsoSCTheater.Scenario
 
         private readonly List<string> keys = new List<string>();
         private readonly List<Sprite> sprites = new List<Sprite>();
-        private readonly List<bool> isUnit = new List<bool>();   //[Iris 아이콘] 후보별 종류 (유닛 = UnitData에 있는 Id → 배경 없이 표시)
+        private readonly List<bool> isUnit = new List<bool>();   //[Iris 아이콘] 후보별 종류 (유닛 = UnitData에 있는 Id → 유닛 기본 배율)
 
         public int Count => sprites.Count;
         public string Rule { get; private set; } = "후보 없음";   // 로그용: 어느 규칙으로 정했는지
@@ -57,12 +58,12 @@ namespace UsoSCTheater.Scenario
 
             //2. 등장인물 전원
             set.AddAll(characters);
-            set.Rule = set.Count > 0 ? "등장인물 랜덤" : "후보 없음 → 기본 아이콘";
+            set.Rule = set.Count > 0 ? "등장인물 랜덤" : "후보 없음 → 기본 아이콘(283프로)";
             return set;
         }
 
-        //트랜지션마다 호출. 후보가 없으면 false (호출 쪽은 기본 아이콘 유지)
-        //unit = true면 유닛 아이콘 (배경 원 없이 1배), false면 멤버 사인 (배경 원 위에 여백 배율)
+        //트랜지션마다 호출. 후보가 없으면 false (호출 쪽은 기본 아이콘). key가 default면 sprite는 null → 호출 쪽이 기본 아이콘으로
+        //unit = true면 유닛 아이콘, false면 멤버 사인 — 배율·Y 보정은 TransitionData (2026-10-29: 모두 배경 원 위)
         public bool TryPick(out Sprite sprite, out string key, out bool unit)   //[Iris 아이콘] out bool unit 추가
         {
             sprite = null;
@@ -83,6 +84,15 @@ namespace UsoSCTheater.Scenario
             {
                 string id = raw?.Trim();
                 if (string.IsNullOrEmpty(id) || keys.Contains(id, StringComparer.OrdinalIgnoreCase)) continue;
+
+                //[Iris 아이콘] 추가 (2026-10-29): Iris="Default" → 기본 아이콘 후보 (파일을 찾지 않음, Sprite는 EffectManager가 인스펙터 기본 아이콘으로 채움)
+                if (string.Equals(id, UsoSCTheater.Transition.TransitionData.DefaultIconId, StringComparison.OrdinalIgnoreCase))
+                {
+                    keys.Add(UsoSCTheater.Transition.TransitionData.DefaultIconId);
+                    sprites.Add(null);
+                    isUnit.Add(false);
+                    continue;
+                }
 
                 Sprite sprite = Resources.Load<Sprite>($"{IconRoot}/{id}");
                 if (sprite == null)

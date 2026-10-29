@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;   //[ScenarioData 자동 추가] StringBuilder · UTF8Encoding
 using System.Xml;   //[목록 UI] 막 헤더(mainTitle/subTitle) 읽기
 using UnityEditor;
 using UnityEditor.Build;
@@ -144,6 +145,9 @@ public class ScenarioCatalogSync : AssetPostprocessor
 
         //[시나리오 데이터] 태그/등장인물 병합 (문서가 없거나 파싱 실패면 null → 전부 빈 값, 개별 경고 생략)
         var data = ReadScenarioData();
+        //[ScenarioData 자동 추가] 폴더는 있는데 항목이 없는 시나리오 → 빈 항목을 문서 끝에 추가하고 다시 읽음 (사용자는 속성만 기입)
+        if (data != null && AppendMissingScenarioData(found.Keys.Where(id => !data.ContainsKey(id)).ToList()))
+            data = ReadScenarioData();
         if (data != null)
         {
             foreach (var kv in found)
@@ -154,7 +158,8 @@ public class ScenarioCatalogSync : AssetPostprocessor
                     kv.Value.characters = item.characters;
                     kv.Value.irisIcons = item.irisIcons;   //[Iris 아이콘]
                 }
-                else Debug.LogWarning($"[ScenarioCatalogSync] '{kv.Key}': ScenarioData.xml에 항목 없음 → 태그/등장인물 비움");
+                //[ScenarioData 자동 추가] 경고 → 오류 (자동 추가 뒤에도 없음 = 쓰기 실패 등)
+                else Debug.LogError($"[ScenarioCatalogSync] '{kv.Key}': ScenarioData.xml에 항목 없음 (자동 추가 실패) → 태그/등장인물 비움");
             }
             foreach (string id in data.Keys)
             {
@@ -339,7 +344,7 @@ public class ScenarioCatalogSync : AssetPostprocessor
         var asset = AssetDatabase.LoadAssetAtPath<TextAsset>(ScenarioDataPath);
         if (asset == null)
         {
-            Debug.LogWarning($"[ScenarioCatalogSync] {ScenarioDataPath} 없음 → 태그/등장인물 없이 동기화");
+            Debug.LogError($"[ScenarioCatalogSync] {ScenarioDataPath} 없음 → 태그/등장인물 없이 동기화");   //[ScenarioData 자동 추가] 경고 → 오류 (파일은 새로 만들지 않음)
             return null;
         }
 
@@ -395,10 +400,53 @@ public class ScenarioCatalogSync : AssetPostprocessor
         }
         catch (XmlException e)
         {
-            Debug.LogWarning($"[ScenarioCatalogSync] ScenarioData.xml 파싱 실패 — {e.Message}");
+            Debug.LogError($"[ScenarioCatalogSync] ScenarioData.xml 파싱 실패 — {e.Message}");   //[ScenarioData 자동 추가] 경고 → 오류
             return null;
         }
         return result;
+    }
+
+    //[ScenarioData 자동 추가] 빈 항목을 루트 닫는 태그 앞에 덧붙임. 사람이 쓴 서식·주석은 건드리지 않고 텍스트만 추가 (기존 항목은 다시 쓰지 않음)
+    //속성 목록 = 아래 상수 (Id + Tag·Character·Iris) — 속성이 늘면 여기에 추가, 기존 항목은 생략 가능 + 빈 값으로 읽음
+    private static readonly string[] ScenarioDataTemplateAttrs = { DataTagAttr, DataCharacterAttr, DataIrisAttr };
+
+    private static bool AppendMissingScenarioData(List<string> ids)
+    {
+        if (ids.Count == 0) return false;
+        try
+        {
+            byte[] bytes = File.ReadAllBytes(ScenarioDataPath);
+            bool bom = bytes.Length >= 3 && bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF;
+            string text = new UTF8Encoding(false).GetString(bytes, bom ? 3 : 0, bytes.Length - (bom ? 3 : 0));
+            string nl = text.Contains("\r\n") ? "\r\n" : "\n";
+
+            int close = text.LastIndexOf("</", StringComparison.Ordinal);   //루트 닫는 태그
+            if (close < 0)
+            {
+                Debug.LogError("[ScenarioCatalogSync] ScenarioData.xml에 루트 닫는 태그가 없어 항목을 추가하지 못함");
+                return false;
+            }
+
+            var sb = new StringBuilder();
+            foreach (string id in ids.OrderBy(i => i, StringComparer.Ordinal))
+            {
+                sb.Append($"    <{DataScenarioTag}{nl}        {DataIdAttr}=\"{id}\"{nl}");
+                foreach (string attr in ScenarioDataTemplateAttrs) sb.Append($"        {attr}=\"\"{nl}");
+                sb.Append($"    />{nl}");
+            }
+
+            string before = text.Substring(0, close).TrimEnd() + nl;
+            string result = before + sb + text.Substring(close);
+            File.WriteAllText(ScenarioDataPath, result, new UTF8Encoding(bom));
+            AssetDatabase.ImportAsset(ScenarioDataPath);
+            Debug.Log($"[ScenarioCatalogSync] ScenarioData.xml에 빈 항목 추가: {string.Join(", ", ids)} → Tag·Character 등 속성을 채워 주세요");
+            return true;
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"[ScenarioCatalogSync] ScenarioData.xml 항목 자동 추가 실패 — {e.Message}");
+            return false;
+        }
     }
 
     //[시나리오 데이터] 요소/속성 이름 대소문자 무시 비교 (XmlAttribute도 XmlNode)

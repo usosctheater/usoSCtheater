@@ -48,10 +48,9 @@ public class EffectManager : MonoBehaviour
 
     [Header("Iris Simple 설정")]
     [SerializeField] private UnityEngine.UI.Image irisImage;                                            //패널 이미지
-    [SerializeField] private UnityEngine.UI.Image irisIcon;                                             //배경 원 (멤버 사인일 때만 보임)   //[Iris 아이콘] 주석 변경
-    [SerializeField] private UnityEngine.UI.Image irisIconImage;                                        //[Iris 아이콘] 추가: IrisIcon 아래 Icon — 아이콘 Sprite는 여기에만
-    [SerializeField] private float unitIconScale = 1f;                                                  //[Iris 아이콘] 추가: 유닛 아이콘 배율 (배경 원 없음)
-    [SerializeField] private float memberIconScale = 0.8f;                                              //[Iris 아이콘] 추가: 멤버 사인 배율 (배경 원 위, 여백)
+    [SerializeField] private UnityEngine.UI.Image irisIcon;                                             //배경 원 (모든 아이콘 아래에 항상 표시 — 2026-10-29)   //[Iris 아이콘] 주석 변경
+    [SerializeField] private UnityEngine.UI.Image irisIconImage;                                        //[Iris 아이콘] 추가: IrisIcon 아래 Icon — 아이콘 Sprite는 여기에만 (인스펙터에 연결된 Sprite = 기본 아이콘)
+    //[Iris 아이콘] 삭제: unitIconScale · memberIconScale → Resources/Data/TransitionData.xml (IrisIconDefault, 아이콘별 IrisIcon)
     [SerializeField] private float irisOutDuration = 1.0f;
     [SerializeField] private float irisInDuration = 1.0f;
     [SerializeField] private float irisMinScale = 1.0f;
@@ -60,13 +59,16 @@ public class EffectManager : MonoBehaviour
     [SerializeField] private AnimationCurve irisOutCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
     [SerializeField] private AnimationCurve irisInCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
 
-    //[Iris 아이콘] 시나리오 시작 때 ScenarioPlayer가 전달. 트랜지션마다 후보 중 랜덤 (없으면 irisIconImage·배경 원의 인스펙터 상태 유지)
+    //[Iris 아이콘] 시나리오 시작 때 ScenarioPlayer가 전달. 트랜지션마다 후보 중 랜덤 (후보가 없거나 default면 기본 아이콘)
     private UsoSCTheater.Scenario.IrisIconSet irisIconSet;
+    private Sprite defaultIconSprite;   //[Iris 아이콘] 추가: 인스펙터의 irisIconImage Sprite = 기본 아이콘 (283프로). 후보가 없거나 Iris="Default"일 때 사용
 
     public void SetIrisIcons(UsoSCTheater.Scenario.IrisIconSet set) => irisIconSet = set;
 
     void Awake()
     {
+        if (irisIconImage != null) defaultIconSprite = irisIconImage.sprite;   //[Iris 아이콘] 기본 아이콘 기억 (이후 트랜지션마다 Sprite를 바꾸므로 먼저 저장)
+
         overlayImage.gameObject.SetActive(false);
 
         //Iris 트랜지션 세팅
@@ -231,19 +233,23 @@ public class EffectManager : MonoBehaviour
 
     }
 
-    //[Iris 아이콘] 추가: 유닛 = 배경 원 없이 unitIconScale / 멤버 사인 = 배경 원 위에 memberIconScale
-    //배경 원은 Image 컴포넌트만 끔 (GameObject는 켜 둬야 하위 Icon이 보임)
-    private void ApplyIrisIcon(Sprite sprite, bool isUnit)
+    //[Iris 아이콘] 수정 (2026-10-29): 모든 아이콘(유닛·멤버 사인·기본)을 배경 원 위에 표시 (이전: 유닛은 배경 원 없이)
+    //배율·Y 보정은 TransitionData.xml — 아이콘별 항목이 없으면 종류별 기본 배율, OffsetY는 배경 원 반지름 대비 비율
+    private void ApplyIrisIcon(Sprite sprite, string key, bool isUnit, bool isDefault)
     {
         if (irisIconImage == null)
         {
             Debug.LogWarning("[EffectManager] irisIconImage 미연결 — IrisIcon 아래 Icon을 연결하세요");
             return;
         }
+        UsoSCTheater.Transition.TransitionData.IrisIconStyle style = UsoSCTheater.Transition.TransitionData.GetIrisIconStyle(key, isUnit, isDefault);
+
         irisIconImage.sprite = sprite;
-        irisIcon.enabled = !isUnit;
-        float scale = isUnit ? unitIconScale : memberIconScale;
-        irisIconImage.rectTransform.localScale = new UnityEngine.Vector3(scale, scale, 1f);
+        irisIcon.enabled = true;   //배경 원 항상 켬
+        irisIconImage.rectTransform.localScale = new UnityEngine.Vector3(style.Scale, style.Scale, 1f);
+
+        float radius = irisIcon.rectTransform.rect.height * 0.5f;   //배경 원 반지름 (Icon의 부모 기준 단위)
+        irisIconImage.rectTransform.anchoredPosition = new UnityEngine.Vector2(0f, style.OffsetY * radius);
     }
 
     private IEnumerator IrisCoroutine(string se, Action onComplete)
@@ -257,10 +263,17 @@ public class EffectManager : MonoBehaviour
         else Debug.Log("[EffectManager] SE_out is null");
 
         //[Iris 아이콘] 트랜지션마다 새로 선정
-        if (irisIconSet != null && irisIconSet.TryPick(out Sprite pickedIcon, out string pickedKey, out bool isUnit))
+        //수정 (2026-10-29): 후보가 없거나 default를 뽑으면 기본 아이콘 (이전: 후보가 없으면 인스펙터 상태 그대로)
+        if (irisIconSet != null && irisIconSet.TryPick(out Sprite pickedIcon, out string pickedKey, out bool isUnit)
+            && !string.Equals(pickedKey, UsoSCTheater.Transition.TransitionData.DefaultIconId, StringComparison.OrdinalIgnoreCase))
         {
-            ApplyIrisIcon(pickedIcon, isUnit);
+            ApplyIrisIcon(pickedIcon, pickedKey, isUnit, false);
             Debug.Log($"[EffectManager] Iris 아이콘: {pickedKey} ({(isUnit ? "유닛" : "멤버")})");
+        }
+        else
+        {
+            ApplyIrisIcon(defaultIconSprite, UsoSCTheater.Transition.TransitionData.DefaultIconId, false, true);
+            Debug.Log("[EffectManager] Iris 아이콘: 기본 아이콘");
         }
 
         irisIcon.gameObject.SetActive(true);        

@@ -419,9 +419,6 @@ MonoBehaviour:
   dividerSprite1: {fileID: -919852725, guid: b11d894010e82234297f9a9d4e6f1e94, type: 3}
   dividerSprite2: {fileID: 21300000, guid: 566afc33b58db8b41838a35d41b01a76, type: 3}
   dividerSprite3: {fileID: 21300000, guid: d323535048c094645a283b006f728ff7, type: 3}
-  defaultSDSprite: {fileID: 21300000, guid: 7245a5e65005c2a4bbcadec82a62d2eb, type: 3}
-  circleMaskSprite: {fileID: 21300000, guid: 696eed24b23b6534f808173fbe79405a, type: 3}
-  sdResourcePath: SD
 --- !u!1 &145419763
 GameObject:
   m_ObjectHideFlags: 0
@@ -1540,8 +1537,6 @@ MonoBehaviour:
   irisImage: {fileID: 1859838219}
   irisIcon: {fileID: 465243627}
   irisIconImage: {fileID: 1634912354}
-  unitIconScale: 1
-  memberIconScale: 0.8
   irisOutDuration: 1
   irisInDuration: 1
   irisMinScale: 2.9
@@ -2005,7 +2000,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ImageManager
   pictureImage: {fileID: 694566886}
   frameImage: {fileID: 322757478}
-  imagePath: Image
   defaultDuration: 1
 --- !u!1 &813396108
 GameObject:
@@ -2438,7 +2432,6 @@ MonoBehaviour:
   bgImage: {fileID: 1374361172}
   flashbackOverlay: {fileID: 1516449389}
   flashbackAlpha: 0.3
-  bgPath: BG
 --- !u!1 &1127497074
 GameObject:
   m_ObjectHideFlags: 0
@@ -3049,9 +3042,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0117f699124af5b47a53d7ca536feca5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AudioManager
-  voicePath: Audio/Voice
-  bgmPath: Audio/BGM
-  sePath: Audio/SE
 --- !u!1 &1403729220
 GameObject:
   m_ObjectHideFlags: 0
@@ -3828,7 +3818,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: a8fbd7e6b6c26a9419b693ae7a1d0ad8, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 7109ad80da700b64194e9a9569add506, type: 3}
   m_Type: 0
   m_PreserveAspect: 1
   m_FillCenter: 1
