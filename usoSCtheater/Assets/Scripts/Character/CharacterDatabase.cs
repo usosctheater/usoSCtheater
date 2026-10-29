@@ -79,8 +79,8 @@ namespace UsoSCTheater.Character
     /// </summary>
     public static class CharacterDatabase
     {
-        public const string DataPath = "Data/CharacterData";   // Resources.Load 경로
-        public const string IconRoot = "CharacterIcon";        // 목록 아이콘: Resources/CharacterIcon/{Id}
+        public const string DataPath = ResourcePaths.Data + "/CharacterData";   // Resources.Load 경로 //[리소스 정리] 폴더는 ResourcePaths
+        public const string IconRoot = ResourcePaths.CharacterIcon;            // 목록 아이콘: Resources/CharacterIcon/{Id}
         public const string DefaultLanguage = "Ko";
         public const string FullSuffix = "Full";               // 성까지 포함한 이름 속성 접미어 (KoFull, JaFull ...)
 
@@ -88,7 +88,7 @@ namespace UsoSCTheater.Character
         private static Dictionary<string, Sprite> iconCache;      // 없는 아이콘(null)도 저장 → 경고·로드 반복 방지
         private static Dictionary<string, List<SpineKeyInfo>> spinesById;   //[Spine 인덱스] 캐릭터 Id → Spine 목록 (대소문자 무시)
 
-        public const string UnitDataPath = "Data/UnitData";   //[유닛] Resources.Load 경로
+        public const string UnitDataPath = ResourcePaths.Data + "/UnitData";   //[유닛] Resources.Load 경로
         private static List<UnitEntry> units;                  //[유닛] 파일 순서 유지
         private static Dictionary<string, UnitEntry> unitsById;   //[유닛] 대소문자 무시
 

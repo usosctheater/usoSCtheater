@@ -40,7 +40,7 @@ namespace UsoSCTheater.Character
     /// <summary>Spine 키 규칙 (게임·등록 도구 공용 — 분류 기준은 여기 한 곳에만 둠)</summary>
     public static class SpineKeys
     {
-        public const string SpineRoot = "Spine";                     // Resources/Spine
+        public const string SpineRoot = ResourcePaths.Spine;         // Resources/Spine //[리소스 정리] 폴더는 ResourcePaths
         public const string SkeletonDataSuffix = "_SkeletonData";    // spine-unity가 만드는 에셋 이름 접미어
         public const string AwakePrefix = "awake_";                  // TE: awake_idols 그룹 접두어
 
@@ -99,8 +99,8 @@ namespace UsoSCTheater.Character
     /// </summary>
     public static class CharacterSpineData
     {
-        public const string DataPath = "Data/CharacterSpineData";                     // Resources.Load 경로
-        public const string AssetPath = "Assets/Resources/Data/CharacterSpineData.xml"; // 등록 도구 쓰기 경로
+        public const string DataPath = ResourcePaths.Data + "/CharacterSpineData";                                    // Resources.Load 경로
+        public const string AssetPath = ResourcePaths.AssetsRoot + "/" + ResourcePaths.Data + "/CharacterSpineData.xml"; // 등록 도구 쓰기 경로
 
         public static List<SpineKeyInfo> Parse(string xmlText)
         {

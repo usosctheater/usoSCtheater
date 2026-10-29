@@ -2,13 +2,14 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using UnityEngine;
+using UsoSCTheater;   //[리소스 정리] ResourcePaths
 
 public class AudioManager : MonoBehaviour
 {
-    [Header("리소스 경로")]
-    [SerializeField] private string voicePath = "Audio/Voice";
-    [SerializeField] private string bgmPath = "Audio/BGM";
-    [SerializeField] private string sePath = "Audio/SE";
+    //[리소스 정리] 삭제: [SerializeField] voicePath·bgmPath·sePath → ResourcePaths.AudioVoice / AudioBGM / AudioSE (값은 그대로)
+    private const string voicePath = ResourcePaths.AudioVoice;
+    private const string bgmPath = ResourcePaths.AudioBGM;
+    private const string sePath = ResourcePaths.AudioSE;
 
     //Voice 여러 개 저장 가능하도록 List로 변경
     private List<AudioSource> voiceSources = new List<AudioSource>();

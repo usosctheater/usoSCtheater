@@ -18,7 +18,7 @@ namespace UsoSCTheater.Scenario
     /// </summary>
     public class IrisIconSet
     {
-        public const string IconRoot = "IrisIcon";
+        public const string IconRoot = ResourcePaths.IrisIcon;   //[리소스 정리] 폴더는 ResourcePaths
 
         private readonly List<string> keys = new List<string>();
         private readonly List<Sprite> sprites = new List<Sprite>();

@@ -44,9 +44,9 @@ namespace UsoSCTheater.Scenario
     /// </summary>
     public class ScenarioCatalog : ScriptableObject
     {
-        public const string ResourcePath = "Data/ScenarioCatalog";   // Resources.Load 경로
-        public const string ScenarioRoot = "Scenario";               // 시나리오 루트 폴더 (Resources/Scenario) //[용어 정리] SceneRoot → ScenarioRoot, 경로 "Scene" → "Scenario"
-        public const string ThumbnailRoot = "ScenarioThumbnail";     //[목록 UI] 썸네일 폴더 (Resources/ScenarioThumbnail/{폴더명}, Sprite)
+        public const string ResourcePath = ResourcePaths.Data + "/ScenarioCatalog";   // Resources.Load 경로 //[리소스 정리] 폴더는 ResourcePaths
+        public const string ScenarioRoot = ResourcePaths.Scenario;                    // 시나리오 루트 폴더 (Resources/Scenario) //[용어 정리] SceneRoot → ScenarioRoot, 경로 "Scene" → "Scenario"
+        public const string ThumbnailRoot = ResourcePaths.ScenarioThumbnail;     //[목록 UI] 썸네일 폴더 (Resources/ScenarioThumbnail/{폴더명}, Sprite)
 
         public List<ScenarioEntry> scenarios = new List<ScenarioEntry>();
 

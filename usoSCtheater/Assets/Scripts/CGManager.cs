@@ -616,7 +616,7 @@ public class CGManager : MonoBehaviour
     //DefaultLipData.xml을 읽어 아이돌별/카테고리별 디폴트 립 데이터를 구성
     private void LoadDefaultLipData()
     {
-        TextAsset xmlAsset = Resources.Load<TextAsset>("Data/DefaultLipData");
+        TextAsset xmlAsset = Resources.Load<TextAsset>(UsoSCTheater.ResourcePaths.Data + "/DefaultLipData");   //[리소스 정리] 폴더는 ResourcePaths
         if (xmlAsset == null)
         {
             Debug.LogWarning("[CGManager] DefaultLipData.xml을 찾을 수 없습니다. 하드코딩된 안전망만 사용됩니다.");

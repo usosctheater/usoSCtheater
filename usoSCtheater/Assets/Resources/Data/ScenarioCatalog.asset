@@ -96,8 +96,12 @@ MonoBehaviour:
     actTitles:
     - "\uC2A4\uD06C\uB9BD\uD2B8 \uD14C\uC2A4\uD2B8"
     - "\uC2A4\uD06C\uB9BD\uD2B8 \uD14C\uC2A4\uD2B8"
-    tags: []
-    characters: []
+    tags:
+    - "\uD14C\uC2A4\uD2B8\uC6A9"
+    characters:
+    - fuyuko
+    - madoka
+    - nichika
     irisIcons: []
     spineKeys:
     - nichika_stand_1040240010

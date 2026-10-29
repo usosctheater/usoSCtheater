@@ -43,7 +43,7 @@ namespace UsoSCTheater.Ending
         private static string GetResourcePath(Language language)
         {
             string suffix = language == Language.JP ? "jp" : "kr";
-            return $"EndingCredits/credits_{suffix}";
+            return $"{ResourcePaths.EndingCredits}/credits_{suffix}";   //[리소스 정리] 폴더는 ResourcePaths
         }
 
         private static List<string> ParseXml(string xmlText)

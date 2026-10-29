@@ -25,10 +25,12 @@ public class BacklogManager : MonoBehaviour
     [SerializeField] private Sprite dividerSprite2;             //Fade, Iris
     [SerializeField] private Sprite dividerSprite3;             //Wipe_Left
 
-    [Header("SD 이미지")]
-    [SerializeField] private Sprite defaultSDSprite;
-    [SerializeField] private Sprite circleMaskSprite;
-    [SerializeField] private string sdResourcePath = "SD";
+    // [백로그 SD 보류] 2026-10-29: 대사 항목의 SD 아이콘은 백로그 개선 때 새 Spine 키 기준(자동 Clip·가운데 정렬 후처리)으로 되살림 — 그때까지 주석
+    //   (Resources/SD·sd_default·ui_sd_back_* 리소스는 삭제됨. 되살릴 때 새 리소스로 다시 연결)
+    // [Header("SD 이미지")]
+    // [SerializeField] private Sprite defaultSDSprite;
+    // [SerializeField] private Sprite circleMaskSprite;
+    // [SerializeField] private string sdResourcePath = "SD";
 
     private DialogManager dialogManager;
     private AudioManager audioManager;
@@ -54,10 +56,11 @@ public class BacklogManager : MonoBehaviour
         Time.timeScale = 0f;
 #endif
 
-        //동일 화자가 연속해서 대사를 하는 경우, SDIcon 동기화를 위한 변수
-        string lastCgKey = null;
-        string lastSpeakerName = null;
-        bool hideSD = false;
+        // [백로그 SD 보류] SD 아이콘 동기화용 변수 — 주석
+        // //동일 화자가 연속해서 대사를 하는 경우, SDIcon 동기화를 위한 변수
+        // string lastCgKey = null;
+        // string lastSpeakerName = null;
+        // bool hideSD = false;
 
         settingPanel.SetActive(false);
 
@@ -73,36 +76,39 @@ public class BacklogManager : MonoBehaviour
             {
                 DialogLine line = node.line;
 
-                //CG = none이면 SD 숨김 처리
-                if (!string.IsNullOrEmpty(line.cgKey) && line.cgKey.ToLower() == "none")
-                {
-                    lastCgKey = null;
-                    lastSpeakerName = null;
-                    line.cgKey = null;
-                    hideSD = true;
-                }
-                //CG 없는데 이전 화자와 동일하면 cgKey 재사용
-                else if (string.IsNullOrEmpty(line.cgKey) && line.name == lastSpeakerName)
-                {
-                    line.cgKey = lastCgKey;
-                }
-                //CG 있고 명시되어 있으면 기억 갱신
-                else if (!string.IsNullOrEmpty(line.cgKey))
-                {
-                    lastCgKey = line.cgKey;
-                    lastSpeakerName = line.name;
-                    hideSD = false;
-                }
+                // [백로그 SD 보류] SD 아이콘용 cgKey 추적 — 주석
+                //   주의: 되살릴 때 line.cgKey를 직접 바꾸지 말 것 (실제 대사 데이터라 Backspace 이전 줄 등에서 CG가 달라짐) → 지역 변수로 추적
+                // //CG = none이면 SD 숨김 처리
+                // if (!string.IsNullOrEmpty(line.cgKey) && line.cgKey.ToLower() == "none")
+                // {
+                //     lastCgKey = null;
+                //     lastSpeakerName = null;
+                //     line.cgKey = null;
+                //     hideSD = true;
+                // }
+                // //CG 없는데 이전 화자와 동일하면 cgKey 재사용
+                // else if (string.IsNullOrEmpty(line.cgKey) && line.name == lastSpeakerName)
+                // {
+                //     line.cgKey = lastCgKey;
+                // }
+                // //CG 있고 명시되어 있으면 기억 갱신
+                // else if (!string.IsNullOrEmpty(line.cgKey))
+                // {
+                //     lastCgKey = line.cgKey;
+                //     lastSpeakerName = line.name;
+                //     hideSD = false;
+                // }
 
-                CreateDialogItem(line, hideSD);
+                CreateDialogItem(line);   // [백로그 SD 보류] hideSD 인자 제거
             }
             else if (node.type == ScriptNode.NodeType.Transition)
             {
                 CreateTransitionDivider(node.transition_effect);
-                //트랜지션 시에도 기억 초기화
-                lastCgKey = null;
-                lastSpeakerName = null;
-                hideSD = false;
+                // [백로그 SD 보류] 트랜지션 때 SD 추적 초기화 — 주석
+                // //트랜지션 시에도 기억 초기화
+                // lastCgKey = null;
+                // lastSpeakerName = null;
+                // hideSD = false;
             }
         }
 
@@ -124,27 +130,29 @@ public class BacklogManager : MonoBehaviour
         backlogUI.SetActive(false);
     }
 
-    private void CreateDialogItem(DialogLine line, bool hideSD = false)
+    private void CreateDialogItem(DialogLine line)   // [백로그 SD 보류] bool hideSD = false 인자 제거
     {
         GameObject item = Instantiate(dialogItemPrefab, contentParent);
         BacklogItem backlogItem = item.GetComponent<BacklogItem>();
 
-        //hideSD = true거나, 화자가 프로듀셔면 sdSprite = null로 처리
-        Sprite sdSprite;
-        if (hideSD || line.speakerType == 2) sdSprite = null;
-        else
-        {
-            sdSprite = GetSDSprite(line.cgKey);
-            //hideSD도 아니고 프로듀서도 아닌데 SD키가 없다면, 디폴트로 처리
-            if (sdSprite == null) sdSprite = defaultSDSprite;
-        }
+        // [백로그 SD 보류] SD 아이콘 선택 — 주석
+        // //hideSD = true거나, 화자가 프로듀셔면 sdSprite = null로 처리
+        // Sprite sdSprite;
+        // if (hideSD || line.speakerType == 2) sdSprite = null;
+        // else
+        // {
+        //     sdSprite = GetSDSprite(line.cgKey);
+        //     //hideSD도 아니고 프로듀서도 아닌데 SD키가 없다면, 디폴트로 처리
+        //     if (sdSprite == null) sdSprite = defaultSDSprite;
+        // }
+        Sprite sdSprite = null;   // [백로그 SD 보류] null이면 BacklogItem이 SD 아이콘(sdIconRoot)을 끔
 
         backlogItem.Setup(
             line,
             GetBubbleSprite(line.speakerType),
             sdSprite,
             audioManager,
-            circleMaskSprite
+            null   // [백로그 SD 보류] circleMaskSprite
             );
     }
 
@@ -170,11 +178,12 @@ public class BacklogManager : MonoBehaviour
         }
     }
 
-    private Sprite GetSDSprite(string cgKey)
-    {
-        if (string.IsNullOrEmpty(cgKey)) return null;
-        return Resources.Load<Sprite>($"{sdResourcePath}/{cgKey}");
-    }
+    // [백로그 SD 보류] Resources/SD/{cgKey}에서 SD 아이콘 불러오기 — 주석 (되살릴 때 경로는 ResourcePaths에 추가)
+    // private Sprite GetSDSprite(string cgKey)
+    // {
+    //     if (string.IsNullOrEmpty(cgKey)) return null;
+    //     return Resources.Load<Sprite>($"{sdResourcePath}/{cgKey}");
+    // }
 
     private Sprite GetDividerSprite(string effect)
     {

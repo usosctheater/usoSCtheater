@@ -2,6 +2,7 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 using UsoSCTheater.Recording; // [녹화] 에디터/빌드 페이싱 분기용
+using UsoSCTheater;           //[리소스 정리] ResourcePaths
 
 public class ImageManager : MonoBehaviour
 {
@@ -9,8 +10,7 @@ public class ImageManager : MonoBehaviour
     [SerializeField] private Image pictureImage;   // Key로 로드한 이미지 출력용
     [SerializeField] private Image frameImage;     // 인스펙터 고정 프레임 - pictureImage와 항상 함께 합성
 
-    [Header("리소스 경로")]
-    [SerializeField] private string imagePath = "Image";
+    //[리소스 정리] 삭제: [SerializeField] imagePath("Image") → ResourcePaths.ScenarioImage (폴더도 Resources/ScenarioImage로 변경)
 
     [Header("기본 노출 시간")]
     [SerializeField] private float defaultDuration = 1f;   // Duration 미지정 시 사용 (테스트 후 조정 가능)
@@ -26,7 +26,7 @@ public class ImageManager : MonoBehaviour
             return;
         }
 
-        Sprite sprite = Resources.Load<Sprite>($"{imagePath}/{imageKey}");
+        Sprite sprite = Resources.Load<Sprite>($"{ResourcePaths.ScenarioImage}/{imageKey}");
 
         if (sprite == null)
         {

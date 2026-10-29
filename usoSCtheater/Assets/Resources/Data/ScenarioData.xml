@@ -15,4 +15,9 @@
         Tag="개그, 일상"
         Character="asahi, fuyuko"
     />
+    <Scenario
+        Id="TEMP"
+        Tag="테스트용"
+        Character="fuyuko, madoka, nichika"
+    />
 </ScenarioData>

@@ -8,6 +8,7 @@ using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
 using UnityEngine;
 using UsoSCTheater.Scenario;
+using UsoSCTheater;   //[리소스 정리] ResourcePaths
 
 /// <summary>
 /// 시나리오 루트(Resources/Scenario) 하위 폴더를 스캔해 ScenarioCatalog를 자동 동기화한다. (에디터 전용)
@@ -23,12 +24,12 @@ using UsoSCTheater.Scenario;
 /// </summary>
 public class ScenarioCatalogSync : AssetPostprocessor
 {
-    private const string ScenarioRootFolder = "Assets/Resources/Scenario";   //[용어 정리] "Assets/Resources/Scene" → "Assets/Resources/Scenario" (ScenarioCatalog.ScenarioRoot와 일치해야 함)
-    private const string CatalogAssetPath = "Assets/Resources/Data/ScenarioCatalog.asset";
+    private const string ScenarioRootFolder = ResourcePaths.AssetsRoot + "/" + ResourcePaths.Scenario;   //[리소스 정리] 폴더는 ResourcePaths   //[용어 정리] "Assets/Resources/Scene" → "Assets/Resources/Scenario" (ScenarioCatalog.ScenarioRoot와 일치해야 함)
+    private const string CatalogAssetPath = ResourcePaths.AssetsRoot + "/" + ResourcePaths.Data + "/ScenarioCatalog.asset";
 
     //[시나리오 데이터] 시나리오별 태그/등장인물 문서 (동기화 때만 읽음)
     //양식: <Scenario Id="IL" Tag="a, b" Character="x, y" /> — 요소/속성 이름, Id 모두 대소문자 무시
-    private const string ScenarioDataPath = "Assets/Resources/Data/ScenarioData.xml";
+    private const string ScenarioDataPath = ResourcePaths.AssetsRoot + "/" + ResourcePaths.Data + "/ScenarioData.xml";
     private const string DataScenarioTag = "Scenario";
     private const string DataIdAttr = "Id";
     private const string DataTagAttr = "Tag";
@@ -255,6 +256,36 @@ public class ScenarioCatalogSync : AssetPostprocessor
         }
     }
 
+    //[리소스 정리] 막의 BG·IMAGE 키가 실제 파일로 있는지 (없으면 경고, 빌드는 막지 않음 — Spine 검사와 같은 방침)
+    private static void ValidateActResourceKeys(string assetPath, XmlDocument doc)
+    {
+        var missing = new List<string>();
+        foreach (XmlNode node in doc.GetElementsByTagName("*"))
+        {
+            string type = ActXml.GetAttrIgnoreCase(node, ActTypeAttr);
+            string folder = string.Equals(type, "BG", StringComparison.OrdinalIgnoreCase) ? ResourcePaths.BG
+                          : string.Equals(type, "IMAGE", StringComparison.OrdinalIgnoreCase) ? ResourcePaths.ScenarioImage : null;
+            if (folder == null) continue;
+
+            string key = ActXml.GetAttrIgnoreCase(node, "ResourceKey");
+            if (string.IsNullOrEmpty(key)) key = ActXml.GetAttrIgnoreCase(node, "Key");   //DialogManager.GetResourceKey와 같은 폴백
+            if (string.IsNullOrWhiteSpace(key)) continue;
+            string entry = $"{type.ToUpperInvariant()} {key.Trim()}";
+            if (!ResourceFileExists(folder, key.Trim()) && !missing.Contains(entry)) missing.Add(entry);
+        }
+        if (missing.Count > 0)
+            Debug.LogWarning($"[ScenarioCatalogSync] {Path.GetFileNameWithoutExtension(assetPath)}: 리소스 파일 없음 {missing.Count}개 (BG → Resources/{ResourcePaths.BG}, IMAGE → Resources/{ResourcePaths.ScenarioImage})\n  {string.Join("\n  ", missing)}");
+    }
+
+    //[리소스 정리] Resources/{folder}/{key}.* 파일이 있는지 (.meta 제외)
+    private static bool ResourceFileExists(string folder, string key)
+    {
+        string full = $"{ResourcePaths.AssetsRoot}/{folder}/{key}";
+        string dir = Path.GetDirectoryName(full);
+        return Directory.Exists(dir)
+            && Directory.GetFiles(dir, Path.GetFileName(full) + ".*").Any(f => !f.EndsWith(".meta", StringComparison.OrdinalIgnoreCase));
+    }
+
     //[목록 UI] 막 XML 루트의 mainTitle / subTitle 읽기 (파싱 실패 시 빈 값 + 경고)
     //[엔딩 SD] spineKeys: 막 안 모든 요소의 CG 값(쉼표 구분)을 등장 순서대로 추가 (중복·none 제외, 대소문자 무시)
     private static void ReadActHeader(string assetPath, out string mainTitle, out string subTitle, List<string> spineKeys)
@@ -292,6 +323,8 @@ public class ScenarioCatalogSync : AssetPostprocessor
                     if (!spineKeys.Contains(key, StringComparer.OrdinalIgnoreCase)) spineKeys.Add(key);
                 }
             }
+
+            ValidateActResourceKeys(assetPath, doc);   //[리소스 정리] BG·IMAGE 키 파일 존재 검사
         }
         catch (XmlException e)
         {

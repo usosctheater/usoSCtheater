@@ -34,7 +34,7 @@ public class SpineRegisterTool : EditorWindow
     }
 
     // ── 상수 ─────────────────────────────────────────────────────────────
-    private const string SPINE_RESOURCE_PATH = "Assets/Resources/Spine";
+    private const string SPINE_RESOURCE_PATH = UsoSCTheater.ResourcePaths.AssetsRoot + "/" + UsoSCTheater.ResourcePaths.Spine;   //[리소스 정리] 폴더는 ResourcePaths
     private const string SHADER_NAME = "Spine/Straight Alpha/Skeleton Fill";
     //[LD 불러오기] 삭제: CANVAS_NAME·CG_NAME·CGMANAGER_NAME·SORTING_LAYER·ORDER_IN_LAYER·PMA_VERTEX_COLORS(E-004)
     //  → LD 오브젝트는 게임이 실행 중에 만듦 (생성 설정은 CGManager의 SPINE_* 상수)

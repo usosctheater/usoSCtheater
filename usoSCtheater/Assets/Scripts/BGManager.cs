@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using UsoSCTheater;   //[리소스 정리] ResourcePaths
 public class BGManager : MonoBehaviour
 {
     [Header("UI 연결")]
@@ -9,8 +10,7 @@ public class BGManager : MonoBehaviour
     [SerializeField] private Image flashbackOverlay;
     [SerializeField] [Range(0f, 1f)] private float flashbackAlpha = 0.3f;
 
-    [Header("리소스 경로")]
-    [SerializeField] private string bgPath = "BG";
+    //[리소스 정리] 삭제: [SerializeField] bgPath("BG") → ResourcePaths.BG
 
     public void SetBG(string bgKey)
     {
@@ -20,7 +20,7 @@ public class BGManager : MonoBehaviour
             return;
         }
 
-        Sprite sprite = Resources.Load<Sprite>($"{bgPath}/{bgKey}");
+        Sprite sprite = Resources.Load<Sprite>($"{ResourcePaths.BG}/{bgKey}");
 
         if (sprite == null)
         {
