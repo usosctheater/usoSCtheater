@@ -20,7 +20,7 @@ public class BGManager : MonoBehaviour
             return;
         }
 
-        Sprite sprite = Resources.Load<Sprite>($"{ResourcePaths.BG}/{bgKey}");
+        Sprite sprite = LocalizedSprites.Load(ResourcePaths.BG, bgKey);   //[다국어] 수정: Resources.Load → 언어별 (BG_ja → BG)
 
         if (sprite == null)
         {

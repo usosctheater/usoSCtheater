@@ -29,6 +29,7 @@ public static class LocalizationCheck
     [MenuItem("Tools/Localization/Check Translations")]
     private static void CheckTranslations()
     {
+        if (EditorApplication.isPlayingOrWillChangePlaymode) { Debug.LogWarning("[LocalizationCheck] Play 중에는 실행하지 않음"); return; }   //[언어별 이미지] 추가: 씬을 열기 때문
         var targets = UsoSCTheater.Localization.Languages.Where(l => !l.IsDefault).ToList();
         if (targets.Count == 0) { Debug.Log("[LocalizationCheck] 번역 검사: 기본 언어 말고 다른 언어가 없음"); return; }
 
@@ -36,9 +37,10 @@ public static class LocalizationCheck
         CheckActs(targets, report);
         CheckDataFile(DataFile("ScenarioData"), "Scenario", "Tag", "ScenarioData 태그", targets, report);
         CheckDataFile(DataFile("UITextData"), "Text", UIText.TextAttr, "UI 문구", targets, report);
+        CheckLocalizedImages(targets, report);   //[언어별 이미지] 추가
 
         if (report.Count == 0) Debug.Log("[LocalizationCheck] 번역 검사: 누락 없음");
-        else Debug.LogWarning($"[LocalizationCheck] 번역 검사: 누락 {report.Count}건 (원문은 있는데 번역 속성이 없음)\n  {string.Join("\n  ", report)}");
+        else Debug.LogWarning($"[LocalizationCheck] 번역 검사: {report.Count}건 (번역 누락·언어별 이미지 문제)\n  {string.Join("\n  ", report)}");   //[언어별 이미지] 수정: 문구
     }
 
     //막 XML: 루트 mainTitle·subTitle, TEXT 줄 Name·Text (ScenarioCatalogSync에서 옮김)
@@ -96,24 +98,7 @@ public static class LocalizationCheck
         var used = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var issues = new List<string>();
 
-        //프리팹
-        foreach (string path in AssetDatabase.FindAssets("t:Prefab", new[] { "Assets" }).Select(AssetDatabase.GUIDToAssetPath))
-        {
-            if (path.StartsWith(SkipFolder, StringComparison.Ordinal)) continue;
-            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
-            if (prefab != null) CheckObjects(path, prefab.GetComponentsInChildren<TMP_Text>(true), known, used, issues);
-        }
-
-        //씬 (Build Settings) — 열려 있지 않은 씬은 잠깐 추가로 열었다가 닫음 (저장하지 않음)
-        foreach (var buildScene in EditorBuildSettings.scenes.Where(s => s.enabled))
-        {
-            var scene = EditorSceneManager.GetSceneByPath(buildScene.path);
-            bool opened = !scene.isLoaded;
-            if (opened) scene = EditorSceneManager.OpenScene(buildScene.path, OpenSceneMode.Additive);
-            var texts = scene.GetRootGameObjects().SelectMany(go => go.GetComponentsInChildren<TMP_Text>(true));
-            CheckObjects(buildScene.path, texts, known, used, issues);
-            if (opened) EditorSceneManager.CloseScene(scene, true);
-        }
+        ForEachInPrefabsAndScenes<TMP_Text>((where, tmp) => CheckObject(where, tmp, known, used, issues));   //[언어별 이미지] 수정: 프리팹·씬 반복을 공용 함수로
 
         //코드에서 쓰는 Id
         foreach (string file in Directory.GetFiles("Assets/Scripts", "*.cs", SearchOption.AllDirectories))
@@ -126,23 +111,62 @@ public static class LocalizationCheck
         else Debug.LogWarning($"[LocalizationCheck] UI 문구 검사: {issues.Count}건\n  {string.Join("\n  ", issues)}");
     }
 
-    private static void CheckObjects(string where, IEnumerable<TMP_Text> texts, HashSet<string> known, HashSet<string> used, List<string> issues)
+    //[언어별 이미지] 수정: TMP 목록 → TMP 하나씩 (CheckObjects → CheckObject)
+    private static void CheckObject(string where, TMP_Text tmp, HashSet<string> known, HashSet<string> used, List<string> issues)
     {
-        foreach (var tmp in texts)
+        string at = $"{where} :: {PathOf(tmp.transform)}";
+        var localized = tmp.GetComponent<LocalizedText>();
+        if (localized == null)
         {
-            string at = $"{where} :: {PathOf(tmp.transform)}";
-            var localized = tmp.GetComponent<LocalizedText>();
-            if (localized == null)
+            string text = tmp.text ?? "";
+            if (CjkLetters.IsMatch(text) && !text.TrimStart().StartsWith(PlaceholderPrefix, StringComparison.Ordinal))
+                issues.Add($"{at}: LocalizedText 없는 문구 '{Short(text)}' (UI 문구면 LocalizedText + Id, 코드가 덮어쓰는 견본이면 '{PlaceholderPrefix}'로 시작)");
+            return;
+        }
+        string id = localized.TextId?.Trim() ?? "";
+        if (id.Length == 0) issues.Add($"{at}: LocalizedText의 Id가 비어 있음");
+        else if (!known.Contains(id)) issues.Add($"{at}: UITextData.xml에 없는 Id '{id}'");
+        else used.Add(id);
+    }
+
+    //[언어별 이미지] 추가: LocalizedImage의 언어별 Sprite 빠짐·잘못된 코드·빈 Sprite
+    private static void CheckLocalizedImages(List<LanguageInfo> targets, List<string> report)
+    {
+        ForEachInPrefabsAndScenes<LocalizedImage>((where, img) =>
+        {
+            string at = $"{where} :: {PathOf(img.transform)}";
+            foreach (var entry in img.Sprites)
             {
-                string text = tmp.text ?? "";
-                if (CjkLetters.IsMatch(text) && !text.TrimStart().StartsWith(PlaceholderPrefix, StringComparison.Ordinal))
-                    issues.Add($"{at}: LocalizedText 없는 문구 '{Short(text)}' (UI 문구면 LocalizedText + Id, 코드가 덮어쓰는 견본이면 '{PlaceholderPrefix}'로 시작)");
-                continue;
+                var language = UsoSCTheater.Localization.Find(entry.language?.Trim());
+                if (language == null || language.IsDefault) report.Add($"{at}: 잘못된 언어 코드 '{entry.language}' (기본 언어가 아닌 LanguageData 코드, 예: ja)");
+                else if (entry.sprite == null) report.Add($"{at}: [{language.Code}] Sprite가 비어 있음");
             }
-            string id = localized.TextId?.Trim() ?? "";
-            if (id.Length == 0) issues.Add($"{at}: LocalizedText의 Id가 비어 있음");
-            else if (!known.Contains(id)) issues.Add($"{at}: UITextData.xml에 없는 Id '{id}'");
-            else used.Add(id);
+            foreach (var language in targets)
+            {
+                bool has = img.Sprites.Any(e => e.sprite != null && string.Equals(e.language?.Trim(), language.Code, StringComparison.OrdinalIgnoreCase));
+                if (!has) report.Add($"{at}: [{language.Code}] 언어별 이미지 없음");
+            }
+        });
+    }
+
+    //[언어별 이미지] 추가 (CheckUITexts에서 빼냄): 프리팹(TMP 예제 제외)·Build Settings 씬의 T 컴포넌트마다 action. 열려 있지 않은 씬은 잠깐 열었다가 닫음 (저장 안 함)
+    private static void ForEachInPrefabsAndScenes<T>(Action<string, T> action) where T : Component
+    {
+        foreach (string path in AssetDatabase.FindAssets("t:Prefab", new[] { "Assets" }).Select(AssetDatabase.GUIDToAssetPath))
+        {
+            if (path.StartsWith(SkipFolder, StringComparison.Ordinal)) continue;
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (prefab == null) continue;
+            foreach (var c in prefab.GetComponentsInChildren<T>(true)) action(path, c);
+        }
+        foreach (var buildScene in EditorBuildSettings.scenes.Where(s => s.enabled))
+        {
+            var scene = EditorSceneManager.GetSceneByPath(buildScene.path);
+            bool opened = !scene.isLoaded;
+            if (opened) scene = EditorSceneManager.OpenScene(buildScene.path, OpenSceneMode.Additive);
+            foreach (var go in scene.GetRootGameObjects())
+                foreach (var c in go.GetComponentsInChildren<T>(true)) action(buildScene.path, c);
+            if (opened) EditorSceneManager.CloseScene(scene, true);
         }
     }
 

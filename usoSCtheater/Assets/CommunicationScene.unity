@@ -254,6 +254,7 @@ GameObject:
   - component: {fileID: 97099449}
   - component: {fileID: 97099448}
   - component: {fileID: 97099447}
+  - component: {fileID: 97099450}
   m_Layer: 5
   m_Name: LogButton
   m_TagString: Untagged
@@ -362,6 +363,21 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 97099445}
   m_CullTransparentMesh: 1
+--- !u!114 &97099450
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 97099445}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 224a0d4775bc22048ab64d30ee49cfeb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UsoSCTheater.LocalizedImage
+  sprites:
+  - language: ja
+    sprite: {fileID: 21300000, guid: 7dbed18848d8c70488f8d99d8c0589d3, type: 3}
 --- !u!1 &101449364
 GameObject:
   m_ObjectHideFlags: 0
@@ -551,6 +567,7 @@ GameObject:
   - component: {fileID: 160400693}
   - component: {fileID: 160400692}
   - component: {fileID: 160400691}
+  - component: {fileID: 160400694}
   m_Layer: 5
   m_Name: CloseButton
   m_TagString: Untagged
@@ -659,6 +676,19 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 160400689}
   m_CullTransparentMesh: 1
+--- !u!114 &160400694
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 160400689}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 224a0d4775bc22048ab64d30ee49cfeb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UsoSCTheater.LocalizedImage
+  sprites: []
 --- !u!1 &208824564
 GameObject:
   m_ObjectHideFlags: 0
@@ -2090,6 +2120,7 @@ GameObject:
   - component: {fileID: 904250311}
   - component: {fileID: 904250310}
   - component: {fileID: 904250309}
+  - component: {fileID: 904250312}
   m_Layer: 5
   m_Name: HideButton
   m_TagString: Untagged
@@ -2198,6 +2229,21 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 904250307}
   m_CullTransparentMesh: 1
+--- !u!114 &904250312
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 904250307}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 224a0d4775bc22048ab64d30ee49cfeb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UsoSCTheater.LocalizedImage
+  sprites:
+  - language: ja
+    sprite: {fileID: 21300000, guid: 601a0fb6fc27f9144b0eca34c323feaf, type: 3}
 --- !u!1 &943705567
 GameObject:
   m_ObjectHideFlags: 0

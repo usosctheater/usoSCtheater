@@ -26,7 +26,7 @@ public class ImageManager : MonoBehaviour
             return;
         }
 
-        Sprite sprite = Resources.Load<Sprite>($"{ResourcePaths.ScenarioImage}/{imageKey}");
+        Sprite sprite = LocalizedSprites.Load(ResourcePaths.ScenarioImage, imageKey);   //[다국어] 수정: Resources.Load → 언어별
 
         if (sprite == null)
         {

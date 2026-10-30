@@ -55,7 +55,7 @@ namespace UsoSCTheater.Scenario
         {
             if (thumbnail == null) return;
 
-            Sprite sprite = Resources.Load<Sprite>($"{ScenarioCatalog.ThumbnailRoot}/{entry.folderName}");
+            Sprite sprite = LocalizedSprites.Load(ScenarioCatalog.ThumbnailRoot, entry.folderName);   //[다국어] 수정: 언어별 썸네일 (F12 → 목록 다시 그리기 때 반영)
             if (sprite == null)
             {
                 Debug.Log($"[ScenarioListItem] {entry.folderName}: 썸네일 없음 → 기본 썸네일 사용 (Resources/{ScenarioCatalog.ThumbnailRoot}/{entry.folderName})");
