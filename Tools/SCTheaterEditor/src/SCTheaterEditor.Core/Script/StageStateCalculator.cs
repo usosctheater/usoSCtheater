@@ -37,7 +37,7 @@ public static class StageStateCalculator
         foreach (var l in lines)
         {
             if (!l.Type.Equals("CGGROUP", StringComparison.OrdinalIgnoreCase)) continue;
-            string name = l.Get("Name").Split(',', 2)[0].Trim();
+            string name = l.Get("GroupId").Trim();   // 변경(다국어): Name 쉼표 분리 → GroupId
             if (!groups.TryGetValue(name, out var list)) groups[name] = list = new();
             list.Add((l.Get("CG"), l.Get("Position"), l.Get("Animation")));
         }

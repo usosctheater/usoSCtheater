@@ -1,14 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   스크립트 표의 종류(Line Type)별 속성 팔레트.
-  원본: resource\Script\ScriptManual.xlsx 의 ScriptManual 시트 (2026-10-15 기준) — 매뉴얼을 고치면 여기도 같이 고침 (도구 독립 규칙: TE 안 복사본)
+  원본: resource\Script\ScriptManual.xlsx 의 ScriptManual 시트 (2026-10-15 기준, 2026-10-30 TEXT CharId·CGGROUP GroupId 반영) — 매뉴얼을 고치면 여기도 같이 고침 (도구 독립 규칙: TE 안 복사본)
   - Type Id: XML의 Type 값 (드롭다운 순서 = 이 파일 순서)
   - Field: Attr = XML 속성 이름, Label = 칸 이름(제목 줄·빈 칸 안내), Width = 기본 칸 폭(px, 제목 줄 경계선 드래그로 바꾼 폭은 설정에 저장), Hint = 툴팁 설명
   - 팔레트에 없는 속성은 표의 '기타' 칸에 읽기 전용으로 표시 (파일에는 그대로 남음)
 -->
 <LineTypes>
   <Type Id="TEXT">
-    <Field Attr="Name" Label="이름" Width="90" Hint="화자 이름. CGGROUP 화자명과 글자 그대로 같아야 립 재사용 대상"/>
+    <Field Attr="CharId" Label="화자" Width="90" Hint="화자 캐릭터 ID (CharacterData Id, 쉼표로 여러 명). 립 재사용 기준. 이름 칸이 비면 이 ID의 이름이 출력됨"/>
+    <Field Attr="Name" Label="이름" Width="90" Hint="표시 이름 — 비우면 화자(CharId)의 이름이 나옴(흐린 글씨). CharacterData에 없는 인물·별칭(??? 등)만 직접 적음"/>
     <Field Attr="Text" Label="대사" Width="520" Hint="대사. \n은 줄바꿈"/>
     <Field Attr="Voice" Label="보이스 키" Width="90" Hint="보이스 키. 여러 개는 공백(쉼표)으로 구분해 동시 출력 (CGGroup과 함께)"/>
     <Field Attr="CG" Label="스파인 키" Width="170" Hint="스파인 키 또는 CGGroup 그룹명. none = 모든 스파인 내림"/>
@@ -53,13 +54,13 @@
     <Field Attr="Duration" Label="이펙트 시간" Width="75" Hint="zoom 시간"/>
   </Type>
   <Type Id="CGGROUP">
-    <Field Attr="Name" Label="그룹명" Width="160" Hint="그룹명, 화자명 (첫 쉼표만 구분자). 같은 그룹명끼리 묶임 (최대 5명)"/>
+    <Field Attr="GroupId" Label="그룹명" Width="160" Hint="그룹 이름. 같은 그룹명끼리 묶임 (최대 5명). 멤버의 화자는 스파인 키의 캐릭터로 자동"/>
     <Field Attr="CG" Label="스파인 키" Width="170" Hint="그룹에 넣을 스파인 키"/>
     <Field Attr="Position" Label="위치" Width="90" Hint="3분할 / 5분할 위치"/>
     <Field Attr="Animation" Label="애니메이션" Width="220" Hint="공백 구분 트랙 애니메이션"/>
   </Type>
   <Type Id="IMAGE">
-    <Field Attr="ResourceKey" Label="이미지 키" Width="200" Hint="Resources/Image 파일명"/>
+    <Field Attr="ResourceKey" Label="이미지 키" Width="200" Hint="Resources/ScenarioImage 파일명"/>
     <Field Attr="Duration" Label="표시 시간" Width="75" Hint="표시 시간(초), 미입력 시 1초"/>
   </Type>
 </LineTypes>

@@ -10,6 +10,8 @@ using UnityEngine.EventSystems;
 using UsoSCTheater.Recording; // [녹화] 에디터/빌드 페이싱 분기용
 using UsoSCTheater.Capture;   // [캡처] TEXT 라인 자동 스크린샷
 using UsoSCTheater.Scenario;  //[용어 정리] 막 XML 루트 파싱(ActXml)
+using UsoSCTheater;             //[다국어] Localization
+using UsoSCTheater.Character;   //[CharId] CharacterDatabase · SpineKeys
 // using UnityEditor.Audio;
 
 public class DialogManager : MonoBehaviour
@@ -52,8 +54,8 @@ public class DialogManager : MonoBehaviour
     private bool isAutoPlay = false;
     
     //Lip 재사용 기능 (CGGroup 대응으로 단일 값 → List)
-    private List<CGGroupEntry> lastLipTargets = new List<CGGroupEntry>();   //립싱크 재사용 대상 (cgKey / animation / speakerName)
-    private string lastLineSpeakerName = null;                              //직전 CG 지정 라인의 Name (그룹이면 그룹 대사 Name → 전원 립싱크)
+    private List<CGGroupEntry> lastLipTargets = new List<CGGroupEntry>();   //립싱크 재사용 대상 (cgKey / animation / speakerId)
+    private string lastLineSpeakerId = null;                                //[CharId] 직전 CG 지정 라인의 CharId (그룹이면 그룹 대사 CharId → 전원 립싱크) — 기존 lastLineSpeakerName
 
     //CGgroup 구현용 Dict
     private Dictionary<string, List<CGGroupEntry>> cgGroupDict = new Dictionary<string, List<CGGroupEntry>>();
@@ -123,9 +125,11 @@ public class DialogManager : MonoBehaviour
             {
                 case "TEXT":
                     DialogLine line = new DialogLine();
-                    line.name = GetAttr(node, "Name");
+                    line.charId = GetAttr(node, "CharId").Trim();                                           //[CharId] 화자 = 캐릭터 ID (쉼표로 여러 명)
+                    line.name = Localization.Get(node, "Name");                                              //[다국어] 표시 이름: Name_{현재 언어} → Name
+                    if (line.name.Length == 0) line.name = CharacterDatabase.GetSpeakerNames(line.charId);   //[CharId] 직접 쓴 이름이 없으면 DB 이름
                     //Text 받을 때, \n 문자열을 실제 줄바꿈으로 변환
-                    line.text = GetAttr(node, "Text").Replace("\\n", "\n");
+                    line.text = Localization.Get(node, "Text").Replace("\\n", "\n");                         //[다국어] Text_{현재 언어} → Text
                     line.cgKey = GetAttr(node, "CG");
                     line.cgPos = GetAttr(node, "Position");
                     line.animation = GetAttr(node, "Animation");
@@ -159,14 +163,18 @@ public class DialogManager : MonoBehaviour
                     break;
 
                 case "CGGROUP":
-                    // Name = "그룹명, 화자명" (첫 번째 쉼표만 구분자, 화자명 생략 가능 → Lip 재사용은 그룹 대사 Name으로만)
-                    // 화자명은 TEXT의 Name과 글자 그대로 일치해야 Lip 재사용 대상이 됨
-                    string[] groupNameParts = GetAttr(node, "Name").Split(new[] { ',' }, 2);
-                    string groupName = groupNameParts[0].Trim();
-                    string groupSpeaker = groupNameParts.Length > 1 ? groupNameParts[1].Trim() : "";
+                    //[CharId] GroupId = 그룹 이름 (기존 Name="그룹명, 화자명" 규칙 폐기). 멤버 화자 = CG 키 앞부분(캐릭터 ID)
+                    string groupName = GetAttr(node, "GroupId").Trim();
+                    if (groupName.Length == 0)
+                    {
+                        Debug.LogWarning($"[DialogManager] {xmlAsset.name}: GroupId가 없는 CGGROUP 줄 → 건너뜀");
+                        break;
+                    }
+                    string memberCg = GetAttr(node, "CG");
+                    string memberId = SpineKeys.TryParse(memberCg, out SpineKeyInfo memberInfo) ? memberInfo.CharacterId : "";
                     if (!cgGroupDict.ContainsKey(groupName)) cgGroupDict[groupName] = new List<CGGroupEntry>();
 
-                    cgGroupDict[groupName].Add(new CGGroupEntry(GetAttr(node, "CG"), GetAttr(node, "Position"), GetAttr(node, "Animation"), groupSpeaker));
+                    cgGroupDict[groupName].Add(new CGGroupEntry(memberCg, GetAttr(node, "Position"), GetAttr(node, "Animation"), memberId));
                     break;
 
                 case "SETCG":
@@ -249,7 +257,7 @@ public class DialogManager : MonoBehaviour
 
                 //Lip 재사용 정보 저장: 그룹 멤버 전원 (원본 참조가 아닌 복사본으로 저장)
                 lastLipTargets = new List<CGGroupEntry>(cgGroupDict[line.cgKey]);
-                lastLineSpeakerName = line.name;
+                lastLineSpeakerId = line.charId;   //[CharId] (기존 lastLineSpeakerName = line.name)
             }
             //그 외에는 기존 단일 CG 처리
             else
@@ -257,12 +265,12 @@ public class DialogManager : MonoBehaviour
                 cgManager.SetCG(line.cgKey, line.cgPos, line.animation, GetVoiceDuration(line.voiceKey));
             
                 //Lip 재사용 기능을 위한 정보 저장
-                lastLipTargets = new List<CGGroupEntry> { new CGGroupEntry(line.cgKey, line.cgPos, line.animation, line.name) };
-                lastLineSpeakerName = line.name;
+                lastLipTargets = new List<CGGroupEntry> { new CGGroupEntry(line.cgKey, line.cgPos, line.animation, line.charId) };   //[CharId]
+                lastLineSpeakerId = line.charId;   //[CharId]
             }
         }
         //CG 키가 없을 때: 직전 립싱크 대상 중 화자가 일치하는 CG가 있으면 Lip 재사용, 없으면 초기화
-        else if (!RestartLipByName(line.name, GetVoiceDuration(line.voiceKey)))
+        else if (!RestartLipBySpeaker(line.charId, GetVoiceDuration(line.voiceKey)))   //[CharId] RestartLipByName → RestartLipBySpeaker
         {
             ResetLipTracking();
         }
@@ -355,19 +363,20 @@ public class DialogManager : MonoBehaviour
         scenarioPlayer.OnActEnd();   //[용어 정리] sceneManager.OnSceneEnd → scenarioPlayer.OnActEnd
     }
 
-    // 화자 Name으로 Lip 재사용 대상 탐색 후 립싱크 재시작. 하나라도 재생했으면 true
-    // - 직전 CG 지정 라인과 Name이 같으면 대상 전원 (단일 CG / 그룹 전원 대사)
-    // - 아니면 CGGROUP 화자명이 일치하는 멤버만 (화자명 미지정 멤버는 제외 → 빈 Name 나레이션과 오매칭 방지)
-    private bool RestartLipByName(string speakerName, float voiceDuration)
+    //[CharId] 화자 CharId로 Lip 재사용 대상 탐색 후 립싱크 재시작. 하나라도 재생했으면 true (기존 RestartLipByName — Name 기준 폐기)
+    // - CharId가 비어 있으면(나레이션·DB에 없는 인물) 재사용하지 않음
+    // - 직전 CG 지정 라인과 CharId가 같으면 대상 전원 (단일 CG / 그룹 전원 대사)
+    // - 아니면 CGGROUP 멤버 중 화자(CG 키의 캐릭터 ID)가 같은 멤버만
+    private bool RestartLipBySpeaker(string speakerId, float voiceDuration)
     {
-        if (lastLipTargets.Count == 0) return false;
+        if (lastLipTargets.Count == 0 || string.IsNullOrEmpty(speakerId)) return false;
 
-        bool matchAll = speakerName == lastLineSpeakerName;
+        bool matchAll = string.Equals(speakerId, lastLineSpeakerId, System.StringComparison.OrdinalIgnoreCase);
         bool restarted = false;
 
         foreach (var target in lastLipTargets)
         {
-            if (!matchAll && (string.IsNullOrEmpty(target.speakerName) || target.speakerName != speakerName)) continue;
+            if (!matchAll && !string.Equals(target.speakerId, speakerId, System.StringComparison.OrdinalIgnoreCase)) continue;
 
             cgManager.RestartLipSync(target.cgKey, target.animation, voiceDuration);
             restarted = true;
@@ -379,7 +388,7 @@ public class DialogManager : MonoBehaviour
     private void ResetLipTracking()
     {
         lastLipTargets.Clear();
-        lastLineSpeakerName = null;
+        lastLineSpeakerId = null;   //[CharId]
     }
 
     // SETCG 노드 처리: TEXT의 CG 세팅 로직을 재사용하되, 클릭 없이 즉시 다음 라인으로 진행
@@ -413,7 +422,7 @@ public class DialogManager : MonoBehaviour
         }
 
         // CG 키가 CGGroup인 경우
-        // 주의: Lip 재사용 정보(lastLipTargets/lastLineSpeakerName)는 여기서 절대 건드리지 않음.
+        // 주의: Lip 재사용 정보(lastLipTargets/lastLineSpeakerId)는 여기서 절대 건드리지 않음.
         if (cgGroupDict.ContainsKey(node.setCgKey))
         {
             foreach (var entry in cgGroupDict[node.setCgKey]) cgManager.SetCG(entry.cgKey, entry.cgPos, entry.animation, 0f);
@@ -649,7 +658,8 @@ public class DialogManager : MonoBehaviour
 public class DialogLine
 {
     //텍스트
-    public string name     = "";
+    public string charId   = "";   //[CharId] 화자 캐릭터 ID (쉼표로 여러 명, 립 재사용 기준)
+    public string name     = "";   //[다국어] 화면에 찍을 표시 이름 (파싱 때 현재 언어로 정해 둠)
     public string text     = "";
 
     //리소스
@@ -810,13 +820,13 @@ public class CGGroupEntry
     public string cgKey;
     public string cgPos;
     public string animation;
-    public string speakerName;   //Lip 재사용 비교용 화자명 (CGGROUP: Name의 쉼표 뒤, 단일 CG: TEXT의 Name)
+    public string speakerId;   //[CharId] Lip 재사용 비교용 화자 (CGGROUP: CG 키 앞부분, 단일 CG: TEXT의 CharId) — 기존 speakerName
 
-    public CGGroupEntry(string cgKey, string cgPos, string animation, string speakerName = "")
+    public CGGroupEntry(string cgKey, string cgPos, string animation, string speakerId = "")
     {
         this.cgKey = cgKey;
         this.cgPos = cgPos;
         this.animation = animation;
-        this.speakerName = speakerName;
+        this.speakerId = speakerId;
     }
 }

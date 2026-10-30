@@ -42,8 +42,14 @@ public class ScenarioCatalogSync : AssetPostprocessor
     private const string ActCgAttr = "CG";
     private const string ActCgNone = "none";
     private const string ActTypeAttr = "Type";          //[LD 불러오기] CGGROUP 그룹 이름 제외용
-    private const string ActNameAttr = "Name";
     private const string ActCgGroupType = "CGGROUP";
+    private const string ActGroupIdAttr = "GroupId";    //[CharId] CGGROUP 그룹 이름 (기존 Name="그룹명, 화자명" 폐기 — ActNameAttr 삭제)
+    private const string ActCharIdAttr = "CharId";      //[CharId] TEXT 화자 캐릭터 ID (쉼표로 여러 명)
+    private const string ActLineTag = "Line";
+
+    //[번역 검사] 번역할 속성 (원문이 있는데 {속성}_{언어}가 없으면 누락). 번역 대상이 늘면 여기에 추가
+    private static readonly string[] TranslatableRootAttrs = { ActXml.MainTitleAttr, ActXml.SubTitleAttr };
+    private static readonly string[] TranslatableTextAttrs = { "Name", "Text" };
 
     private static bool syncPending = false;
 
@@ -103,6 +109,8 @@ public class ScenarioCatalogSync : AssetPostprocessor
             Debug.LogWarning($"[ScenarioCatalogSync] {ScenarioRootFolder} 폴더가 없습니다.");
             return;
         }
+
+        UsoSCTheater.Character.CharacterDatabase.Reload();   //[CharId] CharacterData·인덱스를 고친 뒤에도 최신 내용으로 검사
 
         var catalog = AssetDatabase.LoadAssetAtPath<ScenarioCatalog>(CatalogAssetPath);
         bool changed = false;
@@ -291,6 +299,100 @@ public class ScenarioCatalogSync : AssetPostprocessor
             && Directory.GetFiles(dir, Path.GetFileName(full) + ".*").Any(f => !f.EndsWith(".meta", StringComparison.OrdinalIgnoreCase));
     }
 
+    //[CharId] 막 스크립트 데이터 오류 검사 (경고만, 빌드는 막지 않음): DB에 없는 CharId, GroupId 없는 CGGROUP, 잘못된 언어 접미어
+    //줄 번호 = Line 요소 순서 (TE 스크립트 표 번호와 같음). 번역 누락은 여기서 보지 않음 → Tools > Scenario > Check Translations
+    private static void ValidateActScript(string assetPath, XmlDocument doc)
+    {
+        XmlNode root = ActXml.GetRoot(doc);
+        if (root == null) return;
+
+        var issues = new List<string>();
+        CheckLanguageSuffix(root, "루트", issues);
+        int number = 0;
+        foreach (XmlNode node in root.ChildNodes)
+        {
+            if (node.NodeType != XmlNodeType.Element || node.Name != ActLineTag) continue;
+            number++;
+            CheckLanguageSuffix(node, $"{number}번 줄", issues);
+
+            foreach (string id in UsoSCTheater.Character.CharacterDatabase.SplitIds(ActXml.GetAttrIgnoreCase(node, ActCharIdAttr)))
+            {
+                if (UsoSCTheater.Character.CharacterDatabase.Find(id) == null)
+                    issues.Add($"{number}번 줄: CharacterData에 없는 CharId '{id}'");
+            }
+
+            if (string.Equals(ActXml.GetAttrIgnoreCase(node, ActTypeAttr), ActCgGroupType, StringComparison.OrdinalIgnoreCase)
+                && ActXml.GetAttrIgnoreCase(node, ActGroupIdAttr).Trim().Length == 0)
+                issues.Add($"{number}번 줄: GroupId가 없는 CGGROUP (게임에서 건너뜀)");
+        }
+
+        if (issues.Count > 0)
+            Debug.LogWarning($"[ScenarioCatalogSync] {Path.GetFileNameWithoutExtension(assetPath)}: 스크립트 오류 {issues.Count}개\n  {string.Join("\n  ", issues)}");
+    }
+
+    //[CharId] 언어 접미어가 잘못된 속성 (Text_Jp 오타, 기본 언어 접미어 Name_Ko 등 — 게임이 읽지 않음)
+    private static void CheckLanguageSuffix(XmlNode node, string where, List<string> issues)
+    {
+        if (node.Attributes == null) return;
+        foreach (XmlAttribute attr in node.Attributes)
+        {
+            if (UsoSCTheater.Localization.HasInvalidLanguageSuffix(attr.Name))
+                issues.Add($"{where}: 잘못된 언어 접미어 속성 '{attr.Name}' (LanguageData에 없는 언어이거나 기본 언어 — 기본 언어는 접미어 없이)");
+        }
+    }
+
+    //[번역 검사] 원문은 있는데 기본 언어가 아닌 언어의 {속성}_{언어}가 없는 곳을 막마다 셈 (동기화와 별개로 필요할 때 실행)
+    [MenuItem("Tools/Scenario/Check Translations")]
+    private static void CheckTranslationsMenu()
+    {
+        var targets = UsoSCTheater.Localization.Languages.Where(l => !l.IsDefault).ToList();
+        if (targets.Count == 0)
+        {
+            Debug.Log("[ScenarioCatalogSync] 번역 검사: LanguageData에 기본 언어 말고 다른 언어가 없음");
+            return;
+        }
+
+        var report = new List<string>();
+        foreach (string folder in AssetDatabase.GetSubFolders(ScenarioRootFolder))
+        {
+            var actPaths = AssetDatabase.FindAssets("t:TextAsset", new[] { folder })
+                .Select(AssetDatabase.GUIDToAssetPath)
+                .Where(p => p.EndsWith(".xml", StringComparison.OrdinalIgnoreCase) && Path.GetDirectoryName(p).Replace('\\', '/') == folder)
+                .OrderBy(p => Path.GetFileNameWithoutExtension(p), StringComparer.Ordinal);
+            foreach (string path in actPaths)
+            {
+                var doc = new XmlDocument();
+                try { doc.LoadXml(AssetDatabase.LoadAssetAtPath<TextAsset>(path).text); }
+                catch (XmlException) { continue; }   // 파싱 오류는 동기화가 알려 줌
+                XmlNode root = ActXml.GetRoot(doc);
+                if (root == null) continue;
+
+                foreach (var language in targets)
+                {
+                    int title = TranslatableRootAttrs.Count(a => IsMissingTranslation(root, a, language));
+                    int name = 0, text = 0;
+                    foreach (XmlNode node in root.ChildNodes)
+                    {
+                        if (node.NodeType != XmlNodeType.Element || node.Name != ActLineTag) continue;
+                        if (!string.Equals(ActXml.GetAttrIgnoreCase(node, ActTypeAttr), "TEXT", StringComparison.OrdinalIgnoreCase)) continue;   // 게임이 이름·대사를 읽는 줄만
+                        if (IsMissingTranslation(node, TranslatableTextAttrs[0], language)) name++;   // Name
+                        if (IsMissingTranslation(node, TranslatableTextAttrs[1], language)) text++;   // Text
+                    }
+                    if (title + name + text > 0)
+                        report.Add($"{Path.GetFileName(folder)}/{Path.GetFileNameWithoutExtension(path)} [{language.Code}] 제목 {title} · Name {name} · Text {text}");
+                }
+            }
+        }
+
+        if (report.Count == 0) Debug.Log("[ScenarioCatalogSync] 번역 검사: 누락 없음");
+        else Debug.LogWarning($"[ScenarioCatalogSync] 번역 검사: 누락이 있는 막 {report.Count}개 (원문은 있는데 번역 속성이 없는 개수)\n  {string.Join("\n  ", report)}");
+    }
+
+    //[번역 검사] 원문(기본 속성)은 있는데 그 언어 속성이 비었거나 없음
+    private static bool IsMissingTranslation(XmlNode node, string attr, UsoSCTheater.LanguageInfo language) =>
+        ActXml.GetAttrIgnoreCase(node, attr).Trim().Length > 0
+        && ActXml.GetAttrIgnoreCase(node, UsoSCTheater.Localization.AttrName(attr, language)).Trim().Length == 0;
+
     //[목록 UI] 막 XML 루트의 mainTitle / subTitle 읽기 (파싱 실패 시 빈 값 + 경고)
     //[엔딩 SD] spineKeys: 막 안 모든 요소의 CG 값(쉼표 구분)을 등장 순서대로 추가 (중복·none 제외, 대소문자 무시)
     private static void ReadActHeader(string assetPath, out string mainTitle, out string subTitle, List<string> spineKeys)
@@ -316,7 +418,7 @@ public class ScenarioCatalogSync : AssetPostprocessor
             foreach (XmlNode node in doc.GetElementsByTagName("*"))
             {
                 if (string.Equals(ActXml.GetAttrIgnoreCase(node, ActTypeAttr), ActCgGroupType, StringComparison.OrdinalIgnoreCase))
-                    groupNames.Add(ActXml.GetAttrIgnoreCase(node, ActNameAttr).Split(',')[0].Trim());
+                    groupNames.Add(ActXml.GetAttrIgnoreCase(node, ActGroupIdAttr).Trim());   //[CharId] Name 쉼표 분리 → GroupId
             }
 
             foreach (XmlNode node in doc.GetElementsByTagName("*"))
@@ -330,6 +432,7 @@ public class ScenarioCatalogSync : AssetPostprocessor
             }
 
             ValidateActResourceKeys(assetPath, doc);   //[리소스 정리] BG·IMAGE 키 파일 존재 검사
+            ValidateActScript(assetPath, doc);         //[CharId] CharId·GroupId·언어 접미어 검사
         }
         catch (XmlException e)
         {

@@ -26,6 +26,17 @@ public sealed class CharacterData
     /// <summary>한국어(기본 언어) 이름 (없거나 비어 있으면 null)</summary>
     public string? KoreanName(string? id) => Find(id)?.Name is { Length: > 0 } s ? s : null;   // 변경(다국어): .Ko → .Name
 
+    /// <summary>추가(다국어): "a, b" → [a, b] (앞뒤 공백·빈 항목 제외) — 막 XML CharId 값 (게임 CharacterDatabase.SplitIds와 같은 규칙)</summary>
+    public static IEnumerable<string> SplitIds(string? ids) =>
+        (ids ?? "").Split(',').Select(s => s.Trim()).Where(s => s.Length > 0);
+
+    /// <summary>추가(다국어): CharId(쉼표로 여러 명)의 한국어 이름을 ", "로 이어 붙임. DB에 없는 ID는 그대로, 비면 null</summary>
+    public string? SpeakerNames(string? ids)
+    {
+        var names = SplitIds(ids).Select(id => KoreanName(id) ?? id).ToList();
+        return names.Count > 0 ? string.Join(", ", names) : null;
+    }
+
     public static CharacterData Parse(string xml)
     {
         var root = XDocument.Parse(xml).Root ?? throw new InvalidDataException("CharacterData.xml 루트가 없습니다");

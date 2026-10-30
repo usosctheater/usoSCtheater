@@ -147,7 +147,7 @@ public class GameExportTests
             <?xml version="1.0" encoding="UTF-8"?>
             <Act mainTitle="m" subTitle="s">
             	<Line Type="TEXT" Name="円香" Text="a" CG="madoka_stand_1040210050" SpeakerType="1"/>
-            	<Line Type="CGGROUP" Name="G1, 円香" CG="mano_stand_1040010010" Position="left"/>
+            	<Line Type="CGGROUP" GroupId="G1" CG="mano_stand_1040010010" Position="left"/>
             	<Line Type="TEXT" Name="円香" Text="b" CG="G1" SpeakerType="1"/>
             	<Line Type="TEXT" Name="円香" Text="c" CG="MADOKA_stand_1040210050" SpeakerType="1"/>
             	<Line Type="TEXT" Name="x" Text="d" CG="none" SpeakerType="1"/>

@@ -576,8 +576,8 @@ public class ScriptViewModelTests
         SCTheaterEditor.Script.ScriptLine L(params (string, string)[] a) => SCTheaterEditor.Script.ScriptLine.Create(a);
         var lines = new List<SCTheaterEditor.Script.ScriptLine>
         {
-            L(("Type", "CGGROUP"), ("Name", "duo, 둘"), ("CG", "a_stand_1"), ("Position", "left")),
-            L(("Type", "CGGROUP"), ("Name", "duo"), ("CG", "b_stand_1"), ("Position", "right")),
+            L(("Type", "CGGROUP"), ("GroupId", "duo"), ("CG", "a_stand_1"), ("Position", "left")),
+            L(("Type", "CGGROUP"), ("GroupId", "duo"), ("CG", "b_stand_1"), ("Position", "right")),
             L(("Type", "TEXT"), ("Name", "둘"), ("CG", "duo")),
             L(("Type", "TEXT"), ("Name", "A"), ("CG", "a_stand_1")),
             L(("Type", "TEXT"), ("Name", "A"), ("Text", "CG 없음")),

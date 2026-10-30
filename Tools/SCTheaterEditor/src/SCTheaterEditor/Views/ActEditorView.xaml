@@ -37,7 +37,8 @@
                          Text="{Binding Value, UpdateSourceTrigger=LostFocus}"/>
                 <!-- 빈 칸: 흐린 글씨로 칸 이름 (변경: 선택한 줄과 같은 종류의 줄에서만)
                      변경(E-002): 입력 상자에 글자가 없을 때만 표시 — 입력을 시작하면 바로 숨고, 다 지우면 다시 보임 -->
-                <TextBlock Text="{Binding Def.Label}" Foreground="#FFBDBDBD" Margin="5,0,0,0" VerticalAlignment="Center"
+                <!-- 변경(다국어): 이름 칸은 화자(CharId)의 DB 이름 (HintText) -->
+                <TextBlock Text="{Binding HintText}" Foreground="#FFBDBDBD" Margin="5,0,0,0" VerticalAlignment="Center"
                            IsHitTestVisible="False" TextTrimming="CharacterEllipsis">
                     <TextBlock.Style>
                         <Style TargetType="TextBlock">

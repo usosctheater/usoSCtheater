@@ -19,6 +19,7 @@ public sealed partial class ScriptRow : ObservableObject
     private IReadOnlyList<FieldCell> _fields = [];
     private IReadOnlyList<string> _typeOptions = [];
     private bool _cgMissing;
+    private bool _charIdUnknown;   // 추가(다국어)
 
     internal ScriptRow(ScriptLine line, ActEditorViewModel owner)
     {
@@ -70,6 +71,9 @@ public sealed partial class ScriptRow : ObservableObject
     /// <summary>SpineData에 없는 CG 키 (옛 CG 키 등)</summary>
     public bool CgMissing => _cgMissing;
 
+    /// <summary>추가(다국어): 화자(CharId)에 CharacterData에 없는 ID가 있음 (오타 등)</summary>
+    public bool CharIdUnknown => _charIdUnknown;
+
     /// <summary>속성 값 (없으면 "")</summary>
     public string Get(string attr) => Line.Get(attr);
 
@@ -86,15 +90,19 @@ public sealed partial class ScriptRow : ObservableObject
 
     internal void Detach() => Line.Changed -= OnLineChanged;
 
-    /// <summary>CG 경고 다시 계산 (바뀐 경우만 알림)</summary>
+    /// <summary>CG·화자 경고 다시 계산 (바뀐 경우만 알림) — 변경(다국어): 화자(CharId) 경고 추가</summary>
     internal void RefreshWarning()
     {
         bool missing = Owner.IsUnknownCg(Line);
-        if (missing == _cgMissing) return;
+        bool unknownId = Owner.IsUnknownCharId(Line);
+        bool cgChanged = missing != _cgMissing, idChanged = unknownId != _charIdUnknown;
+        if (!cgChanged && !idChanged) return;
         _cgMissing = missing;
-        OnPropertyChanged(nameof(CgMissing));
+        _charIdUnknown = unknownId;
+        if (cgChanged) OnPropertyChanged(nameof(CgMissing));
+        if (idChanged) OnPropertyChanged(nameof(CharIdUnknown));
         foreach (var f in _fields)
-            if (f.Def.Attr == "CG") f.Refresh();
+            if ((cgChanged && f.Def.Attr == "CG") || (idChanged && f.Def.Attr == "CharId")) f.Refresh();
     }
 
     private void OnLineChanged(ScriptLine _)
@@ -141,17 +149,25 @@ public sealed class FieldCell : ObservableObject
     /// 다른 종류의 줄은 마우스를 올려 툴팁으로 확인 (2026-10-15 사용자 요청)
     /// </summary>
     // 변경(E-002): 빈 칸 판단은 화면(입력 상자에 보이는 글자)에서 함 → 여기서는 '선택한 줄과 같은 종류인지'만
-    public bool ShowHint => Row.Def != null && Row.Def == Row.Owner.HeaderType;
-    // (이전) public bool ShowHint => IsEmpty && Row.Def != null && Row.Def == Row.Owner.HeaderType;
+    // 변경(다국어): 이름 칸의 화자 이름(흐린 글씨)은 선택한 줄과 상관없이 모든 TEXT 줄에서 보임 (실제로 출력될 이름)
+    public bool ShowHint => SpeakerHint != null || (Row.Def != null && Row.Def == Row.Owner.HeaderType);
+    // (이전) public bool ShowHint => Row.Def != null && Row.Def == Row.Owner.HeaderType;
+
+    /// <summary>추가(다국어): 빈 칸의 흐린 글씨 — 이름 칸이고 화자(CharId)가 있으면 그 DB 이름, 아니면 칸 이름</summary>
+    public string HintText => SpeakerHint ?? Def.Label;
+
+    /// <summary>추가(다국어): 이름 칸일 때 화자(CharId)의 한국어 이름 (없으면 null)</summary>
+    private string? SpeakerHint => Def.Attr == "Name" ? Row.Owner.SpeakerHint(Row.Line) : null;
 
     internal void RefreshHint() => OnPropertyChanged(nameof(ShowHint));
 
-    /// <summary>CG 칸이고 SpineData에 없는 키</summary>
-    public bool Warning => Def.Attr == "CG" && Row.CgMissing;
+    /// <summary>CG 칸이고 SpineData에 없는 키 / 추가(다국어): 화자 칸이고 CharacterData에 없는 ID</summary>
+    public bool Warning => (Def.Attr == "CG" && Row.CgMissing) || (Def.Attr == "CharId" && Row.CharIdUnknown);
 
-    public string ToolTip => Warning
-        ? Def.ToolTip + "\n⚠ SpineData에 없는 CG 키 (옛 CG 키이거나 아직 받지 않은 세트) — 대응표 작업 전까지 무대에 올릴 수 없음"
-        : Def.ToolTip;
+    public string ToolTip => !Warning ? Def.ToolTip
+        : Def.Attr == "CharId"
+            ? Def.ToolTip + "\n⚠ CharacterData에 없는 화자 ID (오타이거나 등록되지 않은 인물) — 등록되지 않은 인물은 화자를 비우고 이름 칸에 직접 적음"
+            : Def.ToolTip + "\n⚠ SpineData에 없는 CG 키 (옛 CG 키이거나 아직 받지 않은 세트) — 대응표 작업 전까지 무대에 올릴 수 없음";
 
     internal void Refresh() => OnPropertyChanged(string.Empty);
 }

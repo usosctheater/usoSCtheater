@@ -305,6 +305,17 @@ public class AudioTests
         SCTheaterEditor.Script.ScriptLine.Create(("Type", "TEXT"), ("Name", name), ("Text", "대사"), ("Voice", voice));
 
     [Fact]
+    public void VoiceBatch_Plan_CharIdOnly_IsSpeaker()   // 추가(다국어): 화자 = Name, 비면 CharId — 둘 다 비어야 나레이션
+    {
+        var charOnly = SCTheaterEditor.Script.ScriptLine.Create(("Type", "TEXT"), ("CharId", "madoka"), ("Text", "대사"));
+        var narration = SCTheaterEditor.Script.ScriptLine.Create(("Type", "TEXT"), ("Text", "대사"));
+        var plan = SCTheaterEditor.Script.VoiceBatch.Plan([(charOnly, 1), (narration, 2)], ["v1", "v2"], SCTheaterEditor.Script.VoiceBatchMode.Overwrite);
+        Assert.Equal("v1", plan[0].NewVoice);
+        Assert.Equal("madoka", plan[0].Name);
+        Assert.Equal(SCTheaterEditor.Script.VoiceBatch.NoteNoName, plan[1].Note);
+    }
+
+    [Fact]
     public void VoiceBatch_Plan_OverwriteEmptyOnly_SkipsNarrationAndNonText_Short()
     {
         var lines = new List<(SCTheaterEditor.Script.ScriptLine, int)>

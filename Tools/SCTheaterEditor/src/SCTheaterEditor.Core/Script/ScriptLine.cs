@@ -12,7 +12,7 @@ public sealed class ScriptLine
     /// <summary>새로 넣는 속성의 자리 기준 (기존 막 파일의 순서). 목록에 없는 속성은 맨 뒤</summary>
     public static readonly IReadOnlyList<string> AttributeOrder =
     [
-        "Type", "Name", "Text", "Voice", "CG", "Position", "Animation", "Key", "ResourceKey",
+        "Type", "GroupId", "CharId", "Name", "Name_Ja", "Text", "Text_Ja", "Voice", "CG", "Position", "Animation", "Key", "ResourceKey",   // 변경(다국어): GroupId·CharId·Name_Ja·Text_Ja 자리
         "Value", "Track", "Volume", "Effect", "SE", "Duration", "SpeakerType",
     ];
 

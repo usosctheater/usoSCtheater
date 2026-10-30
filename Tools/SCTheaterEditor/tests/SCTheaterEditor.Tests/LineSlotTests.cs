@@ -58,7 +58,7 @@ public class LineSlotTests
         Assert.Equal("3번 줄 아래에 삽입", ed.InsertPositionText);
 
         Assert.True(ed.InsertSlot(1));                                          // 이어서 넣으면 방금 넣은 줄 아래
-        Assert.Equal("\t<Line Type=\"TEXT\" Name=\"\" Text=\"\" SpeakerType=\"1\"/>", ed.Rows[3].Line.ToXmlLine());
+        Assert.Equal("\t<Line Type=\"TEXT\" CharId=\"\" Text=\"\" SpeakerType=\"1\"/>", ed.Rows[3].Line.ToXmlLine());   // 변경(다국어)
         Assert.Equal("Text", env.Focus[^1].Attr);                               // TEXT는 대사 칸
 
         ed.UndoCommand.Execute(null);                                           // 한 줄씩 되돌리기

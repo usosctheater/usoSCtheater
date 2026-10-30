@@ -109,6 +109,15 @@ namespace UsoSCTheater
             return attrs != null && attrs.TryGetValue(AttrName(attr, language), out value) && !string.IsNullOrEmpty(value);
         }
 
+        //[검사] 언어 접미어가 잘못된 속성인지: '_' 뒤가 LanguageData에 없는 언어이거나 기본 언어(기본은 접미어 없이 씀). '_'가 없으면 false
+        public static bool HasInvalidLanguageSuffix(string attrName)
+        {
+            int index = attrName?.LastIndexOf(Separator, StringComparison.Ordinal) ?? -1;
+            if (index <= 0 || index == attrName.Length - 1) return false;
+            LanguageInfo language = Find(attrName.Substring(index + 1));
+            return language == null || language.IsDefault;
+        }
+
         //여러 이름을 현재 언어 구분자로 이어 붙임
         public static string Join(IEnumerable<string> parts) => string.Join(Current.ListSeparator, parts);
 

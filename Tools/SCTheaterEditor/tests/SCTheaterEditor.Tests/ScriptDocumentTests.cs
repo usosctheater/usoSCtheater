@@ -316,12 +316,33 @@ public class ActEditorViewModelTests
         Assert.Equal("", rows[0].Others);
         Assert.Equal("ResourceKey", rows[1].Fields[0].Def.Attr);                                      // BG
         Assert.Equal("Key=bg_office_day", rows[1].Others);                                             // 옛 Key는 팔레트에 없음 → 기타
-        Assert.Equal(10, rows[2].Fields.Count);                                                        // TEXT
+        Assert.Equal(11, rows[2].Fields.Count);                                                        // TEXT (변경(다국어): CharId 칸 추가)
         Assert.Equal("anger1 face_anger", Cell(rows[2], "Animation").Value);
         Assert.True(Cell(rows[2], "CG").Warning);                                                      // 옛 CG 키 → 경고
         Assert.False(Cell(rows[2], "Name").Warning);
         Assert.Equal(1, env.Vm.UnknownCgCount);
         Assert.True(Cell(rows[2], "Effect").IsEmpty);
+    }
+
+    [Fact]
+    public void CharId_NameHint_AndUnknownWarning()   // 추가(다국어): 이름 칸 흐린 글씨 = 화자의 DB 이름, DB에 없는 화자 = 경고
+    {
+        using var env = new Env();
+        env.Vm.Open(env.Path1);
+        env.Vm.SetSelection([env.Vm.Rows[1]]);
+        env.Vm.AddTextCommand.Execute(null);
+        var row = env.Vm.Rows[2];
+        Assert.Equal("이름", Cell(row, "Name").HintText);                      // 화자 없음 → 칸 이름
+
+        Cell(row, "CharId").Value = "madoka, NICHIKA";
+        Assert.Equal("마도카, 니치카", Cell(row, "Name").HintText);            // 여러 명, 대소문자 무시
+        Assert.True(Cell(row, "Name").ShowHint);
+        Assert.False(Cell(row, "CharId").Warning);
+
+        Cell(row, "CharId").Value = "nobody";
+        Assert.True(Cell(row, "CharId").Warning);
+        Assert.Contains("CharacterData에 없는", Cell(row, "CharId").ToolTip);
+        Assert.False(Cell(row, "Name").Warning);
     }
 
     [Fact]
@@ -431,7 +452,7 @@ public class ActEditorViewModelTests
         Assert.Equal(3, env.Vm.Rows[2].Number);
         Assert.Equal(4, env.Vm.Rows[3].Number);
         Assert.Same(env.Vm.Rows[2], env.Selected.Last().Single());
-        Assert.Equal("\t<Line Type=\"TEXT\" Name=\"\" Text=\"\" SpeakerType=\"1\"/>", env.Vm.Rows[2].Line.ToXmlLine());
+        Assert.Equal("\t<Line Type=\"TEXT\" CharId=\"\" Text=\"\" SpeakerType=\"1\"/>", env.Vm.Rows[2].Line.ToXmlLine());   // 변경(다국어): Name → CharId
     }
 
     [Fact]
@@ -557,7 +578,7 @@ public class ActEditorViewModelTests
         using var env = new Env();
         env.Vm.Open(env.Path1);
         env.Vm.SetSelection([env.Vm.Rows[1]]);
-        env.Vm.AddTextCommand.Execute(null);            // TEXT Name="" Text="" SpeakerType="1"
+        env.Vm.AddTextCommand.Execute(null);            // TEXT CharId="" Text="" SpeakerType="1" (변경(다국어))
         var row = env.Vm.Rows[2];
 
         row.Type = "TRANSITION";
@@ -565,10 +586,10 @@ public class ActEditorViewModelTests
         Assert.Equal("SpeakerType=1", row.Others);
 
         env.Vm.UndoCommand.Execute(null);               // 되돌리기 1단계로 원래 자리까지
-        Assert.Equal("\t<Line Type=\"TEXT\" Name=\"\" Text=\"\" SpeakerType=\"1\"/>", row.Line.ToXmlLine());
+        Assert.Equal("\t<Line Type=\"TEXT\" CharId=\"\" Text=\"\" SpeakerType=\"1\"/>", row.Line.ToXmlLine());
 
-        row.Type = "CGGROUP";                           // 새 종류에도 있는 빈 속성(Name)은 남음
-        Assert.Equal("\t<Line Type=\"CGGROUP\" Name=\"\" SpeakerType=\"1\"/>", row.Line.ToXmlLine());
+        row.Type = "CGGROUP";                           // 변경(다국어): CGGROUP 그룹명은 GroupId라 빈 CharId·Text는 공통 속성이 아님 → 지워짐
+        Assert.Equal("\t<Line Type=\"CGGROUP\" SpeakerType=\"1\"/>", row.Line.ToXmlLine());
     }
 
     // ------------------------------------------------------------------ 추가: 줄 복사·잘라내기·붙여넣기
@@ -697,7 +718,7 @@ public class LineTypeCatalogTests
     {
         var c = LineTypeCatalog.LoadEmbedded();
         Assert.Equal(new[] { "TEXT", "BG", "AUDIO", "SE", "TRANSITION", "BREAK", "SETCG", "CGGROUP", "IMAGE" }, c.Ids);
-        Assert.Equal(new[] { "Name", "Text", "Voice", "CG", "Position", "Animation", "Effect", "Value", "Duration", "SpeakerType" },
+        Assert.Equal(new[] { "CharId", "Name", "Text", "Voice", "CG", "Position", "Animation", "Effect", "Value", "Duration", "SpeakerType" },   // 변경(다국어): CharId
                      c.Find("TEXT")!.Fields.Select(f => f.Attr));
         Assert.Equal(new[] { "Track", "Volume", "Duration" }, c.Find("se")!.Fields.Select(f => f.Attr));
         Assert.All(c.Types.SelectMany(t => t.Fields), f => Assert.False(string.IsNullOrEmpty(f.Label)));

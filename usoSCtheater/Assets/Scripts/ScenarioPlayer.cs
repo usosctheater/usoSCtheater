@@ -211,8 +211,9 @@ public class ScenarioPlayer : MonoBehaviour
         doc.LoadXml(actFile.text);
         XmlNode actNode = ActXml.GetRoot(doc);   //[용어 정리] <Act> 우선, 기존 <Scene> 호환
         //[제목 읽기] 대소문자 구분 없이 조회 (카탈로그 동기화와 동일 규칙)
-        string mainTitle = ActXml.GetAttrIgnoreCase(actNode, ActXml.MainTitleAttr);
-        string subTitle  = ActXml.GetAttrIgnoreCase(actNode, ActXml.SubTitleAttr);
+        //[다국어] mainTitle_{현재 언어} → mainTitle (Localization.Get도 대소문자 무시라 옛 MainTitle도 읽음)
+        string mainTitle = UsoSCTheater.Localization.Get(actNode, ActXml.MainTitleAttr);
+        string subTitle  = UsoSCTheater.Localization.Get(actNode, ActXml.SubTitleAttr);
 
         //Title 표시
         if (!string.IsNullOrEmpty(mainTitle) || !string.IsNullOrEmpty(subTitle))

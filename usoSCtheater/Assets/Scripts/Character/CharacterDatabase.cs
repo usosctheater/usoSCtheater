@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;   //[CharId] SplitIds
 using System.Xml;
 using Spine.Unity;   //[Spine 인덱스] SkeletonDataAsset
 using UnityEngine;
@@ -180,6 +181,14 @@ namespace UsoSCTheater.Character
         //표시 이름 (현재 언어, DB에 없으면 입력값 그대로)
         public static string GetName(string id, bool full = false)   //[다국어] language 인자 삭제 → 현재 언어
             => Find(id)?.GetName(full) ?? id;
+
+        //[CharId] 화자 표시 이름: CharId(쉼표로 여러 명) → 현재 언어 이름을 언어별 구분자로 이어 붙임 (DB에 없는 Id는 그대로). 비면 ""
+        public static string GetSpeakerNames(string charIds) =>
+            Localization.Join(SplitIds(charIds).Select(id => GetName(id)));
+
+        //[CharId] "a, b" → [a, b] (앞뒤 공백·빈 항목 제외)
+        public static IEnumerable<string> SplitIds(string ids) =>
+            (ids ?? "").Split(',').Select(s => s.Trim()).Where(s => s.Length > 0);
 
         //목록 아이콘: Resources/CharacterIcon/{Id}. 없으면 null (아이콘당 경고 1번)
         public static Sprite LoadIcon(string id)

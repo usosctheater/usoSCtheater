@@ -52,8 +52,8 @@ public class StageStateCalculatorTests
     {
         var lines = new[]
         {
-            L(("Type", "CGGROUP"), ("Name", "g1"), ("CG", "a"), ("Position", "left"), ("Animation", "wait")),
-            L(("Type", "CGGROUP"), ("Name", "g1"), ("CG", "b"), ("Position", "right"), ("Animation", "wait")),
+            L(("Type", "CGGROUP"), ("GroupId", "g1"), ("CG", "a"), ("Position", "left"), ("Animation", "wait")),
+            L(("Type", "CGGROUP"), ("GroupId", "g1"), ("CG", "b"), ("Position", "right"), ("Animation", "wait")),
             Text("g1"),
             L(("Type", "TRANSITION")),
             Text("g1"),
@@ -157,10 +157,11 @@ public class StampTests
 
         env.Vm.AddTextCommand.Execute(null);   // 무대 선택 없음 → 빈 TEXT 줄
         var added = env.Vm.Rows[2];
-        Assert.Equal("", added.Get("Name"));
+        Assert.Equal("", added.Get("CharId"));
         env.Vm.SetSelection([added]);
         env.Vm.ApplyStamp(Madoka);
-        Assert.Equal(CharacterData.LoadEmbedded().KoreanName("madoka"), added.Get("Name"));
+        Assert.Equal("madoka", added.Get("CharId"));   // 변경(다국어): 이름 대신 화자(CharId)
+        Assert.Equal("", added.Get("Name"));
     }
 
     [Fact]
@@ -177,7 +178,7 @@ public class StampTests
         Assert.Equal("left", added.Get("Position"));
         Assert.Equal("wait face_smile", added.Get("Animation"));
         Assert.Equal("1", added.Get("SpeakerType"));
-        Assert.NotEqual("", added.Get("Name"));
+        Assert.Equal("madoka", added.Get("CharId"));   // 변경(다국어): 이름 대신 화자(CharId)
         Assert.Equal((added, "Text"), env.Focus.Last());
         Assert.Equal(added, env.Vm.Selection.Single());
     }

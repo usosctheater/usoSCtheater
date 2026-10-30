@@ -469,7 +469,7 @@ public sealed partial class ActEditorViewModel : ObservableObject
 
     /// <summary>
     /// [라인에 적용] (Ctrl+Enter): 선택한 첫 줄(TEXT·SETCG·CGGROUP)에 CG·위치·애니메이션 세 칸을 모두 기록 (되돌리기 1단계).
-    /// TEXT는 이름 칸이 비어 있을 때만 캐릭터 이름(CharacterData Ko)을 넣고, 그 줄의 대사 칸으로 커서 이동
+    /// TEXT는 화자 칸이 비어 있을 때만 캐릭터 ID(CharId)를 넣고, 그 줄의 대사 칸으로 커서 이동 (변경(다국어): 이전엔 이름 칸에 한국어 이름)
     /// </summary>
     public void ApplyStamp(StageStamp stamp)
     {
@@ -487,8 +487,9 @@ public sealed partial class ActEditorViewModel : ObservableObject
             return;
         }
         var changes = new List<(string Name, string? Value)> { ("CG", stamp.CgKey), ("Position", stamp.Position), ("Animation", stamp.Animation) };
-        if (type == "TEXT" && row.Get("Name").Length == 0 && _characters.KoreanName(stamp.NickName) is { } name)
-            changes.Insert(0, ("Name", name));
+        // 변경(다국어): 이름 대신 화자(CharId), 빈 칸일 때만 (CharacterData에 있는 캐릭터만)
+        if (type == "TEXT" && row.Get("CharId").Length == 0 && _characters.Find(stamp.NickName) is { } who)
+            changes.Insert(0, ("CharId", who.Id));
         Document.SetAttributes(row.Line, changes);
         StatusText = $"{row.Number}번 줄에 적용: {stamp.CgKey} · {stamp.Position} · {(stamp.Animation.Length > 0 ? stamp.Animation : "(애니메이션 없음)")}";
         if (type == "TEXT") FocusFieldRequested?.Invoke(row, "Text");
@@ -584,7 +585,7 @@ public sealed partial class ActEditorViewModel : ObservableObject
 
         var line = kind switch
         {
-            AudioKind.Voice => ScriptLine.Create(("Type", "TEXT"), ("Name", ""), ("Text", ""), ("Voice", key), ("SpeakerType", "1")),
+            AudioKind.Voice => ScriptLine.Create(("Type", "TEXT"), ("CharId", ""), ("Text", ""), ("Voice", key), ("SpeakerType", "1")),   // 변경(다국어): Name → CharId
             AudioKind.SE => ScriptLine.Create(("Type", "SE"), ("Track", key)),
             _ => ScriptLine.Create(("Type", "AUDIO"), ("Value", "bgm"), ("Track", key)),
         };
@@ -632,9 +633,9 @@ public sealed partial class ActEditorViewModel : ObservableObject
     private ScriptLine NewLineOfType(string type, StageStamp? stamp) => type switch
     {
         "TEXT" => stamp is { } s
-            ? ScriptLine.Create(("Type", "TEXT"), ("Name", _characters.KoreanName(s.NickName) ?? ""), ("Text", ""),
+            ? ScriptLine.Create(("Type", "TEXT"), ("CharId", _characters.Find(s.NickName)?.Id ?? ""), ("Text", ""),   // 변경(다국어): 이름 → 화자(CharId)
                                 ("CG", s.CgKey), ("Position", s.Position), ("Animation", s.Animation), ("SpeakerType", "1"))
-            : ScriptLine.Create(("Type", "TEXT"), ("Name", ""), ("Text", ""), ("SpeakerType", "1")),
+            : ScriptLine.Create(("Type", "TEXT"), ("CharId", ""), ("Text", ""), ("SpeakerType", "1")),
         "SETCG" or "CGGROUP" when stamp is { } c =>
             ScriptLine.Create(("Type", type), ("CG", c.CgKey), ("Position", c.Position), ("Animation", c.Animation)),
         _ => ScriptLine.Create(("Type", type)),
@@ -851,6 +852,15 @@ public sealed partial class ActEditorViewModel : ObservableObject
         return _library.Find(cg) == null;
     }
 
+    /// <summary>추가(다국어): TEXT 화자 칸의 ID 중 CharacterData에 없는 것이 있는지 (오타 검사)</summary>
+    internal bool IsUnknownCharId(ScriptLine line) =>
+        line.Type.Equals("TEXT", StringComparison.OrdinalIgnoreCase)
+        && CharacterData.SplitIds(line.Get("CharId")).Any(id => _characters.Find(id) == null);
+
+    /// <summary>추가(다국어): TEXT 이름 칸이 비었을 때 흐린 글씨로 보일 이름 = 화자(CharId)의 한국어 이름 (여러 명은 ", "). 없으면 null</summary>
+    internal string? SpeakerHint(ScriptLine line) =>
+        line.Type.Equals("TEXT", StringComparison.OrdinalIgnoreCase) ? _characters.SpeakerNames(line.Get("CharId")) : null;
+
     /// <summary>추가: CG 속성을 쓰는 라인 종류 (TEXT·SETCG·CGGROUP)</summary>
     private static bool IsCgLine(ScriptLine line) =>
         line.Type.Equals("TEXT", StringComparison.OrdinalIgnoreCase) ||
@@ -862,7 +872,7 @@ public sealed partial class ActEditorViewModel : ObservableObject
         _groupNames = Document == null
             ? new(StringComparer.OrdinalIgnoreCase)
             : Document.Lines.Where(l => l.Type.Equals("CGGROUP", StringComparison.OrdinalIgnoreCase))
-                            .Select(l => l.Get("Name").Split(',', 2)[0].Trim())
+                            .Select(l => l.Get("GroupId").Trim())   // 변경(다국어): Name 쉼표 분리 → GroupId
                             .Where(n => n.Length > 0)
                             .ToHashSet(StringComparer.OrdinalIgnoreCase);
     }
