@@ -10,7 +10,7 @@ namespace UsoSCTheater.Character
     public class CharacterEntry
     {
         public string Id { get; }
-        private readonly Dictionary<string, string> names;   // 속성 이름(Ko, KoFull, Ja, JaFull ...) → 표기
+        private readonly Dictionary<string, string> names;   // 속성 이름(Name, Name_Ja, FullName, FullName_Ja ...) → 표기   //[다국어] 주석 수정
 
         internal CharacterEntry(string id, Dictionary<string, string> names)
         {
@@ -19,10 +19,10 @@ namespace UsoSCTheater.Character
         }
 
         /// <summary>
-        /// 언어별 이름. full = true면 성까지 포함한 이름({언어}Full).
-        /// 없으면 같은 언어의 다른 형식 → 기본 언어(Ko) → Id 순으로 대체
+        /// 언어별 이름 (language = null이면 현재 언어). full = true면 성까지 포함한 이름(FullName).
+        /// 없으면 같은 언어의 다른 형식 → 기본 언어 → Id 순으로 대체
         /// </summary>
-        public string GetName(string language, bool full = false) => LocalizedNames.Get(names, Id, language, full);   //[유닛] 이름 대체 규칙을 유닛과 공유
+        public string GetName(bool full = false, LanguageInfo language = null) => LocalizedNames.Get(names, Id, language, full);   //[유닛] 이름 대체 규칙을 유닛과 공유 //[다국어] 인자 변경 (언어 문자열 → LanguageInfo, 기본 현재 언어)
     }
 
     //[유닛] 추가: 유닛 1개 (UnitData.xml의 Unit 한 줄). Members = 캐릭터 ID (소문자)
@@ -39,7 +39,7 @@ namespace UsoSCTheater.Character
             this.names = names;
         }
 
-        public string GetName(string language, bool full = false) => LocalizedNames.Get(names, Id, language, full);
+        public string GetName(bool full = false, LanguageInfo language = null) => LocalizedNames.Get(names, Id, language, full);   //[다국어] 인자 변경
 
         //멤버 전원이 목록에 들어 있음 (게스트가 더 있어도 true, 대소문자 무시)
         public bool IsFullyIn(IEnumerable<string> characterIds)
@@ -51,24 +51,21 @@ namespace UsoSCTheater.Character
         }
     }
 
-    //[유닛] 언어별 이름 대체 규칙 (캐릭터·유닛 공용): 요청 형식 → 같은 언어 다른 형식 → 기본 언어(Ko) → Id
+    //[유닛] 언어별 이름 대체 규칙 (캐릭터·유닛 공용): 요청 형식 → 같은 언어 다른 형식 → 기본 언어 → Id
+    //[다국어] 속성 이름 규칙을 Localization으로 (Name / Name_Ja / FullName / FullName_Ja), 기존 TryGet(언어 + Full 접미어) 삭제
     internal static class LocalizedNames
     {
-        public static string Get(Dictionary<string, string> names, string id, string language, bool full)
+        public static string Get(Dictionary<string, string> names, string id, LanguageInfo language, bool full)
         {
-            if (string.IsNullOrEmpty(language)) language = CharacterDatabase.DefaultLanguage;
+            language ??= Localization.Current;
+            string primary = full ? CharacterDatabase.FullNameAttr : CharacterDatabase.NameAttr;
+            string other   = full ? CharacterDatabase.NameAttr : CharacterDatabase.FullNameAttr;
 
-            if (TryGet(names, language, full, out string name)) return name;
-            if (TryGet(names, language, !full, out name)) return name;
-            if (TryGet(names, CharacterDatabase.DefaultLanguage, full, out name)) return name;
-            if (TryGet(names, CharacterDatabase.DefaultLanguage, !full, out name)) return name;
+            if (Localization.TryGet(names, primary, language, out string name)) return name;
+            if (Localization.TryGet(names, other, language, out name)) return name;
+            if (Localization.TryGet(names, primary, Localization.Default, out name)) return name;
+            if (Localization.TryGet(names, other, Localization.Default, out name)) return name;
             return id;
-        }
-
-        private static bool TryGet(Dictionary<string, string> names, string language, bool full, out string name)
-        {
-            return names.TryGetValue(full ? language + CharacterDatabase.FullSuffix : language, out name)
-                   && !string.IsNullOrEmpty(name);
         }
     }
 
@@ -81,8 +78,8 @@ namespace UsoSCTheater.Character
     {
         public const string DataPath = ResourcePaths.Data + "/CharacterData";   // Resources.Load 경로 //[리소스 정리] 폴더는 ResourcePaths
         public const string IconRoot = ResourcePaths.CharacterIcon;            // 목록 아이콘: Resources/CharacterIcon/{Id}
-        public const string DefaultLanguage = "Ko";
-        public const string FullSuffix = "Full";               // 성까지 포함한 이름 속성 접미어 (KoFull, JaFull ...)
+        public const string NameAttr = "Name";           //[다국어] 이름 속성 (언어별: Name_Ja ...) — 기존 DefaultLanguage("Ko") 삭제
+        public const string FullNameAttr = "FullName";   //[다국어] 성까지 포함한 이름 속성 (FullName_Ja ...) — 기존 FullSuffix("Full") 삭제
 
         private static Dictionary<string, CharacterEntry> byId;   // 대소문자 무시
         private static Dictionary<string, Sprite> iconCache;      // 없는 아이콘(null)도 저장 → 경고·로드 반복 방지
@@ -180,9 +177,9 @@ namespace UsoSCTheater.Character
             return byId.TryGetValue(id.Trim(), out var entry) ? entry : null;
         }
 
-        //표시 이름 (DB에 없으면 입력값 그대로)
-        public static string GetName(string id, string language = DefaultLanguage, bool full = false)
-            => Find(id)?.GetName(language, full) ?? id;
+        //표시 이름 (현재 언어, DB에 없으면 입력값 그대로)
+        public static string GetName(string id, bool full = false)   //[다국어] language 인자 삭제 → 현재 언어
+            => Find(id)?.GetName(full) ?? id;
 
         //목록 아이콘: Resources/CharacterIcon/{Id}. 없으면 null (아이콘당 경고 1번)
         public static Sprite LoadIcon(string id)

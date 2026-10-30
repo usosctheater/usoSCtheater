@@ -92,8 +92,9 @@ public class StageStateCalculatorTests
     public void CharacterData_Embedded()
     {
         var data = CharacterData.LoadEmbedded();
-        Assert.Equal(29, data.Count);
-        Assert.Equal("아사히", data.Find("ASAHI")?.Ko);
+        Assert.Equal(30, data.Count);                        // 변경(다국어): producer 추가
+        Assert.Equal("아사히", data.Find("ASAHI")?.Name);     // 변경(다국어): .Ko → .Name
+        Assert.Equal("あさひ", data.Find("asahi")?.NameJa);   // 추가(다국어): 게임 원본 복사본 (짧은 이름)
         Assert.Equal("토오루", data.KoreanName("toru"));
         Assert.Null(data.KoreanName("nobody"));
     }

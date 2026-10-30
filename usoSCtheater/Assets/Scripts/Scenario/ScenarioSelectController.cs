@@ -44,6 +44,12 @@ namespace UsoSCTheater.Scenario
             if (recordingModeIndicator != null) recordingModeIndicator.SetActive(RecordingSignal.RecordingModeEnabled);   //[녹화 표시]
         }
 
+        //[다국어] F12 = 언어 전환 (디버그 — 정식 설정 UI는 사운드·폰트 크기 등 설정 화면을 만들 때). 목록 다시 그리기는 5회차
+        void Update()
+        {
+            if (Input.GetKeyDown(KeyCode.F12)) Localization.CycleLanguage();
+        }
+
         // ── 목록 데이터 ──────────────────────────────────────────────────
         private void LoadCatalog()
         {
