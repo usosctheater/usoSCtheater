@@ -69,7 +69,7 @@ namespace UsoSCTheater.Scenario
         {
             if (scenarioTitle == null) return;
 
-            string title = entry.scenarioTitle;
+            string title = entry.GetScenarioTitle();   //[다국어] (기존 entry.scenarioTitle)
             if (string.IsNullOrEmpty(title))
             {
                 Debug.LogWarning($"[ScenarioListItem] {entry.folderName}: 시나리오 타이틀(mainTitle) 없음 → 표시명 '{entry.DisplayNameOrFolder}' 사용");
@@ -84,7 +84,7 @@ namespace UsoSCTheater.Scenario
         // ── 태그: 카탈로그 tags 순서대로 TagItem 생성, maxTags 초과분은 생략 ──
         private void ApplyTags(ScenarioEntry entry)
         {
-            List<string> tags = entry.tags ?? new List<string>();
+            List<string> tags = entry.GetTags() ?? new List<string>();   //[다국어] (기존 entry.tags)
             if (tagArea == null || tagItemPrefab == null)
             {
                 if (tags.Count > 0) Debug.LogWarning($"[ScenarioListItem] {entry.folderName}: TagArea 또는 TagItem 프리팹 미연결 — 태그 생략");

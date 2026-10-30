@@ -65,7 +65,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "\uC2DC\uB098\uB9AC\uC624 \uC774\uB984"
+  m_text: "(\uACAC\uBCF8) \uC2DC\uB098\uB9AC\uC624 \uC774\uB984"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 66a8879fdf976ff4eacd612b12f8b2e7, type: 2}
   m_sharedMaterial: {fileID: 1602717811423173617, guid: 66a8879fdf976ff4eacd612b12f8b2e7, type: 2}
@@ -300,6 +300,7 @@ GameObject:
   - component: {fileID: 5185712723535763944}
   - component: {fileID: 6714956479374146515}
   - component: {fileID: 5662776422799156420}
+  - component: {fileID: 5040842361914181035}
   m_Layer: 5
   m_Name: ActTitle
   m_TagString: Untagged
@@ -426,6 +427,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &5040842361914181035
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1229105586814149184}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 949c25157cca8a44d83c95149bd7bfb4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UsoSCTheater.LocalizedText
+  textId: list.playAll
 --- !u!1 &1631429006968996740
 GameObject:
   m_ObjectHideFlags: 0
@@ -674,6 +688,7 @@ GameObject:
   - component: {fileID: 7015224078613234744}
   - component: {fileID: 647542629765175369}
   - component: {fileID: 8203516143775815664}
+  - component: {fileID: 4321112164890524172}
   m_Layer: 5
   m_Name: Title
   m_TagString: Untagged
@@ -800,6 +815,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &4321112164890524172
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4875789465531614911}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 949c25157cca8a44d83c95149bd7bfb4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UsoSCTheater.LocalizedText
+  textId: list.characters
 --- !u!1 &5080905521450263481
 GameObject:
   m_ObjectHideFlags: 0
@@ -1641,6 +1669,7 @@ GameObject:
   - component: {fileID: 6482634061784919422}
   - component: {fileID: 5697861200403214182}
   - component: {fileID: 6021767739403876491}
+  - component: {fileID: 8553373660262461823}
   m_Layer: 5
   m_Name: Title
   m_TagString: Untagged
@@ -1767,3 +1796,16 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &8553373660262461823
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9116305247579366301}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 949c25157cca8a44d83c95149bd7bfb4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UsoSCTheater.LocalizedText
+  textId: list.tags

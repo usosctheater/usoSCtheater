@@ -1,9 +1,24 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;   //[다국어] SequenceEqual
 using UnityEngine;
 
 namespace UsoSCTheater.Scenario
 {
+    /// <summary>[다국어] 기본 언어가 아닌 언어의 제목·태그 1벌 (카탈로그 동기화가 자동 저장 — 실행 중에는 고르기만)</summary>
+    [Serializable]
+    public class ScenarioTranslation
+    {
+        public string language;                                  // 언어 코드 (ja …)
+        public string scenarioTitle = "";                        // mainTitle_{언어} — 처음으로 값이 있는 막
+        public List<string> actTitles = new List<string>();      // subTitle_{언어} — actNames 순서 (없으면 "")
+        public List<string> tags = new List<string>();           // ScenarioData.xml Tag_{언어}
+
+        public bool SameAs(ScenarioTranslation other) =>
+            other != null && language == other.language && scenarioTitle == other.scenarioTitle
+            && actTitles.SequenceEqual(other.actTitles) && tags.SequenceEqual(other.tags);
+    }
+
     /// <summary>
     /// 시나리오 1개 정보.
     /// folderName / actNames는 에디터 동기화(ScenarioCatalogSync)가 자동 갱신,
@@ -30,12 +45,37 @@ namespace UsoSCTheater.Scenario
         //[엔딩 SD] 막 XML에서 사용한 CG 키 (막 순서·등장 순서, 중복 없음, none 제외) — 동기화 때 자동
         public List<string> spineKeys = new List<string>();
 
+        //[다국어] 기본 언어가 아닌 언어별 제목·태그 (자동). 위의 scenarioTitle·actTitles·tags = 기본 언어(한국어)
+        public List<ScenarioTranslation> translations = new List<ScenarioTranslation>();
+
         //[목록 UI] 표시명 (비어 있으면 폴더명)
         public string DisplayNameOrFolder => string.IsNullOrEmpty(displayName) ? folderName : displayName;
 
-        //[목록 UI] 막 제목 (없으면 null)
-        public string GetActTitle(int index) =>
-            (actTitles != null && index >= 0 && index < actTitles.Count && !string.IsNullOrEmpty(actTitles[index])) ? actTitles[index] : null;
+        //[다국어] 현재 언어의 번역 (기본 언어이거나 없으면 null)
+        private ScenarioTranslation CurrentTranslation =>
+            Localization.Current.IsDefault ? null : translations?.Find(t => t.language == Localization.Current.Code);
+
+        //[다국어] 표시용 시나리오 제목: 현재 언어 → 비어 있으면 기본 언어
+        public string GetScenarioTitle()
+        {
+            string t = CurrentTranslation?.scenarioTitle;
+            return !string.IsNullOrEmpty(t) ? t : scenarioTitle;
+        }
+
+        //[다국어] 표시용 태그: 현재 언어 태그가 있으면 그것, 없으면 기본 언어
+        public List<string> GetTags()
+        {
+            var t = CurrentTranslation;
+            return t != null && t.tags.Count > 0 ? t.tags : tags;
+        }
+
+        //[목록 UI] 막 제목 (없으면 null) //[다국어] 현재 언어 → 기본 언어
+        public string GetActTitle(int index)
+        {
+            var t = CurrentTranslation;
+            if (t != null && index >= 0 && index < t.actTitles.Count && !string.IsNullOrEmpty(t.actTitles[index])) return t.actTitles[index];
+            return (actTitles != null && index >= 0 && index < actTitles.Count && !string.IsNullOrEmpty(actTitles[index])) ? actTitles[index] : null;
+        }
     }
 
     /// <summary>

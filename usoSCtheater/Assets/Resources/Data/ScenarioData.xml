@@ -3,6 +3,7 @@
     <Scenario
         Id="IL"
         Tag="시리어스, 스트레이라이트"
+        Tag_Ja="シリアス、ストレイライト"
         Character="asahi, fuyuko, mei"
     />
     <Scenario

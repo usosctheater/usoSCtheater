@@ -1266,7 +1266,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 461109747}
   m_HandleRect: {fileID: 461109746}
   m_Direction: 2
-  m_Value: 0
+  m_Value: 1
   m_Size: 1
   m_NumberOfSteps: 0
   m_OnValueChanged:
@@ -1646,7 +1646,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "\uCCAB\uBC88\uC9F8 \uC904\n\uB450\uBC88\uC9F8 \uC904\n\uC138\uBC88\uC9F8
+  m_text: "(\uACAC\uBCF8) \uCCAB\uBC88\uC9F8 \uC904\n\uB450\uBC88\uC9F8 \uC904\n\uC138\uBC88\uC9F8
     \uC904"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 75de8a7b5dc2e2741966e2926fccfde7, type: 2}
@@ -2622,7 +2622,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "\uB4F1\uC7A5\uC778\uBB3C"
+  m_text: "(\uACAC\uBCF8) \uB4F1\uC7A5\uC778\uBB3C"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 66a8879fdf976ff4eacd612b12f8b2e7, type: 2}
   m_sharedMaterial: {fileID: 1602717811423173617, guid: 66a8879fdf976ff4eacd612b12f8b2e7, type: 2}
@@ -3893,7 +3893,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "\uB9C9\uC81C\uBAA9\uC758\uAE38\uC774\uB294\uCD5C\uB30023\uC790\uAE4C\uC9C0\uC801\uC744\uC218\uC788\uB2E4\uB294\uAC78\uAE30\uC5B5\uD574"
+  m_text: "(\uACAC\uBCF8) \uB9C9\uC81C\uBAA9\uC758\uAE38\uC774\uB294\uCD5C\uB30023\uC790\uAE4C\uC9C0\uC801\uC744\uC218\uC788\uB2E4\uB294\uAC78"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 6d76c83a4d6051e4699059ff8b76b70c, type: 2}
   m_sharedMaterial: {fileID: -5738787215584065916, guid: 6d76c83a4d6051e4699059ff8b76b70c, type: 2}
@@ -4617,7 +4617,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &2027259511
 RectTransform:
   m_ObjectHideFlags: 0
@@ -4934,7 +4934,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "\uC2DC\uB098\uB9AC\uC624\uC81C\uBAA9\uC740\uCD5C\uB30017\uC790\uAE4C\uC9C0\uC801\uC744\uC218"
+  m_text: "(\uACAC\uBCF8) \uC2DC\uB098\uB9AC\uC624\uC81C\uBAA9\uC740\uCD5C\uB30017\uC790\uAE4C\uC9C0"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 66a8879fdf976ff4eacd612b12f8b2e7, type: 2}
   m_sharedMaterial: {fileID: 1602717811423173617, guid: 66a8879fdf976ff4eacd612b12f8b2e7, type: 2}

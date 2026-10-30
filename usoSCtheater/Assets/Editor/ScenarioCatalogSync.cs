@@ -46,10 +46,11 @@ public class ScenarioCatalogSync : AssetPostprocessor
     private const string ActGroupIdAttr = "GroupId";    //[CharId] CGGROUP 그룹 이름 (기존 Name="그룹명, 화자명" 폐기 — ActNameAttr 삭제)
     private const string ActCharIdAttr = "CharId";      //[CharId] TEXT 화자 캐릭터 ID (쉼표로 여러 명)
     private const string ActLineTag = "Line";
+    //[다국어] 번역 누락 검사(Check Translations)는 Editor/LocalizationCheck.cs로 옮김 (Tools > Localization)
 
-    //[번역 검사] 번역할 속성 (원문이 있는데 {속성}_{언어}가 없으면 누락). 번역 대상이 늘면 여기에 추가
-    private static readonly string[] TranslatableRootAttrs = { ActXml.MainTitleAttr, ActXml.SubTitleAttr };
-    private static readonly string[] TranslatableTextAttrs = { "Name", "Text" };
+    //[다국어] 기본 언어가 아닌 언어 목록 (제목·태그를 언어별로 저장할 대상)
+    private static List<UsoSCTheater.LanguageInfo> TranslationLanguages() =>
+        UsoSCTheater.Localization.Languages.Where(l => !l.IsDefault).ToList();
 
     private static bool syncPending = false;
 
@@ -63,6 +64,7 @@ public class ScenarioCatalogSync : AssetPostprocessor
         public List<string> characters = new List<string>();   //[시나리오 데이터]
         public List<string> irisIcons = new List<string>();    //[Iris 아이콘]
         public List<string> spineKeys = new List<string>();    //[엔딩 SD]
+        public List<ScenarioTranslation> translations = new List<ScenarioTranslation>();   //[다국어] 기본 언어가 아닌 언어별 제목·태그
     }
 
     //[시나리오 데이터] ScenarioData.xml의 시나리오 1개
@@ -71,6 +73,7 @@ public class ScenarioCatalogSync : AssetPostprocessor
         public List<string> tags = new List<string>();
         public List<string> characters = new List<string>();
         public List<string> irisIcons = new List<string>();    //[Iris 아이콘]
+        public Dictionary<string, List<string>> localizedTags = new Dictionary<string, List<string>>();   //[다국어] 언어 코드 → Tag_{언어}
     }
 
     // ── 자동 트리거 ──────────────────────────────────────────────────────
@@ -141,12 +144,22 @@ public class ScenarioCatalogSync : AssetPostprocessor
                 .ToList();
 
             var scan = new ScanResult();
+            scan.translations = TranslationLanguages().Select(l => new ScenarioTranslation { language = l.Code }).ToList();   //[다국어]
             foreach (string path in actPaths)
             {
-                ReadActHeader(path, out string mainTitle, out string subTitle, scan.spineKeys);   //[엔딩 SD] CG 키도 함께 수집
+                var localizedTitles = new Dictionary<string, string[]>();   //[다국어] 언어 코드 → [mainTitle_{언어}, subTitle_{언어}]
+                ReadActHeader(path, out string mainTitle, out string subTitle, scan.spineKeys, localizedTitles);   //[엔딩 SD] CG 키도 함께 수집
                 scan.acts.Add(Path.GetFileNameWithoutExtension(path));
                 scan.actTitles.Add(subTitle);
                 if (string.IsNullOrEmpty(scan.scenarioTitle) && !string.IsNullOrEmpty(mainTitle)) scan.scenarioTitle = mainTitle;
+
+                //[다국어] 언어별 제목 (번역이 없으면 빈 값 — 실행 중에 기본 언어로 대체)
+                foreach (var tr in scan.translations)
+                {
+                    string[] titles = localizedTitles.TryGetValue(tr.language, out var t) ? t : new[] { "", "" };
+                    tr.actTitles.Add(titles[1]);
+                    if (string.IsNullOrEmpty(tr.scenarioTitle) && !string.IsNullOrEmpty(titles[0])) tr.scenarioTitle = titles[0];
+                }
             }
             found[name] = scan;
         }
@@ -165,6 +178,8 @@ public class ScenarioCatalogSync : AssetPostprocessor
                     kv.Value.tags = item.tags;
                     kv.Value.characters = item.characters;
                     kv.Value.irisIcons = item.irisIcons;   //[Iris 아이콘]
+                    foreach (var tr in kv.Value.translations)   //[다국어] 언어별 태그
+                        if (item.localizedTags.TryGetValue(tr.language, out var localized)) tr.tags = localized;
                 }
                 //[ScenarioData 자동 추가] 경고 → 오류 (자동 추가 뒤에도 없음 = 쓰기 실패 등)
                 else Debug.LogError($"[ScenarioCatalogSync] '{kv.Key}': ScenarioData.xml에 항목 없음 (자동 추가 실패) → 태그/등장인물 비움");
@@ -222,6 +237,12 @@ public class ScenarioCatalogSync : AssetPostprocessor
                 entry.spineKeys = scan.spineKeys;
                 changed = true;
             }
+            if (entry.translations == null || entry.translations.Count != scan.translations.Count
+                || entry.translations.Where((t, i) => !t.SameAs(scan.translations[i])).Any())   //[다국어]
+            {
+                entry.translations = scan.translations;
+                changed = true;
+            }
             merged.Add(entry);
             added.Add(entry.folderName);
         }
@@ -234,6 +255,7 @@ public class ScenarioCatalogSync : AssetPostprocessor
                 actNames = kv.Value.acts, actTitles = kv.Value.actTitles, scenarioTitle = kv.Value.scenarioTitle,   //[목록 UI]
                 tags = kv.Value.tags, characters = kv.Value.characters,   //[시나리오 데이터]
                 irisIcons = kv.Value.irisIcons, spineKeys = kv.Value.spineKeys,   //[Iris 아이콘] [엔딩 SD]
+                translations = kv.Value.translations,   //[다국어]
             });
             changed = true;
         }
@@ -341,61 +363,10 @@ public class ScenarioCatalogSync : AssetPostprocessor
         }
     }
 
-    //[번역 검사] 원문은 있는데 기본 언어가 아닌 언어의 {속성}_{언어}가 없는 곳을 막마다 셈 (동기화와 별개로 필요할 때 실행)
-    [MenuItem("Tools/Scenario/Check Translations")]
-    private static void CheckTranslationsMenu()
-    {
-        var targets = UsoSCTheater.Localization.Languages.Where(l => !l.IsDefault).ToList();
-        if (targets.Count == 0)
-        {
-            Debug.Log("[ScenarioCatalogSync] 번역 검사: LanguageData에 기본 언어 말고 다른 언어가 없음");
-            return;
-        }
-
-        var report = new List<string>();
-        foreach (string folder in AssetDatabase.GetSubFolders(ScenarioRootFolder))
-        {
-            var actPaths = AssetDatabase.FindAssets("t:TextAsset", new[] { folder })
-                .Select(AssetDatabase.GUIDToAssetPath)
-                .Where(p => p.EndsWith(".xml", StringComparison.OrdinalIgnoreCase) && Path.GetDirectoryName(p).Replace('\\', '/') == folder)
-                .OrderBy(p => Path.GetFileNameWithoutExtension(p), StringComparer.Ordinal);
-            foreach (string path in actPaths)
-            {
-                var doc = new XmlDocument();
-                try { doc.LoadXml(AssetDatabase.LoadAssetAtPath<TextAsset>(path).text); }
-                catch (XmlException) { continue; }   // 파싱 오류는 동기화가 알려 줌
-                XmlNode root = ActXml.GetRoot(doc);
-                if (root == null) continue;
-
-                foreach (var language in targets)
-                {
-                    int title = TranslatableRootAttrs.Count(a => IsMissingTranslation(root, a, language));
-                    int name = 0, text = 0;
-                    foreach (XmlNode node in root.ChildNodes)
-                    {
-                        if (node.NodeType != XmlNodeType.Element || node.Name != ActLineTag) continue;
-                        if (!string.Equals(ActXml.GetAttrIgnoreCase(node, ActTypeAttr), "TEXT", StringComparison.OrdinalIgnoreCase)) continue;   // 게임이 이름·대사를 읽는 줄만
-                        if (IsMissingTranslation(node, TranslatableTextAttrs[0], language)) name++;   // Name
-                        if (IsMissingTranslation(node, TranslatableTextAttrs[1], language)) text++;   // Text
-                    }
-                    if (title + name + text > 0)
-                        report.Add($"{Path.GetFileName(folder)}/{Path.GetFileNameWithoutExtension(path)} [{language.Code}] 제목 {title} · Name {name} · Text {text}");
-                }
-            }
-        }
-
-        if (report.Count == 0) Debug.Log("[ScenarioCatalogSync] 번역 검사: 누락 없음");
-        else Debug.LogWarning($"[ScenarioCatalogSync] 번역 검사: 누락이 있는 막 {report.Count}개 (원문은 있는데 번역 속성이 없는 개수)\n  {string.Join("\n  ", report)}");
-    }
-
-    //[번역 검사] 원문(기본 속성)은 있는데 그 언어 속성이 비었거나 없음
-    private static bool IsMissingTranslation(XmlNode node, string attr, UsoSCTheater.LanguageInfo language) =>
-        ActXml.GetAttrIgnoreCase(node, attr).Trim().Length > 0
-        && ActXml.GetAttrIgnoreCase(node, UsoSCTheater.Localization.AttrName(attr, language)).Trim().Length == 0;
-
     //[목록 UI] 막 XML 루트의 mainTitle / subTitle 읽기 (파싱 실패 시 빈 값 + 경고)
     //[엔딩 SD] spineKeys: 막 안 모든 요소의 CG 값(쉼표 구분)을 등장 순서대로 추가 (중복·none 제외, 대소문자 무시)
-    private static void ReadActHeader(string assetPath, out string mainTitle, out string subTitle, List<string> spineKeys)
+    //[다국어] localizedTitles: 기본 언어가 아닌 언어마다 [mainTitle_{언어}, subTitle_{언어}] (없으면 "")
+    private static void ReadActHeader(string assetPath, out string mainTitle, out string subTitle, List<string> spineKeys, Dictionary<string, string[]> localizedTitles)
     {
         mainTitle = "";
         subTitle = "";
@@ -411,6 +382,12 @@ public class ScenarioCatalogSync : AssetPostprocessor
             //[제목 읽기] 대소문자 구분 없이 조회
             mainTitle = ActXml.GetAttrIgnoreCase(root, ActXml.MainTitleAttr);
             subTitle  = ActXml.GetAttrIgnoreCase(root, ActXml.SubTitleAttr);
+            foreach (var language in TranslationLanguages())   //[다국어] 번역이 없으면 빈 값 (기본 언어로 대체하는 것은 실행 중)
+                localizedTitles[language.Code] = new[]
+                {
+                    ActXml.GetAttrIgnoreCase(root, UsoSCTheater.Localization.AttrName(ActXml.MainTitleAttr, language)),
+                    ActXml.GetAttrIgnoreCase(root, UsoSCTheater.Localization.AttrName(ActXml.SubTitleAttr, language)),
+                };
 
             //[엔딩 SD] 사용한 CG 키 수집
             //[LD 불러오기] 수정: CGGROUP 그룹 이름은 Spine 키가 아니므로 제외 (멤버 키는 CGGROUP 줄의 CG로 수집됨)
@@ -477,6 +454,8 @@ public class ScenarioCatalogSync : AssetPostprocessor
                 var item = new ScenarioDataItem();
                 foreach (string tag in SplitList(ActXml.GetAttrIgnoreCase(node, DataTagAttr)))
                     item.tags.Add(tag);
+                foreach (var language in TranslationLanguages())   //[다국어] Tag_{언어} (목록은 언어마다 독립, 개수가 달라도 됨)
+                    item.localizedTags[language.Code] = SplitList(ActXml.GetAttrIgnoreCase(node, UsoSCTheater.Localization.AttrName(DataTagAttr, language))).ToList();
 
                 foreach (string value in SplitList(ActXml.GetAttrIgnoreCase(node, DataCharacterAttr)))
                 {
@@ -495,7 +474,10 @@ public class ScenarioCatalogSync : AssetPostprocessor
                 //속성 이름 오타 확인 (예: Charactor → 읽히지 않으므로 경고)
                 foreach (XmlAttribute attr in node.Attributes)
                 {
-                    if (!IsName(attr, DataIdAttr) && !IsName(attr, DataTagAttr) && !IsName(attr, DataCharacterAttr) && !IsName(attr, DataIrisAttr))   //[Iris 아이콘] Iris 허용
+                    if (IsName(attr, DataIdAttr) || IsName(attr, DataTagAttr) || IsName(attr, DataCharacterAttr) || IsName(attr, DataIrisAttr)) continue;   //[Iris 아이콘] Iris 허용
+                    if (UsoSCTheater.Localization.HasInvalidLanguageSuffix(attr.Name))   //[다국어] Tag_Jp·Tag_Ko 등
+                        Debug.LogWarning($"[ScenarioCatalogSync] ScenarioData.xml '{id}': 잘못된 언어 접미어 속성 '{attr.Name}' (LanguageData에 없는 언어이거나 기본 언어 — 기본 언어는 접미어 없이) → 무시");
+                    else if (!TranslationLanguages().Any(l => IsName(attr, UsoSCTheater.Localization.AttrName(DataTagAttr, l))))   //[다국어] Tag_{언어} 허용
                         Debug.LogWarning($"[ScenarioCatalogSync] ScenarioData.xml '{id}': 알 수 없는 속성 '{attr.Name}' → 무시");
                 }
                 result[id] = item;
@@ -510,8 +492,19 @@ public class ScenarioCatalogSync : AssetPostprocessor
     }
 
     //[ScenarioData 자동 추가] 빈 항목을 루트 닫는 태그 앞에 덧붙임. 사람이 쓴 서식·주석은 건드리지 않고 텍스트만 추가 (기존 항목은 다시 쓰지 않음)
-    //속성 목록 = 아래 상수 (Id + Tag·Character·Iris) — 속성이 늘면 여기에 추가, 기존 항목은 생략 가능 + 빈 값으로 읽음
-    private static readonly string[] ScenarioDataTemplateAttrs = { DataTagAttr, DataCharacterAttr, DataIrisAttr };
+    //속성 목록 = 아래 (Id + Tag·Tag_{언어}·Character·Iris) — 속성이 늘면 여기에 추가, 기존 항목은 생략 가능 + 빈 값으로 읽음
+    //[다국어] 번역 속성(Tag_Ja …)은 LanguageData의 언어마다 자동 (언어를 추가해도 코드 수정 없음)
+    private static IEnumerable<string> ScenarioDataTemplateAttrs() =>
+        new[] { DataTagAttr }
+            .Concat(TranslationLanguages().Select(l => TemplateAttrName(DataTagAttr, l)))
+            .Concat(new[] { DataCharacterAttr, DataIrisAttr });
+
+    //양식에 쓸 번역 속성 이름: 언어 코드 첫 글자를 대문자로 (Tag_ja → Tag_Ja, 문서 표기와 맞춤 — 읽기는 대소문자 무시라 동작은 같음)
+    private static string TemplateAttrName(string attr, UsoSCTheater.LanguageInfo language)
+    {
+        string code = language.Code;
+        return $"{attr}_{char.ToUpperInvariant(code[0])}{code.Substring(1)}";
+    }
 
     private static bool AppendMissingScenarioData(List<string> ids)
     {
@@ -534,7 +527,7 @@ public class ScenarioCatalogSync : AssetPostprocessor
             foreach (string id in ids.OrderBy(i => i, StringComparer.Ordinal))
             {
                 sb.Append($"    <{DataScenarioTag}{nl}        {DataIdAttr}=\"{id}\"{nl}");
-                foreach (string attr in ScenarioDataTemplateAttrs) sb.Append($"        {attr}=\"\"{nl}");
+                foreach (string attr in ScenarioDataTemplateAttrs()) sb.Append($"        {attr}=\"\"{nl}");
                 sb.Append($"    />{nl}");
             }
 

@@ -464,7 +464,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Name
+  m_text: "(\uACAC\uBCF8) Name"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 75de8a7b5dc2e2741966e2926fccfde7, type: 2}
   m_sharedMaterial: {fileID: 5102296567969247475, guid: 75de8a7b5dc2e2741966e2926fccfde7, type: 2}
@@ -594,7 +594,7 @@ MonoBehaviour:
   soundButton: {fileID: 1470302129989970790}
   sdIconRoot: {fileID: 21660948751257971}
   sdOffset: {x: 5, y: -60}
-  sdScale: {x: 0.4, y: 0.4, z: 0.4}
+  sdIconSize: {x: 80, y: 192}
 --- !u!114 &2724844382376995530
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -680,9 +680,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: 'TEXT SAMPLE
-
-    SecondLine'
+  m_text: "(\uACAC\uBCF8) TEXT SAMPLE\nSecondLine"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 75de8a7b5dc2e2741966e2926fccfde7, type: 2}
   m_sharedMaterial: {fileID: 5102296567969247475, guid: 75de8a7b5dc2e2741966e2926fccfde7, type: 2}

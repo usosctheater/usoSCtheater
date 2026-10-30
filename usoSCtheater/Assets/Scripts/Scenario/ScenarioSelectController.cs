@@ -44,10 +44,25 @@ namespace UsoSCTheater.Scenario
             if (recordingModeIndicator != null) recordingModeIndicator.SetActive(RecordingSignal.RecordingModeEnabled);   //[녹화 표시]
         }
 
-        //[다국어] F12 = 언어 전환 (디버그 — 정식 설정 UI는 사운드·폰트 크기 등 설정 화면을 만들 때). 목록 다시 그리기는 5회차
+        //[다국어] F12 = 언어 전환 (디버그 — 정식 설정 UI는 사운드·폰트 크기 등 설정 화면을 만들 때)
         void Update()
         {
             if (Input.GetKeyDown(KeyCode.F12)) Localization.CycleLanguage();
+        }
+
+        //[다국어] 언어가 바뀌면 목록을 다시 만듦 (스크롤 위치 유지). 고정 문구는 LocalizedText가 직접 바꿈
+        void OnEnable() => Localization.Changed += OnLanguageChanged;
+        void OnDisable() => Localization.Changed -= OnLanguageChanged;
+
+        private void OnLanguageChanged()
+        {
+            float scroll = scenarioScrollRect != null ? scenarioScrollRect.verticalNormalizedPosition : 1f;
+            BuildList();
+            if (scenarioScrollRect != null)
+            {
+                Canvas.ForceUpdateCanvases();
+                scenarioScrollRect.verticalNormalizedPosition = scroll;
+            }
         }
 
         // ── 목록 데이터 ──────────────────────────────────────────────────

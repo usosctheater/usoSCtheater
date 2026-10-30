@@ -46,6 +46,16 @@ MonoBehaviour:
     - asahi_stand_3000170060
     - mei_stand_3000190060
     - mei_stand_3000190030
+    translations:
+    - language: ja
+      scenarioTitle: 
+      actTitles:
+      - 
+      - 
+      - 
+      - 
+      tags:
+      - "\u30B7\u30EA\u30A2\u30B9\u3001\u30B9\u30C8\u30EC\u30A4\u30E9\u30A4\u30C8"
   - folderName: NKS
     displayName: NKS
     hidden: 0
@@ -64,6 +74,12 @@ MonoBehaviour:
     spineKeys:
     - nichika_stand_1040240020
     - hazuki_stand_4000910022
+    translations:
+    - language: ja
+      scenarioTitle: 
+      actTitles:
+      - 
+      tags: []
   - folderName: SC
     displayName: SC
     hidden: 0
@@ -86,6 +102,12 @@ MonoBehaviour:
     - fuyuko_support_stand_2040180170
     - fuyuko_stand_1040180100
     - nichika_stand_1030240020
+    translations:
+    - language: ja
+      scenarioTitle: 
+      actTitles:
+      - 
+      tags: []
   - folderName: TEMP
     displayName: TEMP
     hidden: 0
@@ -110,3 +132,10 @@ MonoBehaviour:
     - madoka_stand_1050210010
     - fuyuko_stand_1050180010
     - hazuki_stand_4000910022
+    translations:
+    - language: ja
+      scenarioTitle: "\u81E8\u6642\u6587\u7AE0"
+      actTitles:
+      - "\u30B9\u30AF\u30EA\u30D7\u30C8\u30C6\u30FC\u30B9\u30C8"
+      - 
+      tags: []

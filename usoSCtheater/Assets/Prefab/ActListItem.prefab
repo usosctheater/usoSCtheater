@@ -282,7 +282,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "\uB9C9 \uC774\uB984 \uC608\uC2DC\uC6A9 \uD14D\uC2A4\uD2B8"
+  m_text: "(\uACAC\uBCF8) \uB9C9 \uC774\uB984 \uC608\uC2DC\uC6A9 \uD14D\uC2A4\uD2B8"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 66a8879fdf976ff4eacd612b12f8b2e7, type: 2}
   m_sharedMaterial: {fileID: 1602717811423173617, guid: 66a8879fdf976ff4eacd612b12f8b2e7, type: 2}

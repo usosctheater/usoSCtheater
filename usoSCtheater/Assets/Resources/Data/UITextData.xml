@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    UI 고정 문구 (사람이 직접 편집). 코드: UsoSCTheater.UIText, 씬·프리팹의 TMP에 LocalizedText 컴포넌트 + Id
+    Id = {화면}.{항목} (여러 화면 공용은 common.{항목}, 소문자로 시작하는 camelCase, 대소문자 무시). 한 번 정한 Id는 바꾸지 않음
+    Text = 기본 언어(한국어), 언어별은 Text_{언어 코드} (예: Text_Ja) — LanguageData.xml 참고. 번역이 없으면 Text로 대체
+    검사: Tools > Localization > Check Translations (번역 누락) / Check UI Texts (적용 안 된 문구·없는 Id·쓰지 않는 Id)
+    규칙 상세: _docs 핸드오프 4장 '다국어 원칙·규칙'
+-->
+<UITextData>
+    <Text Id="select.title"     Text="시나리오 목록"      Text_Ja="シナリオ一覧" />
+    <Text Id="select.recording" Text="(녹화중)"           Text_Ja="(録画中)" />
+    <Text Id="list.playAll"     Text="시나리오 모두 재생" Text_Ja="シナリオをすべて再生" />
+    <Text Id="list.characters"  Text="등장인물"           Text_Ja="登場人物" />
+    <Text Id="list.tags"        Text="태그"               Text_Ja="タグ" />
+</UITextData>
