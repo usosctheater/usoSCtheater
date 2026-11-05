@@ -1,5 +1,3 @@
-using System.IO;
-using System.Reflection;
 using System.Xml.Linq;
 
 namespace SCTheaterEditor.Services;
@@ -11,30 +9,30 @@ namespace SCTheaterEditor.Services;
 ///           → lip_{키워드} / lip_{키워드}_s, 없는 쪽은 아이돌별 기본값(DefaultLipData.xml)
 /// - 아이돌별 기본값: {아이돌}/{키워드 카테고리} → 없으면 {아이돌}/Default → 아이돌 자체가 없으면 lip_wait / lip_wait_s
 /// - 아이돌 키는 게임의 cgKey 앞부분(mei_idol_3 → mei)과 같은 형식 = idollist의 nickName
-/// 데이터: 도구 안의 복사본 Resources\DefaultLipData.xml (exe에 포함). 원본은 게임 프로젝트
-///         Assets/Resources/Data/DefaultLipData.xml — 게임 쪽을 고치면 복사본도 갱신 후 다시 빌드 (도구 독립 실행 규칙)
+/// 데이터: 변경(번역 모드 2회차) exe 옆 Data\DefaultLipData.xml (GameData가 읽음). 원본은 게임 프로젝트
+///         Assets/Resources/Data/DefaultLipData.xml — 다르면 설정 탭 [게임 데이터 다시 복사] (도구 독립 실행 규칙)
+///         (이전: exe에 포함된 Resources\DefaultLipData.xml — 갱신 후 다시 빌드)
 /// </summary>
 public sealed class LipRules
 {
     private readonly Dictionary<string, Dictionary<string, (string? moving, string? still)>> _defaults =
         new(StringComparer.OrdinalIgnoreCase);
 
-    /// <summary>변경: exe에 포함된 DefaultLipData.xml 읽기 (없거나 읽기 실패면 하드코딩 안전망만 사용)</summary>
-    public static LipRules LoadEmbedded()
+    // 삭제(번역 모드 2회차): LoadEmbedded() — 파일이 없거나 깨졌을 때의 로그는 GameData가 남기고 안전망만 사용
+
+    /// <summary>추가(번역 모드 2회차): DefaultLipData.xml 내용 → 규칙 (깨진 XML은 예외 — GameData가 로그 후 안전망만 사용)</summary>
+    public static LipRules Parse(string xml)
     {
         var rules = new LipRules();
-        try
-        {
-            using var stream = typeof(LipRules).Assembly.GetManifestResourceStream("DefaultLipData.xml");
-            if (stream != null) rules.Read(XDocument.Load(stream));
-            else AppLog.Shared.Error("립 기본값(DefaultLipData.xml)이 exe에 없음 — lip_wait / lip_wait_s 안전망만 사용");
-        }
-        catch (Exception ex)
-        {
-            // 변경: 조용히 무시하지 않고 로그 (안전망으로는 계속 동작)
-            AppLog.Shared.Error("립 기본값(DefaultLipData.xml) 읽기 실패 — lip_wait / lip_wait_s 안전망만 사용", ex);
-        }
+        rules.Read(XDocument.Parse(xml));
         return rules;
+    }
+
+    /// <summary>추가(번역 모드 2회차): 내용을 다른 규칙으로 바꿈 (이 객체를 받아 둔 무대는 그대로 새 내용을 봄)</summary>
+    internal void ReplaceWith(LipRules other)
+    {
+        _defaults.Clear();
+        foreach (var kv in other._defaults) _defaults[kv.Key] = kv.Value;
     }
 
     private void Read(XDocument doc)

@@ -281,7 +281,7 @@ public class ActEditorViewModelTests
             var lib = new SpineLibrary(Path.Combine(Temp.Path, "SpineData"), new SpineManifest());
             lib.Rebuild();
             Vm = new ActEditorViewModel(Settings, lib, Dialogs, new ImmediateDispatcher(), () => { }, new AppLog(), Backups,
-                                        () => Now);   // 변경: 고정 시각 → Now
+                                        () => Now, characters: TestData.Characters());   // 추가(번역 모드 2회차): 시험용 캐릭터 복사본 / 변경: 고정 시각 → Now
             Vm.SelectionRequested += rows => Selected.Add(rows);
         }
 

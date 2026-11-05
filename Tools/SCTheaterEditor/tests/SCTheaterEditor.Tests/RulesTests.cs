@@ -66,7 +66,7 @@ public class AnimationScriptTests
 /// <summary>립 결정 규칙 (CGManager.LipSyncCoroutine 이식, 내장 DefaultLipData.xml 사용)</summary>
 public class LipRulesTests
 {
-    private static readonly LipRules Rules = LipRules.LoadEmbedded();
+    private static readonly LipRules Rules = TestData.Lips();   // 변경(번역 모드 2회차): LoadEmbedded → 시험용 복사본
 
     private static Func<string, bool> Has(params string[] names)
     {

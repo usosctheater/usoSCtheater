@@ -184,7 +184,7 @@ public class ScriptViewModelTests
             Library.Rebuild();
             Messenger.Register<ShowTabMessage>(Tabs, (r, msg) => ((List<AppTab>)r).Add(msg.Tab));
             var bg = new BackgroundLibrary(Path.Combine(Temp.Path, "Backgrounds"));
-            Vm = new ScriptViewModel(Settings, Library, bg, Stage, LipRules.LoadEmbedded(), Messenger, () => { }, new AppLog());
+            Vm = new ScriptViewModel(Settings, Library, bg, Stage, TestData.Lips(), Messenger, () => { }, new AppLog());   // 변경(번역 모드 2회차)
             Stage.Raise(new StageReady());
         }
 

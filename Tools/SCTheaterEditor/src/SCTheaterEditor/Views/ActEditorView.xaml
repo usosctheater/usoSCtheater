@@ -123,6 +123,8 @@
                 <Button Content="Spine 게임에 내보내기" Padding="8,1" Margin="10,0,0,0" Command="{Binding ExportActSpinesCommand}"
                         ToolTip="이 막에서 쓰는 Spine 세트를 게임 Resources\Spine에 복사 (없으면 복사, 같으면 건너뜀, 다르면 물어봄). 등록은 Unity의 Tools &gt; Spine Auto Setup"/>
                 <TextBlock Text="{Binding UnknownCgText}" Foreground="#FFC62828" VerticalAlignment="Center" Margin="12,0,0,0"/>
+                <!-- 추가(번역 모드 2회차): 게임 데이터 복사본 경고 -->
+                <TextBlock Text="{Binding GameDataWarning}" Foreground="#FFC62828" VerticalAlignment="Center" Margin="12,0,0,0"/>
             </StackPanel>
             <TextBlock Text="{Binding StatusText}" Foreground="Gray" VerticalAlignment="Center" Margin="12,0,0,0" TextTrimming="CharacterEllipsis"/>
         </DockPanel>

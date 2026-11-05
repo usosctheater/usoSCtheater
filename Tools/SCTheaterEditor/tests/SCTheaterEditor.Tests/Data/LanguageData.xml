@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    지원 언어 목록 (사람이 직접 편집). 코드: UsoSCTheater.Localization
+    Code = 언어 코드 (소문자). 데이터 속성 접미어 _{Code} (예: Text_Ja, 대소문자 무시), 이미지 파일 접미어 _{code} (예: ui_log_ja)
+    Default="true" = 기본 언어 (접미어 없는 속성·파일). 없으면 첫 줄
+    NativeName = 그 언어 자신의 글자로 쓴 언어 이름 (예: ko → 한국어, ja → 日本語). 화면 언어에 따라 번역하지 않음 — 언어 선택 목록·로그용
+    ListSeparator = 여러 이름을 이어 붙일 때 구분자
+    언어 추가 = 이 파일 1줄 + 데이터에 _{Code} 속성 추가 (코드 수정 없음)
+-->
+<LanguageData>
+    <Language Code="ko" NativeName="한국어" ListSeparator=", " Default="true" />
+    <Language Code="ja" NativeName="日本語" ListSeparator="、" />
+</LanguageData>

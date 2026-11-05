@@ -18,6 +18,10 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
+  <!-- 추가(번역 모드 2회차): 시험용 게임 데이터 복사본 (고정 값 시험용 — 게임 데이터가 바뀌어도 시험은 그대로) -->
+  <ItemGroup>
+    <None Include="Data\*.xml" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\SCTheaterEditor.Core\SCTheaterEditor.Core.csproj" />
   </ItemGroup>

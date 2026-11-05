@@ -1,5 +1,5 @@
 using System.IO;
-using System.Reflection;
+// 삭제(번역 모드 2회차): using System.Reflection; (exe 내장 리소스를 더 읽지 않음)
 using System.Xml.Linq;
 
 namespace SCTheaterEditor.Services;
@@ -8,12 +8,13 @@ namespace SCTheaterEditor.Services;
 public sealed record CharacterInfo(string Id, string Name, string NameJa);   // 변경(다국어): Ko/Ja → Name/NameJa
 
 /// <summary>
-/// 캐릭터 이름 데이터 (exe에 넣은 Resources/CharacterData.xml).
+/// 캐릭터 이름 데이터.
 /// 변경(다국어): 게임 Assets/Resources/Data/CharacterData.xml이 원본, TE는 그 복사본을 씀 (도구 독립 규칙). 속성 규칙 Name / Name_Ja (기본 언어는 접미어 없음)
+/// 변경(번역 모드 2회차): 복사본 위치 exe 내장 → exe 옆 Data\CharacterData.xml (GameData가 읽음)
 /// </summary>
 public sealed class CharacterData
 {
-    private readonly Dictionary<string, CharacterInfo> _byId;
+    private Dictionary<string, CharacterInfo> _byId;   // 변경(번역 모드 2회차): readonly 삭제 (ReplaceWith)
 
     public CharacterData(IEnumerable<CharacterInfo> items) =>
         _byId = items.GroupBy(i => i.Id, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
@@ -46,11 +47,8 @@ public sealed class CharacterData
                 (string?)e.Attribute("Name") ?? "", (string?)e.Attribute("Name_Ja") ?? "")));   // 변경(다국어): 속성 이름 Ko/Ja → Name/Name_Ja
     }
 
-    public static CharacterData LoadEmbedded()
-    {
-        using var s = Assembly.GetExecutingAssembly().GetManifestResourceStream("CharacterData.xml")
-                      ?? throw new InvalidOperationException("CharacterData.xml 리소스가 없습니다");
-        using var r = new StreamReader(s);
-        return Parse(r.ReadToEnd());
-    }
+    /// <summary>추가(번역 모드 2회차): 내용을 다른 데이터로 바꿈 — 이 객체를 받아 둔 쪽은 그대로 새 내용을 봄 ([게임 데이터 다시 복사])</summary>
+    internal void ReplaceWith(CharacterData other) => _byId = other._byId;
+
+    // 삭제(번역 모드 2회차): LoadEmbedded() — exe 내장 복사본 대신 GameData가 Data\ 파일을 읽음
 }

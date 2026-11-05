@@ -50,7 +50,7 @@ public sealed partial class ActEditorViewModel : ObservableObject
         _messenger = messenger ?? new StrongReferenceMessenger();
         // 추가: 시나리오 폴더가 바뀌면 (어디서 바꿨든) 막 목록 다시 읽기
         _messenger.Register<ActEditorViewModel, SettingsChangedMessage>(this, static (r, m) => r.OnSettingsChanged(m));
-        _characters = characters ?? CharacterData.LoadEmbedded();   // 추가(4-2): 라인에 적용할 때 이름 칸
+        _characters = characters ?? new CharacterData([]);   // 변경(번역 모드 2회차): 이전 CharacterData.LoadEmbedded() — 앱은 GameData.Characters를 넘김
         // 추가: 종류별 팔레트 (LineTypes.xml) + 저장된 칸 폭
         Types = types ?? LineTypeCatalog.LoadEmbedded();
         Types.ApplyWidths(settings.Editor.FieldWidths);
@@ -111,6 +111,17 @@ public sealed partial class ActEditorViewModel : ObservableObject
     public string? DocumentPath => Document?.FilePath;
 
     public string UnknownCgText => UnknownCgCount > 0 ? $"⚠ SpineData에 없는 CG 키 {UnknownCgCount}줄 (빨간 글자)" : "";
+
+    /// <summary>추가(번역 모드 2회차): 게임 데이터 경고 (복사본이 게임과 다르거나 없음) — 표 위 빨간 글씨, 비면 안 보임</summary>
+    [ObservableProperty] public partial string GameDataWarning { get; internal set; } = "";
+
+    /// <summary>추가(번역 모드 2회차): 게임 데이터를 다시 읽음 → 화자 이름 흐린 글씨·화자 경고 다시 계산</summary>
+    internal void OnGameDataChanged()
+    {
+        foreach (var r in Rows)
+            foreach (var f in r.Fields) f.Refresh();
+        RefreshCgWarnings();
+    }
 
     /// <summary>막 제목 (루트 mainTitle) — 고치면 되돌리기 1단계</summary>
     public string MainTitle

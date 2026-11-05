@@ -25,10 +25,15 @@ public sealed partial class SettingsViewModel : ObservableObject
     private readonly AppLog _log;
 
     private readonly LineTypeCatalog _types;   // 추가: 조합키 슬롯 목록
+    private readonly GameData? _gameData;      // 추가(번역 모드 2회차): 게임 데이터 복사본
 
     public SettingsViewModel(AppSettings settings, IDialogService dialogs, Action saveSettings, IMessenger messenger, AppLog log,
-                             LineTypeCatalog? types = null)   // 변경: types 추가 (생략하면 내장 LineTypes.xml)
+                             LineTypeCatalog? types = null,    // 변경: types 추가 (생략하면 내장 LineTypes.xml)
+                             GameData? gameData = null)        // 추가(번역 모드 2회차)
     {
+        _gameData = gameData;   // 추가(번역 모드 2회차)
+        GameDataNote = "";
+        if (gameData != null) gameData.Changed += () => OnPropertyChanged(nameof(GameDataStates));
         _settings = settings;
         _dialogs = dialogs;
         _saveSettings = saveSettings;
@@ -180,6 +185,35 @@ public sealed partial class SettingsViewModel : ObservableObject
         catch (Exception ex) { _log.Error("탐색기 열기 실패", ex); }
     }
 
+    // ------------------------------------------------------------------ 추가(번역 모드 2회차): 게임 데이터 복사본
+
+    /// <summary>복사본 폴더 (exe 옆 Data\)</summary>
+    public string GameDataFolderText => _gameData?.Folder ?? "";
+
+    /// <summary>파일별 상태 (게임과 같음 / 다름 / 없음)</summary>
+    public IReadOnlyList<GameDataFileState> GameDataStates => _gameData?.States ?? [];
+
+    [ObservableProperty] public partial string GameDataNote { get; private set; }
+
+    /// <summary>[게임 데이터 다시 복사]: 확인 → 게임 Resources\Data 원본으로 덮어쓰고 바로 다시 읽음</summary>
+    [RelayCommand]
+    private void CopyGameData()
+    {
+        if (_gameData == null) return;
+        if (_settings.Editor.GameResourcesFolder is not { Length: > 0 })
+        {
+            GameDataNote = "게임 Resources 폴더를 먼저 지정하세요";
+            return;
+        }
+        if (!_dialogs.Confirm("게임 데이터 다시 복사",
+                $"게임 Resources\\Data의 {string.Join(" · ", GameData.Files)}를\nTE 복사본({_gameData.Folder})에 덮어씁니다. 계속할까요?\n\n(바로 다시 읽어 적용합니다)"))
+            return;
+        int n = _gameData.CopyAllFromGame();
+        GameDataNote = n == GameData.Files.Count ? $"{n}개 복사·적용 완료" : $"{n}/{GameData.Files.Count}개 복사 — 나머지는 로그 확인";
+    }
+
+    [RelayCommand] private void OpenGameDataFolder() => OpenFolder(_gameData?.Folder);
+
     // ------------------------------------------------------------------ 추가(7회차): 화면 배치 (스크립트 탭 경계선 크기)
 
     /// <summary>지금 배치 (스크립트 탭에서 경계선을 끌면 알림을 받아 갱신)</summary>
@@ -214,6 +248,8 @@ public sealed partial class SettingsViewModel : ObservableObject
     {
         if (m.Area == SettingsArea.ScriptLayout) { OnPropertyChanged(nameof(LayoutText)); return; }   // 추가(7회차)
         if (m.Area != SettingsArea.ResourcesFolder) return;   // 변경(5회차)
+        _gameData?.Refresh();   // 추가(번역 모드 2회차): 게임 데이터도 다시 비교 (없는 복사본은 채움)
+        GameDataNote = "";
         PathNote = "";
         OnPropertyChanged(nameof(ResourcesFolderText));
         OnPropertyChanged(nameof(ScenarioFolderText));

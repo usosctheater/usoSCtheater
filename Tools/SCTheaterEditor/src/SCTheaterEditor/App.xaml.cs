@@ -68,6 +68,9 @@ public partial class App : Application
         _ = Task.Run(() => Housekeeping.CleanExtractionFolders(AppSettings.AppName, AppLog.Shared));
 
         // 5) 공용 데이터와 화면 (변경: MVVM — App이 서비스를 만들어 ViewModel에 넘김)
+        // 추가(번역 모드 2회차): 게임 데이터 복사본 (exe 옆 Data\ — 없으면 게임 Resources\Data에서 복사, 게임과 비교)
+        var gameData = new GameData(GameData.DefaultFolder, () => Settings.Editor.GameResourcesFolder, AppLog.Shared);
+        gameData.Refresh();
         var manifest = SpineManifest.Load(Settings.MetaFolder);
         var library = new SpineLibrary(Settings.SaveFolder, manifest);
         library.Rebuild();
@@ -78,6 +81,7 @@ public partial class App : Application
             saveSettings: SaveSettingsSoon,
             messenger: CommunityToolkit.Mvvm.Messaging.WeakReferenceMessenger.Default,
             log: AppLog.Shared,
+            gameData: gameData,   // 추가(번역 모드 2회차)
             audioMemos: new AudioMemoStore(AudioMemoStore.DefaultPath));   // 추가(6회차): exe 옆 AudioMemo.xml
 
         var window = new MainWindow(vm);

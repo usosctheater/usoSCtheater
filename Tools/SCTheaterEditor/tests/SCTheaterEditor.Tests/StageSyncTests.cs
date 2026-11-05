@@ -89,9 +89,9 @@ public class StageStateCalculatorTests
     }
 
     [Fact]
-    public void CharacterData_Embedded()
+    public void CharacterData_Copy()   // 변경(번역 모드 2회차): 이름 (이전 CharacterData_Embedded)
     {
-        var data = CharacterData.LoadEmbedded();
+        var data = TestData.Characters();   // 변경(번역 모드 2회차): LoadEmbedded → 시험용 복사본
         Assert.Equal(30, data.Count);                        // 변경(다국어): producer 추가
         Assert.Equal("아사히", data.Find("ASAHI")?.Name);     // 변경(다국어): .Ko → .Name
         Assert.Equal("あさひ", data.Find("asahi")?.NameJa);   // 추가(다국어): 게임 원본 복사본 (짧은 이름)
@@ -117,7 +117,8 @@ public class StampTests
             var lib = new SpineLibrary(Path.Combine(Temp.Path, "SpineData"), new SpineManifest());
             lib.Rebuild();
             Vm = new ActEditorViewModel(settings, lib, new FakeDialogs(), new ImmediateDispatcher(), () => { }, new AppLog(),
-                                        Path.Combine(Temp.Path, "Backups"), () => new DateTime(2026, 10, 15, 12, 0, 0));
+                                        Path.Combine(Temp.Path, "Backups"), () => new DateTime(2026, 10, 15, 12, 0, 0),
+                                        characters: TestData.Characters());   // 추가(번역 모드 2회차): 내장 복사본이 없어져 시험용 복사본을 넘김
             Vm.FocusFieldRequested += (row, attr) => Focus.Add((row, attr));
             Vm.Open(path);
         }

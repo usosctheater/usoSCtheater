@@ -146,7 +146,7 @@ public class SettingsViewModelTests
                                              env.Messenger, new AppLog());
         var stage = new FakeStage();
         var bg = new BackgroundLibrary(env.Settings.Editor.BackgroundFolder);
-        var script = new ScriptViewModel(env.Settings, lib, bg, stage, LipRules.LoadEmbedded(), env.Messenger, () => { }, new AppLog());
+        var script = new ScriptViewModel(env.Settings, lib, bg, stage, TestData.Lips(), env.Messenger, () => { }, new AppLog());   // 변경(번역 모드 2회차)
         Assert.Empty(editor.ActEntries);
         Assert.Equal(new[] { ScriptViewModel.NoBackground }, script.BackgroundOptions);
         Assert.Equal("(지정 안 함)", env.Vm.ResourcesFolderText);

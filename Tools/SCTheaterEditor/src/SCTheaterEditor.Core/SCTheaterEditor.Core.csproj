@@ -14,12 +14,9 @@
   <ItemGroup>
     <!-- 유닛 분류 (아이돌 필터) -->
     <EmbeddedResource Include="Resources\IdolUnits.xml" LogicalName="IdolUnits.xml" />
-    <!-- 립 기본값 (게임 프로젝트 Assets/Resources/Data/DefaultLipData.xml의 복사본 — 게임 쪽을 고치면 함께 갱신) -->
-    <EmbeddedResource Include="Resources\DefaultLipData.xml" LogicalName="DefaultLipData.xml" />
+    <!-- 삭제(번역 모드 2회차): DefaultLipData.xml·CharacterData.xml 내장 — 게임 데이터 복사본은 exe 옆 Data\ (GameData) -->
     <!-- 추가: 스크립트 표 종류별 속성 팔레트 (원본 resource\Script\ScriptManual.xlsx) -->
     <EmbeddedResource Include="Resources\LineTypes.xml" LogicalName="LineTypes.xml" />
-    <!-- 추가(4-2): 캐릭터 이름 (나중에 게임 Data/CharacterData.xml의 복사본으로) -->
-    <EmbeddedResource Include="Resources\CharacterData.xml" LogicalName="CharacterData.xml" />
   </ItemGroup>
 
   <ItemGroup>
