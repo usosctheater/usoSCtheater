@@ -105,8 +105,67 @@ public sealed class ActDocument
             }
             if (list.Count > 0) parts.Add(new AttributeEdit(line, list));
         }
-        if (parts.Count > 0) Execute(new MultiEdit(parts));
+        if (parts.Count > 0) Execute(new MultiEdit([.. parts]));   // 변경(번역 모드 3회차): MultiEdit가 IUndoAction 목록을 받음
         return parts.Count;
+    }
+
+    // ------------------------------------------------------------------ 추가(번역 모드 3회차): 루트 속성 (막 제목 번역 mainTitle_Ja 등)
+
+    /// <summary>제목·부제 외 루트 속성 값 (이름은 대소문자 구분, 없으면 null)</summary>
+    public string? GetRootAttribute(string name)
+    {
+        int i = RootIndex(name);
+        return i < 0 ? null : ExtraRootAttributes[i].Value;
+    }
+
+    /// <summary>루트 속성 이름 중 대소문자만 다른 것 (예: mainTitle_ja → 찾는 이름 mainTitle_Ja). 없으면 null</summary>
+    public string? FindRootAttributeIgnoreCase(string name) =>
+        ExtraRootAttributes.Select(a => a.Key).FirstOrDefault(k => string.Equals(k, name, StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>루트 속성 변경 (빈 값 = 삭제), 되돌리기 1단계. 제목 바뀜 알림</summary>
+    public void SetRootAttribute(string name, string? value)
+    {
+        string? old = GetRootAttribute(name);
+        if ((old ?? "") == (value ?? "")) return;
+        Execute(new RootAttrEdit(this, name, old, RootIndex(name), string.IsNullOrEmpty(value) ? null : value));
+    }
+
+    /// <summary>
+    /// 속성 이름 바꾸기 여러 개를 한 단계로 (번역 속성 표기 정리: Text_ja → Text_Ja). Line이 null이면 루트 속성.
+    /// 새 이름이 이미 있으면 건너뜀 (값을 잃지 않도록). 바꾼 수
+    /// </summary>
+    public int RenameAttributes(IReadOnlyList<(ScriptLine? Line, string Old, string New)> renames)
+    {
+        var parts = new List<IUndoAction>();
+        foreach (var (line, oldName, newName) in renames)
+        {
+            if (line == null)
+            {
+                if (GetRootAttribute(oldName) is not { } v || GetRootAttribute(newName) != null) continue;
+                parts.Add(new RootAttrEdit(this, oldName, v, RootIndex(oldName), null));
+                parts.Add(new RootAttrEdit(this, newName, null, -1, v));
+            }
+            else
+            {
+                if (line.Find(oldName) is not { } v || line.Find(newName) != null) continue;
+                parts.Add(new AttributeEdit(line, [new AttrChange(oldName, v, line.IndexOf(oldName), null), new AttrChange(newName, null, -1, v)]));
+            }
+        }
+        if (parts.Count == 0) return 0;
+        Execute(new MultiEdit(parts, "번역 속성 표기 정리"));
+        return parts.Count(p => p is AttributeEdit) + parts.Count(p => p is RootAttrEdit) / 2;
+    }
+
+    private int RootIndex(string name) =>
+        ExtraRootAttributes.FindIndex(a => string.Equals(a.Key, name, StringComparison.Ordinal));
+
+    private void ApplyRoot(string name, string? value, int insertAt)
+    {
+        int i = RootIndex(name);
+        if (value == null) { if (i >= 0) ExtraRootAttributes.RemoveAt(i); }
+        else if (i >= 0) ExtraRootAttributes[i] = new(name, value);
+        else ExtraRootAttributes.Insert(insertAt >= 0 ? Math.Min(insertAt, ExtraRootAttributes.Count) : ExtraRootAttributes.Count, new(name, value));
+        TitleChanged?.Invoke();
     }
 
     /// <summary>
@@ -187,10 +246,10 @@ public sealed class ActDocument
         }
     }
 
-    /// <summary>추가(9회차): 여러 줄 속성 변경을 한 단계로</summary>
-    private sealed class MultiEdit(List<AttributeEdit> parts) : IUndoAction
+    /// <summary>추가(9회차): 여러 줄 속성 변경을 한 단계로. 변경(번역 모드 3회차): 루트 속성 변경도 섞을 수 있게 IUndoAction 목록 + 이름</summary>
+    private sealed class MultiEdit(List<IUndoAction> parts, string? label = null) : IUndoAction
     {
-        public string Label => $"{parts.Count}줄 변경";
+        public string Label => label ?? $"{parts.Count}줄 변경";
         public IReadOnlyList<ScriptLine> SelectAfterRedo { get; } = parts.SelectMany(p => p.SelectAfterRedo).ToList();
         public IReadOnlyList<ScriptLine> SelectAfterUndo => SelectAfterRedo;
 
@@ -203,6 +262,16 @@ public sealed class ActDocument
         {
             for (int i = parts.Count - 1; i >= 0; i--) parts[i].Undo();
         }
+    }
+
+    /// <summary>추가(번역 모드 3회차): 루트 속성 1개 (되돌리면 원래 자리로)</summary>
+    private sealed class RootAttrEdit(ActDocument doc, string name, string? old, int oldIndex, string? value) : IUndoAction
+    {
+        public string Label => $"{name} 변경";
+        public IReadOnlyList<ScriptLine> SelectAfterRedo => [];
+        public IReadOnlyList<ScriptLine> SelectAfterUndo => [];
+        public void Redo() => doc.ApplyRoot(name, value, -1);
+        public void Undo() => doc.ApplyRoot(name, old, oldIndex);
     }
 
     private sealed class TitleEdit(ActDocument doc, bool main, string old, string value) : IUndoAction

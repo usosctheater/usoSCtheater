@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Scene MainTitle="InertiaLucis" SubTitle="힘의 법칙" >
+<Act mainTitle="InertiaLucis" subTitle="힘의 법칙" mainTitle_Ja="InertiaLucis" subTitle_Ja="力の法則">
 	<Line Type="AUDIO" Value="bgm" Track="BGM_2" Volume="0.4"/>
 	<Line Type="BG" ResourceKey="bg_rouka"/>
 	<Line Type="SE" Track="se_jihannki"/>
@@ -119,4 +119,4 @@
 	<Line Type="TEXT" CharId="fuyuko" Text="그렇게 1등이 하고 싶으면, 네가 후유의 몫까지 달리면 되잖아" Voice="s001084" CG="fuyuko_stand_costume_1040180030" Position="left" Animation="anger3" SpeakerType="1"/>
 	<Line Type="TEXT" CharId="asahi" Text="무리임다, 그런 거~" Voice="s001085" CG="asahi_stand_costume_1040170030" Position="right" Animation="anger1" SpeakerType="1"/>
 	<Line Type="TRANSITION" Effect="wipe_left" SE="se_trans_out|se_trans_in"/>
-</Scene>
+</Act>

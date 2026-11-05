@@ -740,6 +740,15 @@ public sealed partial class ActEditorViewModel : ObservableObject
         StatusText = $"다시 하기: {label}";
     }
 
+    /// <summary>추가(번역 모드 3회차): 다른 창(번역 창)에서 이 줄을 골랐음 → 표 선택·스크롤 (포커스는 옮기지 않음)</summary>
+    public void SelectLine(ScriptLine line) => SelectLines([line]);
+
+    /// <summary>추가(번역 모드 3회차): [번역 창] 버튼 — 창을 여닫는 일은 화면(메인 창)이 맡음 (Ctrl+T와 같음)</summary>
+    public event Action? TranslationToggleRequested;
+
+    [RelayCommand]
+    private void ToggleTranslation() => TranslationToggleRequested?.Invoke();
+
     private void SelectLines(IReadOnlyList<ScriptLine>? lines)
     {
         if (lines == null || lines.Count == 0) return;

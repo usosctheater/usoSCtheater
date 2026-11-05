@@ -30,6 +30,9 @@ public sealed class MainViewModel
         Editor.StampProvider = () => Script.CurrentStamp;   // 추가(4-2): 줄 추가 때 무대에서 선택한 캐릭터 정보
         SettingsPage = new SettingsViewModel(settings, dialogs, saveSettings, messenger, log, gameData: gameData);   // 변경(번역 모드 2회차): gameData
 
+        _ui = ui;                       // 추가(번역 모드 3회차): 번역 창
+        _saveSettings = saveSettings;
+
         // 추가(번역 모드 2회차): 게임 데이터 상태 → 스크립트 표 경고, 다시 읽으면 화자 표시 갱신
         GameData = gameData;
         gameData.Changed += OnGameDataChanged;
@@ -38,6 +41,13 @@ public sealed class MainViewModel
 
     /// <summary>추가(번역 모드 2회차): 게임 데이터 복사본 (번역 창 언어 목록 등에서 씀)</summary>
     public GameData GameData { get; }
+
+    private readonly IUiDispatcher _ui;     // 추가(번역 모드 3회차)
+    private readonly Action _saveSettings;
+
+    /// <summary>추가(번역 모드 3회차): 번역 창을 열 때마다 새로 만듦 (닫으면 화면이 Dispose). 무대 동기화 = 스크립트 탭 F5와 같은 명령</summary>
+    public TranslationViewModel CreateTranslation() =>
+        new(Editor, GameData, Settings.Translation, _saveSettings, () => Script.SyncFromScriptCommand.Execute(null), _ui);
 
     private void OnGameDataChanged()
     {

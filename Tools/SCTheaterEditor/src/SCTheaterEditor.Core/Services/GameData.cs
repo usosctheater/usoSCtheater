@@ -3,8 +3,8 @@ using System.Xml.Linq;
 
 namespace SCTheaterEditor.Services;
 
-/// <summary>언어 1개 (게임 LanguageData.xml의 Language 줄)</summary>
-public sealed record LanguageInfo(string Code, string NativeName, bool IsDefault)
+/// <summary>언어 1개 (게임 LanguageData.xml의 Language 줄). 변경(번역 모드 3회차): ListSeparator(여러 이름 구분자) 추가</summary>
+public sealed record LanguageInfo(string Code, string NativeName, bool IsDefault, string ListSeparator = ", ")
 {
     /// <summary>번역 속성 접미어 표기 (ja → Ja) — 도구가 쓰는 속성 이름 {속성}_{Ja}</summary>
     public string Suffix => Code.Length == 0 ? "" : char.ToUpperInvariant(Code[0]) + Code[1..].ToLowerInvariant();
@@ -40,7 +40,7 @@ public sealed class GameData
     public static readonly IReadOnlyList<string> Files = [CharacterFile, LipFile, LanguageFile];
     public static string DefaultFolder => Path.Combine(AppContext.BaseDirectory, "Data");
 
-    private static readonly IReadOnlyList<LanguageInfo> LanguageFallback = [new("ko", "한국어", true), new("ja", "日本語", false)];
+    private static readonly IReadOnlyList<LanguageInfo> LanguageFallback = [new("ko", "한국어", true), new("ja", "日本語", false, "、")];
 
     private readonly Func<string?> _resources;
     private readonly AppLog _log;
@@ -165,11 +165,12 @@ public sealed class GameData
         var items = root.Elements("Language")
             .Select(e => (Code: ((string?)e.Attribute("Code") ?? "").Trim().ToLowerInvariant(),
                           Native: (string?)e.Attribute("NativeName") ?? "",
-                          Default: string.Equals((string?)e.Attribute("Default"), "true", StringComparison.OrdinalIgnoreCase)))
+                          Default: string.Equals((string?)e.Attribute("Default"), "true", StringComparison.OrdinalIgnoreCase),
+                          Separator: (string?)e.Attribute("ListSeparator") ?? ", "))   // 추가(번역 모드 3회차)
             .Where(x => x.Code.Length > 0)
             .GroupBy(x => x.Code).Select(g => g.First())
             .ToList();
         int def = Math.Max(0, items.FindIndex(x => x.Default));
-        return items.Select((x, i) => new LanguageInfo(x.Code, x.Native, i == def)).ToList();
+        return items.Select((x, i) => new LanguageInfo(x.Code, x.Native, i == def, x.Separator)).ToList();
     }
 }

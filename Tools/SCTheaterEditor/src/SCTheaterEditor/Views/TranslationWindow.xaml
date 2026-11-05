@@ -1,0 +1,108 @@
+<Window x:Class="SCTheaterEditor.Views.TranslationWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="TE 번역" ShowInTaskbar="False" PreviewKeyDown="Window_PreviewKeyDown">
+    <!-- 추가(번역 모드 3회차): 번역 창. DataContext = TranslationViewModel. 화면은 배치·키만 (값·규칙은 Core)
+         왼쪽 = 한국어 원문(읽기 전용), 오른쪽 = 고른 언어 입력. Enter 다음 칸 · Shift+Enter 이전 칸 · Esc 입력 취소
+         Ctrl+S 저장 · Ctrl+Z/Y 되돌리기/다시 하기(스크립트 표와 공유) · Ctrl+T 닫기 -->
+    <Window.Resources>
+        <!-- 번역 칸 1개: 입력 상자 + 빈 칸일 때 흐린 글씨(비워 두면 게임에 나오는 것) -->
+        <DataTemplate x:Key="Cell">
+            <Grid ToolTip="{Binding ToolTip}">
+                <TextBox x:Name="Box" Text="{Binding Value, UpdateSourceTrigger=LostFocus}" TextWrapping="Wrap" AcceptsReturn="False"
+                         Padding="2,1" GotKeyboardFocus="Cell_GotKeyboardFocus" PreviewKeyDown="Cell_PreviewKeyDown">
+                    <TextBox.Style>
+                        <Style TargetType="TextBox">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Warning}" Value="True">
+                                    <Setter Property="Foreground" Value="#FFC62828"/>
+                                    <Setter Property="BorderBrush" Value="#FFC62828"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBox.Style>
+                </TextBox>
+                <TextBlock Text="{Binding Hint}" Foreground="#FFA0A0A0" Margin="5,2,0,0" IsHitTestVisible="False" TextTrimming="CharacterEllipsis">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Text, ElementName=Box}" Value="">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+            </Grid>
+        </DataTemplate>
+    </Window.Resources>
+
+    <DockPanel Margin="8">
+        <!-- 위: 언어 · 진행률 · 자동 무대 동기화 · 막 -->
+        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,4">
+            <TextBlock DockPanel.Dock="Right" Text="{Binding DocumentTitle}" Foreground="Gray" VerticalAlignment="Center"/>
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="번역 언어:" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                <ComboBox ItemsSource="{Binding Languages}" SelectedItem="{Binding SelectedLanguage}" DisplayMemberPath="NativeName" MinWidth="110"
+                          ToolTip="LanguageData의 기본 언어 외 언어. 고르면 오른쪽 칸이 그 언어 속성(_Ja 등)으로 바뀜"/>
+                <TextBlock Text="{Binding ProgressText}" VerticalAlignment="Center" Margin="14,0,0,0" FontWeight="SemiBold"
+                           ToolTip="원문이 있는 칸 중 번역을 채운 칸 (게임 Tools &gt; Localization &gt; Check Translations와 같은 기준)"/>
+                <CheckBox Content="번역 시 자동으로 무대 동기화" IsChecked="{Binding AutoStageSync}" VerticalAlignment="Center" Margin="18,0,0,0"
+                          ToolTip="켜면 다른 줄의 칸으로 옮길 때 잠깐 멈춘 뒤 무대를 그 줄로 맞춤 (스크립트 탭 F5와 같음 — 보이스도 재생). 스크립트 표 줄 선택은 항상 따라감"/>
+            </StackPanel>
+        </DockPanel>
+        <TextBlock DockPanel.Dock="Top" Text="{Binding StatusText}" Foreground="#FFC62828" TextWrapping="Wrap" Margin="0,0,0,4">
+            <TextBlock.Style>
+                <Style TargetType="TextBlock">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding StatusText}" Value="">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </TextBlock.Style>
+        </TextBlock>
+
+        <!-- 머리말 (행과 같은 열: 56 · 원문 · 12 · 번역) -->
+        <Grid DockPanel.Dock="Top" Background="#FFF0F0F0" Margin="0,0,18,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="56"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="12"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="1" Text="원문 (한국어)" Margin="0,3" FontWeight="SemiBold"/>
+            <TextBlock Grid.Column="3" Text="{Binding TargetHeader}" Margin="0,3" FontWeight="SemiBold"/>
+        </Grid>
+
+        <!-- 행 목록: 막 하나가 백여 줄이라 모두 그림 (가상화하면 화면 밖 칸으로 Enter 이동 때 포커스가 끊김) -->
+        <ScrollViewer VerticalScrollBarVisibility="Visible" Focusable="False">
+            <ItemsControl ItemsSource="{Binding Rows}" Focusable="False" KeyboardNavigation.TabNavigation="Continue">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border BorderBrush="#FFE4E4E4" BorderThickness="0,0,0,1" Padding="0,5">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="56"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="12"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="{Binding NumberText}" Foreground="Gray" Margin="2,2,0,0"/>
+                                <StackPanel Grid.Column="1">
+                                    <TextBlock Text="{Binding SourceTop}" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,2,0,0"/>
+                                    <TextBlock Text="{Binding SourceBottom}" TextWrapping="Wrap" Margin="0,4,0,0"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="3">
+                                    <ContentPresenter Content="{Binding First}" ContentTemplate="{StaticResource Cell}" Focusable="False"/>
+                                    <ContentPresenter Content="{Binding Second}" ContentTemplate="{StaticResource Cell}" Focusable="False" Margin="0,3,0,0"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+    </DockPanel>
+</Window>

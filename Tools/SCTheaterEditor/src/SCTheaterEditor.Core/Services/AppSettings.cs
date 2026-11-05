@@ -34,6 +34,12 @@ public sealed class AppSettings
     /// <summary>추가(7회차): 스크립트 탭 화면 배치 (경계선으로 바꾼 크기)</summary>
     public ScriptLayoutSettings ScriptLayout { get; set; } = new();
 
+    /// <summary>추가(번역 모드 3회차): 번역 창 위치·크기·열림 상태·언어·자동 무대 동기화</summary>
+    public TranslationWindowSettings Translation { get; set; } = new();
+
+    /// <summary>추가(번역 모드 3회차): 메인 창 위치·크기·최대화</summary>
+    public MainWindowSettings MainWindow { get; set; } = new();
+
     /// <summary>읽는 중에 생긴 일 (예전 설정 이전, 손상 복구 등). 로그로 알리기 위한 값, 저장하지 않음</summary>
     [JsonIgnore]
     public string? LoadNotice { get; private set; }
@@ -273,6 +279,36 @@ public sealed class ScriptLayoutSettings
         StageWeight = d.StageWeight;
         TableWeight = d.TableWeight;
     }
+}
+
+/// <summary>
+/// 추가(번역 모드 3회차): 번역 창. 값은 번역 창에서만 바꿈 (자동 무대 동기화 체크박스·언어 드롭다운 — TE 핸드오프 0절: 작업 중 바로 바꾸는 값은 그 자리에)
+/// </summary>
+public sealed class TranslationWindowSettings
+{
+    public double? Left { get; set; }
+    public double? Top { get; set; }
+    public double Width { get; set; } = 1200;
+    public double Height { get; set; } = 900;
+
+    /// <summary>끌 때 열려 있었으면 다음 실행 때 다시 엶</summary>
+    public bool Open { get; set; }
+
+    /// <summary>마지막으로 고른 번역 언어 코드 (예: ja). 없거나 목록에 없으면 첫 번역 언어</summary>
+    public string? Language { get; set; }
+
+    /// <summary>번역 창에서 다른 줄로 옮기면 멈춘 뒤 무대 동기화(F5와 같음, 소리 포함). 스크립트 표 줄 선택은 항상 따라감</summary>
+    public bool AutoStageSync { get; set; }
+}
+
+/// <summary>추가(번역 모드 3회차): 메인 창 (위치가 없거나 화면 밖이면 화면 가운데, 크기는 작업 영역 안으로)</summary>
+public sealed class MainWindowSettings
+{
+    public double? Left { get; set; }
+    public double? Top { get; set; }
+    public double Width { get; set; } = 1920;
+    public double Height { get; set; } = 1080;
+    public bool Maximized { get; set; }
 }
 
 /// <summary>추가: 로그 창 (위치가 없거나 화면 밖이면 메인 창 가운데)</summary>

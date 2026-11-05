@@ -17,7 +17,7 @@ public partial class LogWindow : Window
         _place = place;
         Width = place.Width;
         Height = place.Height;
-        if (place.Left is { } l && place.Top is { } t && IsOnScreen(l, t)) { Left = l; Top = t; }
+        if (place.Left is { } l && place.Top is { } t && WindowPlacement.IsOnScreen(l, t)) { Left = l; Top = t; }   // 변경(번역 모드 3회차): 공용 함수
         else WindowStartupLocation = WindowStartupLocation.CenterOwner;
         Closing += (_, _) => Store();
         // 추가: 옮기거나 크기를 바꿀 때마다 저장 — 창을 닫지 않고 TE를 꺼도 마지막 위치·크기 유지 (설정 저장은 0.4초 모아서 한 번)
@@ -25,11 +25,7 @@ public partial class LogWindow : Window
         SizeChanged += (_, _) => Store();
     }
 
-    /// <summary>창 왼쪽 위가 지금 모니터들 안에 있는지 (모니터 구성이 바뀌어 화면 밖에 뜨는 것 방지)</summary>
-    private static bool IsOnScreen(double left, double top) =>
-        left >= SystemParameters.VirtualScreenLeft - 20 && top >= SystemParameters.VirtualScreenTop - 20 &&
-        left < SystemParameters.VirtualScreenLeft + SystemParameters.VirtualScreenWidth - 80 &&
-        top < SystemParameters.VirtualScreenTop + SystemParameters.VirtualScreenHeight - 40;
+    // (이동, 번역 모드 3회차) IsOnScreen → Services/WindowPlacement (메인 창·번역 창과 공용)
 
     private void Store()
     {
