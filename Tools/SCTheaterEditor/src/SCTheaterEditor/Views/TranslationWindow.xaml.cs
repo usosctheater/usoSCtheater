@@ -62,6 +62,13 @@ public partial class TranslationWindow : Window
         if (_vm.PreTranslateCommand.CanExecute(null)) _vm.PreTranslateCommand.Execute(null);
     }
 
+    // 추가(번역 모드 5회차): [TXT로 내보내기] — 입력 중인 칸을 먼저 확정
+    private void ExportVoiceText_Click(object sender, RoutedEventArgs e)
+    {
+        CommitPending();
+        _vm.ExportVoiceTextCommand.Execute(null);
+    }
+
     // 추가(번역 모드 4회차): [지침 편집] — 언어별 지침 창 (이 창 소속, 언어마다 하나)
     private GuideEditorWindow? _guide;
 

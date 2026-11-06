@@ -15,8 +15,12 @@ public sealed class MainViewModel
                          Func<ICatalogSource> catalogFactory, Func<ISetDownloader> downloaderFactory,
                          Action saveSettings, IMessenger messenger, AppLog log,
                          GameData gameData,                   // 추가(번역 모드 2회차): 게임 데이터 복사본 (exe 옆 Data\)
-                         AudioMemoStore? audioMemos = null)   // 추가(6회차): 오디오 메모 (exe 옆 AudioMemo.xml)
+                         AudioMemoStore? audioMemos = null,   // 추가(6회차): 오디오 메모 (exe 옆 AudioMemo.xml)
+                         string? voiceMatchPath = null)       // 추가(번역 모드 5회차): VOICEVOX 매칭 (생략하면 exe 옆 VoiceMatch.xml)
     {
+        _voicePath = voiceMatchPath ?? VoiceMatchData.DefaultPath;
+        VoiceMatch = VoiceMatchData.Load(_voicePath);
+        if (VoiceMatch.Problem.Length > 0) log.Warn($"보이스 매칭: {VoiceMatch.Problem}");
         Settings = settings;
         Library = library;
         var units = IdolUnits.LoadEmbedded();
@@ -28,7 +32,9 @@ public sealed class MainViewModel
         Editor = new ActEditorViewModel(settings, library, dialogs, ui, saveSettings, log, characters: gameData.Characters, messenger: messenger);   // 변경(번역 모드 2회차): characters
         Script.Editor = Editor;
         Editor.StampProvider = () => Script.CurrentStamp;   // 추가(4-2): 줄 추가 때 무대에서 선택한 캐릭터 정보
-        SettingsPage = new SettingsViewModel(settings, dialogs, saveSettings, messenger, log, gameData: gameData);   // 변경(번역 모드 2회차): gameData
+        Editor.VoiceMatch = VoiceMatch;   // 추가(번역 모드 5회차): [라이선스 내보내기]
+        SettingsPage = new SettingsViewModel(settings, dialogs, saveSettings, messenger, log, gameData: gameData,   // 변경(번역 모드 2회차): gameData
+                                             voices: VoiceMatch, voicePath: _voicePath);                         // 변경(번역 모드 5회차): 보이스
 
         _ui = ui;                       // 추가(번역 모드 3회차): 번역 창
         _saveSettings = saveSettings;
@@ -51,7 +57,12 @@ public sealed class MainViewModel
             new ClaudeCli(() => Settings.PreTranslate.ClaudePath, AppLog.Shared),          // 추가(번역 모드 4회차): 가번역
             new TranslationGuideStore(TranslationGuideStore.DefaultFolder),
             () => TimeSpan.FromMinutes(Math.Clamp(Settings.PreTranslate.TimeoutMinutes, PreTranslateSettings.MinTimeout, PreTranslateSettings.MaxTimeout)),
-            AppLog.Shared);
+            AppLog.Shared,
+            VoiceMatch, () => Settings.Voice.ExportFolder);                                   // 추가(번역 모드 5회차): [TXT로 내보내기]
+
+    /// <summary>추가(번역 모드 5회차): VOICEVOX 매칭 (설정 탭에서 고치면 같은 객체 — 번역 창·스크립트 표가 바로 새 매칭을 씀)</summary>
+    public VoiceMatchData VoiceMatch { get; }
+    private readonly string _voicePath;
 
     private void OnGameDataChanged()
     {

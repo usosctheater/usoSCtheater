@@ -749,6 +749,51 @@ public sealed partial class ActEditorViewModel : ObservableObject
     [RelayCommand]
     private void ToggleTranslation() => TranslationToggleRequested?.Invoke();
 
+    // ------------------------------------------------------------------ 추가(번역 모드 5회차): 라이선스 내보내기
+
+    /// <summary>VOICEVOX 매칭 (앱이 넣음 — 없으면 빈 데이터)</summary>
+    public VoiceMatchData? VoiceMatch { get; set; }
+
+    /// <summary>
+    /// [라이선스 내보내기]: 열린 막의 그룹(시나리오) = 같은 폴더의 막 XML 전부에서 대사가 있는 TEXT 줄의 화자 → 크레딧 TXT
+    /// (설정 탭 '보이스'의 저장 폴더, {그룹}_license.txt — 같으면 덮어씀). 열린 막은 저장하지 않은 편집도 반영. 이용 제한 캐릭터는 상태 줄에 ⚠
+    /// </summary>
+    [RelayCommand]
+    private void ExportLicense()
+    {
+        if (Document?.FilePath is not { } current || Path.GetDirectoryName(current) is not { } dir) { StatusText = "먼저 막을 여세요"; return; }
+        var voices = VoiceMatch ?? VoiceMatchData.Empty();
+        var acts = new List<ActDocument> { Document };
+        var failed = new List<string>();
+        foreach (var file in Directory.EnumerateFiles(dir, "*.xml").Order(StringComparer.OrdinalIgnoreCase))
+        {
+            if (ActFiles.SamePath(file, current)) continue;
+            try { acts.Add(ActXmlFormat.Load(file)); }
+            catch (Exception ex)
+            {
+                failed.Add(Path.GetFileName(file));
+                _log.Error($"라이선스 내보내기: 막 읽기 실패 {file}", ex);
+            }
+        }
+        var r = VoiceExport.BuildLicense(acts, voices);
+        try
+        {
+            string path = VoiceExport.WriteFile(_settings.Voice.ExportFolder, VoiceExport.LicenseFileName(Document.Group), r.Text);
+            var notes = new List<string> { $"라이선스 내보내기: {Document.Group} 막 {acts.Count}개 · 캐릭터 {r.Lines}명 → {path}" };
+            if (voices.Problem.Length > 0) notes.Add($"⚠ {voices.Problem}");
+            if (failed.Count > 0) notes.Add($"⚠ 읽지 못한 막 {string.Join(", ", failed)}");
+            notes.AddRange(r.Warnings.Select(w => "⚠ " + w));
+            StatusText = string.Join(" · ", notes);
+            _log.Info($"라이선스 내보내기: {path} (막 {acts.Count}개, 캐릭터 {r.Lines}명)");
+            foreach (var w in r.Warnings) _log.Warn($"라이선스: {w}");
+        }
+        catch (Exception ex)
+        {
+            _log.Error("라이선스 내보내기 실패", ex);
+            StatusText = $"⚠ 라이선스 내보내기 실패: {ex.Message}";
+        }
+    }
+
     private void SelectLines(IReadOnlyList<ScriptLine>? lines)
     {
         if (lines == null || lines.Count == 0) return;

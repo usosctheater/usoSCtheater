@@ -16,8 +16,16 @@ public sealed class CharacterData
 {
     private Dictionary<string, CharacterInfo> _byId;   // 변경(번역 모드 2회차): readonly 삭제 (ReplaceWith)
 
-    public CharacterData(IEnumerable<CharacterInfo> items) =>
-        _byId = items.GroupBy(i => i.Id, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+    public CharacterData(IEnumerable<CharacterInfo> items)
+    {
+        _all = items.GroupBy(i => i.Id, StringComparer.OrdinalIgnoreCase).Select(g => g.First()).ToList();   // 변경(번역 모드 5회차): 파일 순서 목록도
+        _byId = _all.ToDictionary(c => c.Id, StringComparer.OrdinalIgnoreCase);
+    }
+
+    private List<CharacterInfo> _all;   // 추가(번역 모드 5회차)
+
+    /// <summary>추가(번역 모드 5회차): 전체 (CharacterData.xml 순서 — 설정 탭 '보이스' 목록)</summary>
+    public IReadOnlyList<CharacterInfo> All => _all;
 
     public int Count => _byId.Count;
 
@@ -83,6 +91,7 @@ public sealed class CharacterData
     internal void ReplaceWith(CharacterData other)
     {
         _byId = other._byId;
+        _all = other._all;       // 추가(번역 모드 5회차)
         _names = other._names;   // 추가(번역 모드 3회차)
     }
 

@@ -43,6 +43,9 @@ public sealed class AppSettings
     /// <summary>추가(번역 모드 4회차): 가번역 (Claude Code 경로·제한 시간) — 설정 탭 '가번역' 구역</summary>
     public PreTranslateSettings PreTranslate { get; set; } = new();
 
+    /// <summary>추가(번역 모드 5회차): VOICEVOX 내보내기 저장 폴더 — 설정 탭 '보이스' 구역 (매칭은 VoiceMatch.xml)</summary>
+    public VoiceSettings Voice { get; set; } = new();
+
     /// <summary>읽는 중에 생긴 일 (예전 설정 이전, 손상 복구 등). 로그로 알리기 위한 값, 저장하지 않음</summary>
     [JsonIgnore]
     public string? LoadNotice { get; private set; }
@@ -302,6 +305,12 @@ public sealed class TranslationWindowSettings
 
     /// <summary>번역 창에서 다른 줄로 옮기면 멈춘 뒤 무대 동기화(F5와 같음, 소리 포함). 스크립트 표 줄 선택은 항상 따라감</summary>
     public bool AutoStageSync { get; set; }
+}
+
+/// <summary>추가(번역 모드 5회차): VOICEVOX 내보내기 (비우면 exe 옆 VoiceExport\)</summary>
+public sealed class VoiceSettings
+{
+    public string? ExportFolder { get; set; }
 }
 
 /// <summary>추가(번역 모드 4회차): 가번역</summary>

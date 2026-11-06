@@ -9,3 +9,5 @@ TestResults/
 
 # 추가(번역 모드 4회차): 번역 지침 (작업자마다 자기 스타일 — exe 옆, 없어도 동작)
 /TranslationGuide_*.md
+# 추가(번역 모드 5회차): VOICEVOX 내보내기 기본 폴더 (VoiceMatch.xml은 Git 포함)
+/VoiceExport/

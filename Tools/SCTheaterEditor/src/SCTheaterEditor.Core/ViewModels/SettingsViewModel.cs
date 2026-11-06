@@ -29,8 +29,14 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     public SettingsViewModel(AppSettings settings, IDialogService dialogs, Action saveSettings, IMessenger messenger, AppLog log,
                              LineTypeCatalog? types = null,    // 변경: types 추가 (생략하면 내장 LineTypes.xml)
-                             GameData? gameData = null)        // 추가(번역 모드 2회차)
+                             GameData? gameData = null,        // 추가(번역 모드 2회차)
+                             VoiceMatchData? voices = null, string? voicePath = null)   // 추가(번역 모드 5회차): 보이스 매칭
     {
+        _voices = voices;
+        _voicePath = voicePath ?? VoiceMatchData.DefaultPath;
+        VoiceNote = "";
+        VoiceRows = [];
+        VoiceOptions = [];
         _gameData = gameData;   // 추가(번역 모드 2회차)
         GameDataNote = "";
         if (gameData != null) gameData.Changed += () => OnPropertyChanged(nameof(GameDataStates));
@@ -46,6 +52,8 @@ public sealed partial class SettingsViewModel : ObservableObject
         ScriptEditingNote = "";
         PathNote = "";
         PreTranslateNote = "";   // 추가(번역 모드 4회차)
+        if (gameData != null) gameData.Changed += BuildVoiceRows;   // 추가(번역 모드 5회차): 인물 목록 = CharacterData
+        BuildVoiceRows();
         // 다른 곳(스크립트 표 [폴더 지정…]·리소스 탭 [게임 폴더…])에서 바꿔도 표시를 맞춤
         messenger.Register<SettingsViewModel, SettingsChangedMessage>(this, static (r, m) => r.OnSettingsChanged(m));
     }
@@ -305,6 +313,98 @@ public sealed partial class SettingsViewModel : ObservableObject
         OnPropertyChanged(nameof(ClaudeResolvedText));
     }
 
+    // ------------------------------------------------------------------ 추가(번역 모드 5회차): 보이스 (VOICEVOX 매칭·내보내기 폴더)
+
+    private readonly VoiceMatchData? _voices;
+    private readonly string _voicePath;
+
+    /// <summary>VoiceMatch.xml 경로 (exe 옆)</summary>
+    public string VoiceMatchPathText => _voicePath;
+
+    /// <summary>드롭다운 항목 = (없음) + VOICEVOX 캐릭터 (VoiceMatch.xml 순서, 이용 제한이 있으면 ⚠)</summary>
+    [ObservableProperty] public partial IReadOnlyList<VoiceOption> VoiceOptions { get; private set; }
+
+    /// <summary>맨 위 기본 화자 + CharacterData 인물 순서</summary>
+    [ObservableProperty] public partial IReadOnlyList<VoiceRow> VoiceRows { get; private set; }
+
+    [ObservableProperty] public partial string VoiceNote { get; private set; }
+
+    /// <summary>TXT·라이선스 저장 폴더 (비우면 exe 옆 VoiceExport\)</summary>
+    public string VoiceExportFolderText => string.IsNullOrWhiteSpace(_settings.Voice.ExportFolder)
+        ? $"{VoiceExport.DefaultFolder}   (기본)"
+        : _settings.Voice.ExportFolder;
+
+    private void BuildVoiceRows()
+    {
+        if (_voices == null) return;
+        VoiceOptions = [VoiceOption.None, .. _voices.Voices.Select(v => new VoiceOption(v.Id, v.IsRestricted ? $"{v.Name}  ⚠ {v.UseText}" : v.Name, v))];
+        var rows = new List<VoiceRow> { new(this, null, "기본 화자 (매칭 없는 줄)", _voices.Default) };
+        foreach (var c in _gameData?.Characters.All ?? [])
+            rows.Add(new(this, c.Id, $"{(c.Name.Length > 0 ? c.Name : c.Id)}  ({c.Id})", _voices.MatchOf(c.Id)));
+        VoiceRows = rows;
+        VoiceNote = _voices.Problem;
+    }
+
+    internal VoiceOption OptionOf(string voiceId) =>
+        VoiceOptions.FirstOrDefault(o => o.Id.Equals(voiceId, StringComparison.OrdinalIgnoreCase))
+        ?? (voiceId.Length == 0 ? VoiceOption.None : new VoiceOption(voiceId, $"{voiceId}  ⚠ VoiceMatch.xml에 없음", null));
+
+    /// <summary>행에서 바꿈 → VoiceMatch.xml에 바로 저장</summary>
+    internal void OnVoiceRowChanged(VoiceRow row)
+    {
+        if (_voices == null || !_voices.SetMatch(row.CharId, row.Selected.Id, row.Style)) return;
+        try
+        {
+            _voices.Save(_voicePath);
+            VoiceNote = $"저장했습니다: {row.Label} → {(row.Selected.Voice is { } v ? VoiceMatchData.SpeakerLine(v, row.Style) : "(없음)")}"
+                        + (row.Selected.Voice?.Warning is { } w ? $"  ⚠ {w}" : "");
+        }
+        catch (Exception ex)
+        {
+            _log.Error("VoiceMatch.xml 저장 실패", ex);
+            VoiceNote = $"⚠ 저장하지 못했습니다: {ex.Message}";
+        }
+    }
+
+    /// <summary>[다시 읽기]: VoiceMatch.xml을 직접 고친 뒤</summary>
+    [RelayCommand]
+    private void ReloadVoiceMatch()
+    {
+        if (_voices == null) return;
+        _voices.ReloadFrom(_voicePath);
+        BuildVoiceRows();
+        if (VoiceNote.Length == 0) VoiceNote = $"다시 읽었습니다 (VOICEVOX 캐릭터 {_voices.Voices.Count}명)";
+    }
+
+    [RelayCommand] private void OpenVoiceMatchFolder() => OpenFolder(Path.GetDirectoryName(_voicePath));
+
+    [RelayCommand]
+    private void PickVoiceExportFolder()
+    {
+        string? picked = _dialogs.PickFolder("VOICEVOX 내보내기 폴더", string.IsNullOrWhiteSpace(_settings.Voice.ExportFolder) ? null : _settings.Voice.ExportFolder);
+        if (picked == null) return;
+        _settings.Voice.ExportFolder = picked;
+        Changed(SettingsArea.Voice);
+        OnPropertyChanged(nameof(VoiceExportFolderText));
+    }
+
+    [RelayCommand]
+    private void ResetVoiceExportFolder()
+    {
+        _settings.Voice.ExportFolder = null;
+        Changed(SettingsArea.Voice);
+        OnPropertyChanged(nameof(VoiceExportFolderText));
+    }
+
+    [RelayCommand]
+    private void OpenVoiceExportFolder()
+    {
+        string dir = string.IsNullOrWhiteSpace(_settings.Voice.ExportFolder) ? VoiceExport.DefaultFolder : _settings.Voice.ExportFolder;
+        try { Directory.CreateDirectory(dir); } catch (Exception ex) { _log.Error("내보내기 폴더 만들기 실패", ex); }
+        OpenFolder(dir);
+        if (PathNote.Length > 0) { VoiceNote = PathNote; PathNote = ""; }
+    }
+
     // ------------------------------------------------------------------ 저장·알림
 
     private void Changed(SettingsArea area)
@@ -362,4 +462,61 @@ public sealed class SlotSetting : ObservableObject
         _selected = value;
         OnPropertyChanged(nameof(Selected));
     }
+}
+
+/// <summary>추가(번역 모드 5회차): 설정 탭 '보이스' 드롭다운 항목 (Id 빈 값 = 없음)</summary>
+public sealed record VoiceOption(string Id, string Display, VoiceInfo? Voice)
+{
+    public static readonly VoiceOption None = new("", "(없음)", null);
+    public override string ToString() => Display;
+}
+
+/// <summary>추가(번역 모드 5회차): 설정 탭 '보이스' 1행 (CharId = null이면 기본 화자). 바꾸면 SettingsViewModel이 VoiceMatch.xml에 저장</summary>
+public sealed class VoiceRow : ObservableObject
+{
+    private readonly SettingsViewModel _owner;
+    private VoiceOption _selected;
+    private string _style;
+
+    internal VoiceRow(SettingsViewModel owner, string? charId, string label, VoiceMatchEntry entry)
+    {
+        _owner = owner;
+        CharId = charId;
+        Label = label;
+        _selected = owner.OptionOf(entry.Voice);
+        _style = entry.Style;
+    }
+
+    public string? CharId { get; }
+    public string Label { get; }
+
+    public VoiceOption Selected
+    {
+        get => _selected;
+        set
+        {
+            if (value == null || value == _selected) return;   // 목록을 다시 만들 때 잠깐 null
+            _selected = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(Warning));
+            _owner.OnVoiceRowChanged(this);
+        }
+    }
+
+    /// <summary>스타일 (비우면 기본 스타일) — VOICEVOX 화면의 스타일 이름 그대로 (예: あまあま)</summary>
+    public string Style
+    {
+        get => _style;
+        set
+        {
+            value = (value ?? "").Trim();
+            if (value == _style) return;
+            _style = value;
+            OnPropertyChanged();
+            _owner.OnVoiceRowChanged(this);
+        }
+    }
+
+    /// <summary>이용 제한 안내 (빨간 글씨, 없으면 빈 값)</summary>
+    public string Warning => _selected.Voice?.Warning is { } w ? "⚠ " + w : _selected.Voice == null && _selected.Id.Length > 0 ? "⚠ VoiceMatch.xml에 없는 화자" : "";
 }

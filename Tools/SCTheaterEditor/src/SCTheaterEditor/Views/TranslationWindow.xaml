@@ -69,6 +69,9 @@
                 </Button>
                 <Button Content="지침 편집" Click="EditGuide_Click" Margin="4,0,0,0" Padding="10,1"
                         ToolTip="이 언어의 번역 지침(exe 옆 TranslationGuide_{언어}.md) 편집 — 가번역 때 함께 보냄. 파일이 없으면 지침 없이 가번역"/>
+                <!-- 추가(번역 모드 5회차): VOICEVOX 「テキスト読み込み」용 TXT -->
+                <Button Content="TXT로 내보내기" Click="ExportVoiceText_Click" Margin="12,0,0,0" Padding="10,1"
+                        ToolTip="이 막의 고른 언어 대사를 VOICEVOX 「テキスト読み込み」용 TXT로 (설정 탭 '보이스'의 저장 폴더, {막}_{언어}.txt).&#x0a;화자는 VoiceMatch.xml 매칭으로 전환 줄을 넣고, 대사 안 \n은 이어 붙임. 번역이 빈 줄은 넣지 않음"/>
             </StackPanel>
         </DockPanel>
         <TextBlock DockPanel.Dock="Top" Text="{Binding StatusText}" Foreground="#FFC62828" TextWrapping="Wrap" Margin="0,0,0,4">

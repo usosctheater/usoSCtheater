@@ -206,6 +206,48 @@
                 </StackPanel>
             </GroupBox>
 
+            <!-- 추가(번역 모드 5회차): 보이스 (VOICEVOX 매칭 = exe 옆 VoiceMatch.xml, 바꾸면 바로 저장) -->
+            <GroupBox Header="보이스 (VOICEVOX)">
+                <StackPanel>
+                    <TextBlock TextWrapping="Wrap" Margin="0,2"
+                               Text="번역 창 [TXT로 내보내기]·스크립트 탭 [라이선스 내보내기]가 쓰는 인물 → VOICEVOX 캐릭터 매칭입니다. 스타일은 VOICEVOX 화면의 이름 그대로(예: あまあま), 비우면 기본 스타일. 바꾸면 VoiceMatch.xml에 바로 저장합니다."/>
+                    <DockPanel Margin="0,4">
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                            <Button Content="다시 읽기" Padding="8,1" Command="{Binding ReloadVoiceMatchCommand}" ToolTip="VoiceMatch.xml을 직접 고친 뒤 (VOICEVOX 캐릭터 추가 등)"/>
+                            <Button Content="열기" Padding="8,1" Margin="4,0,0,0" Command="{Binding OpenVoiceMatchFolderCommand}" ToolTip="VoiceMatch.xml이 있는 폴더"/>
+                        </StackPanel>
+                        <TextBlock Text="매칭 파일" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                        <TextBox Style="{StaticResource PathBox}" Text="{Binding VoiceMatchPathText, Mode=OneWay}"/>
+                    </DockPanel>
+                    <ItemsControl ItemsSource="{Binding VoiceRows}" Focusable="False" Margin="0,2">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal" Margin="0,1">
+                                    <TextBlock Text="{Binding Label}" Width="190" VerticalAlignment="Center"/>
+                                    <ComboBox Width="190" SelectedItem="{Binding Selected}" DisplayMemberPath="Display"
+                                              ItemsSource="{Binding DataContext.VoiceOptions, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
+                                    <TextBlock Text="스타일" VerticalAlignment="Center" Margin="10,0,4,0" Foreground="Gray"/>
+                                    <TextBox Width="110" Text="{Binding Style, UpdateSourceTrigger=LostFocus}" VerticalContentAlignment="Center"
+                                             KeyDown="Number_KeyDown" ToolTip="Enter 또는 다른 곳 클릭으로 확정"/>
+                                    <TextBlock Text="{Binding Warning}" Foreground="#FFC62828" VerticalAlignment="Center" Margin="10,0,0,0"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <DockPanel Margin="0,6,0,0">
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                            <Button Content="변경…" Padding="8,1" Command="{Binding PickVoiceExportFolderCommand}"/>
+                            <Button Content="기본값으로" Padding="8,1" Margin="4,0,0,0" Command="{Binding ResetVoiceExportFolderCommand}" ToolTip="exe 옆 VoiceExport\"/>
+                            <Button Content="열기" Padding="8,1" Margin="4,0,0,0" Command="{Binding OpenVoiceExportFolderCommand}"/>
+                        </StackPanel>
+                        <TextBlock Text="내보내기 폴더" VerticalAlignment="Center" Margin="0,0,10,0"
+                                   ToolTip="TXT({막}_{언어}.txt)·라이선스({그룹}_license.txt) 저장 위치 — 같은 이름은 덮어씀"/>
+                        <TextBox Style="{StaticResource PathBox}" Text="{Binding VoiceExportFolderText, Mode=OneWay}"/>
+                    </DockPanel>
+                    <TextBlock Text="{Binding VoiceNote}" Foreground="#FFC62828" TextWrapping="Wrap" Margin="0,4,0,0"/>
+                </StackPanel>
+            </GroupBox>
+
             <!-- 설정 파일 -->
             <DockPanel>
                 <Button DockPanel.Dock="Right" Content="설정 파일 위치 열기" Padding="8,1" Command="{Binding OpenSettingsFolderCommand}"/>

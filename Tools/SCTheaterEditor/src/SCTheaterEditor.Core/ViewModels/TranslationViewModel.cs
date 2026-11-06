@@ -40,8 +40,11 @@ public sealed partial class TranslationViewModel : ObservableObject, IDisposable
     public TranslationViewModel(ActEditorViewModel editor, GameData gameData, TranslationWindowSettings settings,
                                 Action saveSettings, Action syncStage, IUiDispatcher ui,
                                 IClaudeRunner? runner = null, TranslationGuideStore? guides = null,   // 추가(번역 모드 4회차): 가번역
-                                Func<TimeSpan>? timeout = null, AppLog? log = null)
+                                Func<TimeSpan>? timeout = null, AppLog? log = null,
+                                VoiceMatchData? voices = null, Func<string?>? exportFolder = null)   // 추가(번역 모드 5회차): VOICEVOX TXT 내보내기
     {
+        _voices = voices;
+        _exportFolder = exportFolder ?? (() => null);
         _runner = runner;
         _guides = guides;
         _timeout = timeout ?? (() => TimeSpan.FromMinutes(5));
@@ -70,6 +73,8 @@ public sealed partial class TranslationViewModel : ObservableObject, IDisposable
     private readonly Func<TimeSpan> _timeout;
     private readonly AppLog _log;
     private CancellationTokenSource? _cts;
+    private readonly VoiceMatchData? _voices;           // 추가(번역 모드 5회차)
+    private readonly Func<string?> _exportFolder;
 
     /// <summary>번역할 언어 (기본 언어 제외, LanguageData 순서)</summary>
     public IReadOnlyList<LanguageInfo> Languages { get; }
@@ -363,6 +368,35 @@ public sealed partial class TranslationViewModel : ObservableObject, IDisposable
     /// <summary>[취소]: 실행 중인 Claude Code를 끝냄 (아무것도 넣지 않음)</summary>
     [CommunityToolkit.Mvvm.Input.RelayCommand]
     private void CancelPreTranslate() => _cts?.Cancel();
+
+    // ------------------------------------------------------------------ 추가(번역 모드 5회차): VOICEVOX TXT 내보내기
+
+    /// <summary>
+    /// [TXT로 내보내기]: 이 막의 고른 언어 대사를 VOICEVOX 「テキスト読み込み」용 TXT로 (설정 탭 '보이스'의 저장 폴더, {막}_{언어}.txt — 같으면 덮어씀).
+    /// 화자 = VoiceMatch.xml 매칭. 저장하지 않은 편집도 반영 (파일이 아니라 편집 중인 문서). 이용 제한 캐릭터는 상태 줄에 ⚠
+    /// </summary>
+    [CommunityToolkit.Mvvm.Input.RelayCommand]
+    private void ExportVoiceText()
+    {
+        if (_doc == null || _language == null) return;
+        var voices = _voices ?? VoiceMatchData.Empty();
+        var r = VoiceExport.BuildScript(_doc, _language, voices);
+        if (r.Lines == 0) { StatusText = $"{_language.NativeName}: 내보낼 대사가 없습니다 (번역이 빈 줄은 넣지 않음)"; return; }
+        try
+        {
+            string path = VoiceExport.WriteFile(_exportFolder(), VoiceExport.ScriptFileName(_doc, _language), r.Text);
+            var notes = new List<string> { $"TXT 내보내기: 대사 {r.Lines}줄 → {path}" };
+            if (voices.Problem.Length > 0) notes.Add($"⚠ {voices.Problem} — 화자 전환 없이 내보냄");
+            notes.AddRange(r.Warnings.Select(w => "⚠ " + w));
+            StatusText = string.Join(" · ", notes);
+            _log.Info($"VOICEVOX TXT 내보내기: {path} ({r.Lines}줄)");
+        }
+        catch (Exception ex)
+        {
+            _log.Error("VOICEVOX TXT 내보내기 실패", ex);
+            StatusText = $"⚠ TXT 내보내기 실패: {ex.Message}";
+        }
+    }
 
     /// <summary>[지침 편집] 창의 ViewModel (지침 저장소·언어가 없으면 null)</summary>
     public GuideEditorViewModel? CreateGuideEditor() =>

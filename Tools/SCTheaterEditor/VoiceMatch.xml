@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  VoiceMatch.xml — TE 보이스 작업용 데이터 (번역 창 [TXT로 내보내기] · 스크립트 탭 [라이선스 내보내기])
+  - Voice: VOICEVOX 캐릭터. Name = VOICEVOX 화면의 캐릭터 이름 그대로 (TXT 화자 전환 줄에 씀), Credit = 크레딧 문구
+    Use: OK(크레딧만 적으면 상업·비상업 OK) / CorporateInquiry(법인·기업이 관여하면 확인) / CommercialInquiry(상업이면 문의)
+         / NonCommercial(비상업만) / NoGame(게임 작품 사용 불가) — OK가 아니면 내보낼 때 상태 줄에 ⚠ + Note
+    출처: VOICEVOX 공식 리소스 voicevox_resource character_info/*/policy.md (2026-11-05 기준). 세부는 Terms 링크
+  - Match: 인물(CharacterData Id) → Voice Id + Style(비우면 기본 스타일). 설정 탭 '보이스'에서도 바꿀 수 있음 (TE가 저장하면 이 파일을 다시 씀)
+  - Default: 매칭이 없는 줄(모브·나레이션 등)의 화자. 비우면 화자 전환 줄을 넣지 않음 (VOICEVOX에서 직접 지정)
+  - VOICEVOX에 캐릭터가 늘면 Voice 줄을 직접 추가
+-->
+<VoiceMatch>
+  <Voices>
+    <Voice Id="zundamon" Name="ずんだもん" Credit="VOICEVOX:ずんだもん" Use="OK" Note="" Terms="https://zunko.jp/con_ongen_kiyaku.html" />
+    <Voice Id="metan" Name="四国めたん" Credit="VOICEVOX:四国めたん" Use="OK" Note="" Terms="https://zunko.jp/con_ongen_kiyaku.html" />
+    <Voice Id="tsumugi" Name="春日部つむぎ" Credit="VOICEVOX:春日部つむぎ" Use="OK" Note="" Terms="https://tsumugi-official.studio.site/rule" />
+    <Voice Id="hau" Name="雨晴はう" Credit="VOICEVOX:雨晴はう" Use="OK" Note="" Terms="https://amehau.com/?page_id=225" />
+    <Voice Id="ritsu" Name="波音リツ" Credit="VOICEVOX:波音リツ" Use="OK" Note="" Terms="http://canon-voice.com/kiyaku.html" />
+    <Voice Id="takehiro" Name="玄野武宏" Credit="VOICEVOX:玄野武宏" Use="OK" Note="" Terms="https://www.virvoxproject.com/voicevoxの利用規約" />
+    <Voice Id="kotaro" Name="白上虎太郎" Credit="VOICEVOX:白上虎太郎" Use="OK" Note="" Terms="https://www.virvoxproject.com/voicevoxの利用規約" />
+    <Voice Id="ryusei" Name="青山龍星" Credit="VOICEVOX:青山龍星" Use="CorporateInquiry" Note="기업이 관여하면 사전 확인" Terms="https://www.virvoxproject.com/voicevoxの利用規約" />
+    <Voice Id="himari" Name="冥鳴ひまり" Credit="VOICEVOX:冥鳴ひまり" Use="OK" Note="" Terms="https://meimeihimari.wixsite.com/himari/terms-of-use" />
+    <Voice Id="sora" Name="九州そら" Credit="VOICEVOX:九州そら" Use="OK" Note="" Terms="https://zunko.jp/con_ongen_kiyaku.html" />
+    <Voice Id="mochiko" Name="もち子さん" Credit="VOICEVOX:もち子(cv 明日葉よもぎ)" Use="NoGame" Note="음성 작품·음성 소재·게임 작품 제외 · 성우 표기 필수 · 기업이 관여하면 사전 확인" Terms="https://vtubermochio.wixsite.com/mochizora/利用規約" />
+    <Voice Id="mesuo" Name="剣崎雌雄" Credit="VOICEVOX:剣崎雌雄" Use="OK" Note="" Terms="https://frontier.creatia.cc/fanclubs/413/posts/4507" />
+    <Voice Id="whitecul" Name="WhiteCUL" Credit="VOICEVOX:WhiteCUL" Use="OK" Note="" Terms="https://www.whitecul.com/guideline" />
+    <Voice Id="goki" Name="後鬼" Credit="VOICEVOX:後鬼" Use="CorporateInquiry" Note="기업이 관여하면 사전 확인" Terms="https://ついなちゃん.com/voicevox_terms/" />
+    <Voice Id="no7" Name="No.7" Credit="VOICEVOX:No.7" Use="NonCommercial" Note="비상업만 (개인 동인 활동·방송 수익은 OK) — 그 밖의 상업 이용은 No.7製作委員会에 사전 확인" Terms="https://voiceseven.com/#j0200" />
+    <Voice Id="chibishikiji" Name="ちび式じい" Credit="VOICEVOX:ちび式じい" Use="OK" Note="" Terms="https://docs.google.com/presentation/d/1AcD8zXkfzKFf2ertHwWRwJuQXjNnijMxhz7AJzEkaI4" />
+    <Voice Id="miko" Name="櫻歌ミコ" Credit="VOICEVOX:櫻歌ミコ" Use="OK" Note="" Terms="https://voicevox35miko.studio.site/rule" />
+    <Voice Id="sayo" Name="小夜/SAYO" Credit="VOICEVOX:小夜/SAYO" Use="OK" Note="" Terms="https://316soramegu.wixsite.com/sayo-official/guideline" />
+    <Voice Id="nurserobo" Name="ナースロボ＿タイプＴ" Credit="VOICEVOX:ナースロボ＿タイプＴ" Use="OK" Note="" Terms="https://www.krnr.top/rules" />
+    <Voice Id="benizakura" Name="†聖騎士 紅桜†" Credit="VOICEVOX:†聖騎士 紅桜†" Use="OK" Note="" Terms="https://commons.nicovideo.jp/material/nc296132" />
+    <Voice Id="akashi" Name="雀松朱司" Credit="VOICEVOX:雀松朱司" Use="OK" Note="" Terms="https://www.virvoxproject.com/voicevoxの利用規約" />
+    <Voice Id="sorin" Name="麒ヶ島宗麟" Credit="VOICEVOX:麒ヶ島宗麟" Use="OK" Note="" Terms="https://www.virvoxproject.com/voicevoxの利用規約" />
+    <Voice Id="nana" Name="春歌ナナ" Credit="VOICEVOX:春歌ナナ" Use="OK" Note="" Terms="https://nanahira.jp/haruka_nana/guideline.html" />
+    <Voice Id="aru" Name="猫使アル" Credit="VOICEVOX:猫使アル" Use="OK" Note="" Terms="https://nekotukarb.wixsite.com/nekonohako/利用規約" />
+    <Voice Id="bii" Name="猫使ビィ" Credit="VOICEVOX:猫使ビィ" Use="OK" Note="" Terms="https://nekotukarb.wixsite.com/nekonohako/利用規約" />
+    <Voice Id="chugokuusagi" Name="中国うさぎ" Credit="VOICEVOX:中国うさぎ" Use="OK" Note="" Terms="https://zunko.jp/con_ongen_kiyaku.html" />
+    <Voice Id="maron" Name="栗田まろん" Credit="VOICEVOX:栗田まろん" Use="OK" Note="" Terms="https://aivoice.jp/character/maron/" />
+    <Voice Id="iltan" Name="あいえるたん" Credit="VOICEVOX:あいえるたん" Use="OK" Note="" Terms="https://www.infiniteloop.co.jp/special/iltan/terms/" />
+    <Voice Id="hanamaru" Name="満別花丸" Credit="VOICEVOX:満別花丸" Use="OK" Note="" Terms="https://100hanamaru.wixsite.com/manbetsu-hanamaru/rule" />
+    <Voice Id="nia" Name="琴詠ニア" Credit="VOICEVOX:琴詠ニア" Use="OK" Note="" Terms="https://commons.nicovideo.jp/works/nc315435" />
+    <Voice Id="voidoll" Name="Voidoll" Credit="VOICEVOX:Voidoll(CV:丹下桜)" Use="CorporateInquiry" Note="성우 표기 필수 · 법인 이용은 개별 문의" Terms="https://blog.nicovideo.jp/niconews/224589.html" />
+    <Voice Id="zonko" Name="ぞん子" Credit="VOICEVOX:ぞん子" Use="CommercialInquiry" Note="상업 이용은 개별 문의" Terms="https://zonko.zone-energy.jp/guideline" />
+    <Voice Id="tsurugi" Name="中部つるぎ" Credit="VOICEVOX:中部つるぎ" Use="OK" Note="" Terms="https://zunko.jp/con_ongen_kiyaku.html" />
+    <Voice Id="rito" Name="離途" Credit="VOICEVOX:離途" Use="OK" Note="" Terms="https://litmus9.com/#/voicebank#rules" />
+    <Voice Id="sahaku" Name="黒沢冴白" Credit="VOICEVOX:黒沢冴白" Use="OK" Note="" Terms="https://www.virvoxproject.com/voicevoxの利用規約" />
+    <Voice Id="yureichan" Name="ユーレイちゃん" Credit="VOICEVOX:ユーレイちゃん(CV:神崎零)" Use="NonCommercial" Note="비상업만 (개인 동인 활동·방송 수익은 OK) — 그 밖의 상업 이용은 ユーステラ에 사전 확인 · 성우 표기 필수" Terms="https://u-stella.co.jp/voicevox-ure-chan-tucumo-terms-of-use/" />
+    <Voice Id="zunko" Name="東北ずん子" Credit="VOICEVOX:東北ずん子" Use="OK" Note="" Terms="https://zunko.jp/con_ongen_kiyaku.html" />
+    <Voice Id="kiritan" Name="東北きりたん" Credit="VOICEVOX:東北きりたん" Use="OK" Note="" Terms="https://zunko.jp/con_ongen_kiyaku.html" />
+    <Voice Id="itako" Name="東北イタコ" Credit="VOICEVOX:東北イタコ" Use="OK" Note="" Terms="https://zunko.jp/con_ongen_kiyaku.html" />
+    <Voice Id="ankomon" Name="あんこもん" Credit="VOICEVOX:あんこもん" Use="OK" Note="" Terms="https://zunko.jp/con_ongen_kiyaku.html" />
+    <Voice Id="tobari" Name="夜語トバリ" Credit="VOICEVOX:夜語トバリ" Use="OK" Note="" Terms="https://yogataritobari.studio.site/#rules" />
+    <Voice Id="mitama" Name="暁記ミタマ" Credit="VOICEVOX:暁記ミタマ" Use="OK" Note="" Terms="https://yogataritobari.studio.site/#rules" />
+    <Voice Id="yuka" Name="里石ユカ" Credit="VOICEVOX:里石ユカ（つぼみ）" Use="OK" Note="" Terms="https://satoishiyuka.wixsite.com/satoishi/kiyaku" />
+    <Voice Id="cobaco" Name="ブイブイ・コバコ" Credit="VOICEVOX:ブイブイ・コバコ" Use="OK" Note="" Terms="https://vv-cobaco.com/terms" />
+  </Voices>
+  <Matches>
+    <Default Voice="" Style="" />
+    <Match CharId="mano" Voice="" Style="" />
+    <Match CharId="hiori" Voice="" Style="" />
+    <Match CharId="meguru" Voice="" Style="" />
+    <Match CharId="kogane" Voice="" Style="" />
+    <Match CharId="mamimi" Voice="" Style="" />
+    <Match CharId="sakuya" Voice="" Style="" />
+    <Match CharId="yuika" Voice="" Style="" />
+    <Match CharId="kiriko" Voice="" Style="" />
+    <Match CharId="kaho" Voice="bii" Style="つよつよ" />
+    <Match CharId="chiyoko" Voice="" Style="" />
+    <Match CharId="juri" Voice="tsurugi" Style="" />
+    <Match CharId="rinze" Voice="mitama" Style="" />
+    <Match CharId="natsuha" Voice="" Style="" />
+    <Match CharId="amana" Voice="" Style="" />
+    <Match CharId="tenka" Voice="" Style="" />
+    <Match CharId="chiyuki" Voice="zunko" Style="" />
+    <Match CharId="asahi" Voice="zundamon" Style="" />
+    <Match CharId="fuyuko" Voice="metan" Style="" />
+    <Match CharId="mei" Voice="no7" Style="" />
+    <Match CharId="toru" Voice="" Style="" />
+    <Match CharId="madoka" Voice="kiritan" Style="" />
+    <Match CharId="koito" Voice="" Style="" />
+    <Match CharId="hinana" Voice="" Style="" />
+    <Match CharId="nichika" Voice="ankomon" Style="" />
+    <Match CharId="mikoto" Voice="tobari" Style="" />
+    <Match CharId="luca" Voice="yuka" Style="" />
+    <Match CharId="hana" Voice="" Style="" />
+    <Match CharId="haruki" Voice="" Style="" />
+    <Match CharId="hazuki" Voice="" Style="" />
+    <Match CharId="producer" Voice="ryusei" Style="" />
+  </Matches>
+</VoiceMatch>
