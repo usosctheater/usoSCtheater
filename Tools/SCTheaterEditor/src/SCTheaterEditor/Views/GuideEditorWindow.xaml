@@ -1,0 +1,20 @@
+<Window x:Class="SCTheaterEditor.Views.GuideEditorWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="{Binding Title}" Width="760" Height="820" ShowInTaskbar="False"
+        WindowStartupLocation="CenterOwner" PreviewKeyDown="Window_PreviewKeyDown">
+    <!-- 추가(번역 모드 4회차): [지침 편집] 창. DataContext = GuideEditorViewModel. Ctrl+S 저장 · 저장하지 않고 닫으면 확인 -->
+    <DockPanel Margin="8">
+        <DockPanel DockPanel.Dock="Bottom" Margin="0,6,0,0">
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                <Button Content="저장" Click="Save_Click" Padding="14,2" ToolTip="Ctrl+S — 다음 가번역부터 적용"/>
+                <Button Content="닫기" Click="Close_Click" Padding="14,2" Margin="6,0,0,0"/>
+            </StackPanel>
+            <TextBlock Text="{Binding StatusText}" Foreground="Gray" VerticalAlignment="Center" TextWrapping="Wrap"/>
+        </DockPanel>
+        <TextBlock DockPanel.Dock="Top" Text="{Binding FilePath}" Foreground="Gray" Margin="0,0,0,4" TextTrimming="CharacterEllipsis"
+                   ToolTip="{Binding FilePath}"/>
+        <TextBox Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" AcceptsTab="True" TextWrapping="Wrap"
+                 VerticalScrollBarVisibility="Auto" FontFamily="Consolas, Malgun Gothic, Meiryo" FontSize="13" Padding="4"/>
+    </DockPanel>
+</Window>

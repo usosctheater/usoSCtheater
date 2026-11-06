@@ -169,6 +169,43 @@
                 </StackPanel>
             </GroupBox>
 
+            <!-- 추가(번역 모드 4회차): 가번역 (번역 창 [가번역하기] — PC에 설치된 Claude Code를 부름) -->
+            <GroupBox Header="가번역">
+                <StackPanel>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*" MinWidth="360"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition/>
+                            <RowDefinition/>
+                        </Grid.RowDefinitions>
+                        <TextBlock Text="Claude Code 경로" VerticalAlignment="Center" Margin="0,3,10,3"
+                                   ToolTip="지정 안 함이면 %USERPROFILE%\.local\bin\claude.exe → PATH 순서로 찾음"/>
+                        <TextBox Grid.Column="1" Style="{StaticResource PathBox}" Text="{Binding ClaudePathText, Mode=OneWay}"/>
+                        <Button Grid.Column="2" Content="지정…" Padding="8,1" Margin="0,3" Command="{Binding PickClaudeCommand}"/>
+                        <TextBlock Grid.Row="1" Text="  └ 실행할 파일" VerticalAlignment="Center" Margin="0,3,10,3"/>
+                        <TextBox Grid.Row="1" Grid.Column="1" Style="{StaticResource PathBox}" Text="{Binding ClaudeResolvedText, Mode=OneWay}"/>
+                        <Button Grid.Row="1" Grid.Column="2" Content="다시 찾기" Padding="8,1" Margin="0,3" Command="{Binding RefreshPreTranslateCommand}"
+                                ToolTip="Claude Code를 설치한 뒤 TE를 끄지 않고 확인"/>
+                    </Grid>
+                    <StackPanel Orientation="Horizontal" Margin="0,4">
+                        <TextBlock Text="제한 시간" VerticalAlignment="Center"/>
+                        <TextBox Style="{StaticResource Num}" Text="{Binding PreTranslateTimeoutText, UpdateSourceTrigger=LostFocus}"/>
+                        <TextBlock Text="분 (1~30) — 넘기면 중지하고 아무것도 넣지 않음" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <TextBlock Foreground="Gray" Margin="0,4,0,0" TextWrapping="Wrap"
+                               Text="Claude Code에 로그인한 계정(구독)으로 실행합니다. API 키 환경 변수(ANTHROPIC_API_KEY)는 지우고 실행해 API 요금이 나가지 않습니다. 모델은 Claude Code 기본값. 번역 지침은 번역 창 [지침 편집] (exe 옆 TranslationGuide_{언어}.md)."/>
+                    <DockPanel Margin="0,6,0,0">
+                        <Button DockPanel.Dock="Left" Content="가번역 기본값으로" Padding="8,1" Command="{Binding ResetPreTranslateCommand}"
+                                ToolTip="경로 자동 · 제한 시간 5분"/>
+                        <TextBlock Text="{Binding PreTranslateNote}" Foreground="#FFC62828" VerticalAlignment="Center" Margin="10,0,0,0"/>
+                    </DockPanel>
+                </StackPanel>
+            </GroupBox>
+
             <!-- 설정 파일 -->
             <DockPanel>
                 <Button DockPanel.Dock="Right" Content="설정 파일 위치 열기" Padding="8,1" Command="{Binding OpenSettingsFolderCommand}"/>

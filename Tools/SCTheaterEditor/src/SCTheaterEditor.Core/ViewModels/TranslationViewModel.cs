@@ -38,8 +38,14 @@ public sealed partial class TranslationViewModel : ObservableObject, IDisposable
     private bool _disposed;
 
     public TranslationViewModel(ActEditorViewModel editor, GameData gameData, TranslationWindowSettings settings,
-                                Action saveSettings, Action syncStage, IUiDispatcher ui)
+                                Action saveSettings, Action syncStage, IUiDispatcher ui,
+                                IClaudeRunner? runner = null, TranslationGuideStore? guides = null,   // 추가(번역 모드 4회차): 가번역
+                                Func<TimeSpan>? timeout = null, AppLog? log = null)
     {
+        _runner = runner;
+        _guides = guides;
+        _timeout = timeout ?? (() => TimeSpan.FromMinutes(5));
+        _log = log ?? AppLog.Shared;
         _editor = editor;
         _characters = gameData.Characters;
         _allLanguages = gameData.Languages;
@@ -59,6 +65,11 @@ public sealed partial class TranslationViewModel : ObservableObject, IDisposable
     }
 
     private readonly GameData _gameData;
+    private readonly IClaudeRunner? _runner;            // 추가(번역 모드 4회차)
+    private readonly TranslationGuideStore? _guides;
+    private readonly Func<TimeSpan> _timeout;
+    private readonly AppLog _log;
+    private CancellationTokenSource? _cts;
 
     /// <summary>번역할 언어 (기본 언어 제외, LanguageData 순서)</summary>
     public IReadOnlyList<LanguageInfo> Languages { get; }
@@ -74,6 +85,7 @@ public sealed partial class TranslationViewModel : ObservableObject, IDisposable
             _saveSettings();
             OnPropertyChanged();
             OnPropertyChanged(nameof(TargetHeader));
+            OnPropertyChanged(nameof(CanPreTranslate));   // 추가(번역 모드 4회차)
             Rebuild();
         }
     }
@@ -131,6 +143,7 @@ public sealed partial class TranslationViewModel : ObservableObject, IDisposable
             NormalizeNames();
         }
         OnPropertyChanged(nameof(DocumentTitle));
+        OnPropertyChanged(nameof(CanPreTranslate));   // 추가(번역 모드 4회차)
         Rebuild();
     }
 
@@ -266,10 +279,100 @@ public sealed partial class TranslationViewModel : ObservableObject, IDisposable
         _syncTimer = null;
     }
 
+    // ------------------------------------------------------------------ 추가(번역 모드 4회차): 가번역 (Claude Code)
+
+    /// <summary>가번역 실행 중 (버튼 바꿈 — [가번역하기] ↔ [취소])</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanPreTranslate))]
+    public partial bool IsTranslating { get; private set; }
+
+    public bool CanPreTranslate => !IsTranslating && _runner != null && _doc != null && _language != null;
+
+    /// <summary>
+    /// [가번역하기]: 이 막에서 원문이 있고 번역이 빈 칸을 한 번에 Claude Code에 보냄 (문맥 = 막 전체, 지침 = TranslationGuide_{언어}.md, 없으면 지침 없이).
+    /// 답을 받으면 그때도 비어 있는 칸에만 바로 넣음 (되돌리기 1단계). 실행 중에도 다른 작업 가능, 그 사이 막·언어가 바뀌면 결과를 버림
+    /// </summary>
+    [CommunityToolkit.Mvvm.Input.RelayCommand]
+    private async Task PreTranslate()
+    {
+        if (!CanPreTranslate) return;
+        var doc = _doc!;
+        var lang = _language!;
+        var targets = PreTranslation.Targets(doc, lang);
+        if (targets.Count == 0) { StatusText = $"{lang.NativeName}: 가번역할 빈 칸이 없습니다"; return; }
+        string? guide = null;
+        try { guide = _guides?.Load(lang.Code); }
+        catch (Exception ex) { _log.Error("번역 지침 읽기 실패 — 지침 없이 요청", ex); }
+        string system = PreTranslation.SystemPrompt(lang, guide);
+        string input = PreTranslation.Input(doc, lang, _characters, targets);
+
+        IsTranslating = true;
+        _cts = new CancellationTokenSource();
+        StatusText = $"가번역 중… {targets.Count}칸{(guide == null ? " (지침 파일 없음 — 지침 없이 요청)" : "")} — 끝날 때까지 다른 작업을 해도 됨";
+        ClaudeRunResult r;
+        try { r = await _runner!.RunAsync(system, input, _timeout(), _cts.Token); }
+        finally
+        {
+            IsTranslating = false;
+            _cts.Dispose();
+            _cts = null;
+        }
+        if (_disposed) return;
+        string cost = r.CostUsd is { } c ? $", 추정 {c:0.####}달러 — 구독 로그인이면 청구 없음" : "";
+        if (!r.Ok)
+        {
+            StatusText = $"⚠ 가번역 실패: {r.Error}";
+            _log.Warn($"가번역 실패 ({r.Elapsed.TotalSeconds:0.#}초): {r.Error}");
+            return;
+        }
+        var items = PreTranslation.ParseAnswer(r.Text);
+        if (items == null)
+        {
+            StatusText = "⚠ 가번역 답변을 읽지 못했습니다 (로그에 답변 앞부분)";
+            _log.Warn($"가번역 답변 형식 오류: {(r.Text is { } t && t.Length > 1000 ? t[..1000] + "…" : r.Text)}");
+            return;
+        }
+        if (_doc != doc || _language != lang)
+        {
+            StatusText = "가번역 결과를 버렸습니다 — 그 사이 막이나 언어가 바뀜";
+            return;
+        }
+
+        var byId = targets.ToDictionary(t => t.Id);
+        var values = new List<(ScriptLine? Line, string Attr, string? Value)>();
+        int typed = 0;
+        foreach (var item in items)
+        {
+            if (!byId.Remove(item.Id, out var t) || item.Value.Trim().Length == 0) continue;   // 요청하지 않은 칸·같은 칸 두 번·빈 답은 무시
+            string attr = $"{t.BaseAttr}_{lang.Suffix}";
+            if (t.Line != null && !doc.Lines.Contains(t.Line)) continue;                         // 그 사이 지운 줄
+            string? now = t.Line == null ? doc.GetRootAttribute(attr) : t.Line.Find(attr);
+            if (!string.IsNullOrWhiteSpace(now)) { typed++; continue; }                         // 그 사이 직접 입력한 칸은 그대로
+            values.Add((t.Line, attr, item.Value));
+        }
+        int n = doc.SetValuesMany(values, $"가번역 {values.Count}칸");
+        var notes = new List<string> { $"가번역 {n}칸 넣음 (Ctrl+Z로 한 번에 되돌리기)" };
+        int missing = byId.Count;
+        if (missing > 0) notes.Add($"답이 없던 칸 {missing}");
+        if (typed > 0) notes.Add($"그 사이 입력한 칸 {typed}개는 그대로");
+        notes.Add($"{r.Elapsed.TotalSeconds:0}초");
+        StatusText = string.Join(" · ", notes);
+        _log.Info($"가번역 {doc.Group}/{doc.ActName} [{lang.Code}]: 요청 {targets.Count}칸 · 넣음 {n} · 답 없음 {missing} · 입력돼 있어 건너뜀 {typed} · {r.Elapsed.TotalSeconds:0.#}초{cost}");
+    }
+
+    /// <summary>[취소]: 실행 중인 Claude Code를 끝냄 (아무것도 넣지 않음)</summary>
+    [CommunityToolkit.Mvvm.Input.RelayCommand]
+    private void CancelPreTranslate() => _cts?.Cancel();
+
+    /// <summary>[지침 편집] 창의 ViewModel (지침 저장소·언어가 없으면 null)</summary>
+    public GuideEditorViewModel? CreateGuideEditor() =>
+        _guides != null && _language != null ? new GuideEditorViewModel(_guides, _language, _log) : null;
+
     public void Dispose()
     {
         if (_disposed) return;
         _disposed = true;
+        _cts?.Cancel();   // 추가(번역 모드 4회차): 창을 닫으면 실행 중인 가번역도 끝냄
         StopSyncTimer();
         _editor.PropertyChanged -= OnEditorChanged;
         _gameData.Changed -= Rebuild;
@@ -395,8 +498,14 @@ public sealed class TranslationCell : ObservableObject
         }
     }
 
-    /// <summary>대소문자가 다른 표기를 TE 표기로 고친 칸 (빨간 글씨)</summary>
-    public bool Warning => Row.Owner.IsFixed(this);
+    /// <summary>대소문자가 다른 표기를 TE 표기로 고친 칸</summary>
+    public bool IsFixed => Row.Owner.IsFixed(this);
+
+    /// <summary>추가(번역 모드 4회차): 번역이 있는데 원문과 줄바꿈(\n) 개수가 다름</summary>
+    public bool NewlineMismatch => IsDone && PreTranslation.NewlineCount(Value) != PreTranslation.NewlineCount(Source);
+
+    /// <summary>빨간 글씨 = 대소문자 고친 칸 또는 \n 개수가 다른 칸 (변경: 번역 모드 4회차)</summary>
+    public bool Warning => IsFixed || NewlineMismatch;
 
     public string ToolTip
     {
@@ -404,7 +513,10 @@ public sealed class TranslationCell : ObservableObject
         {
             string attr = Row.Owner.AttrName(BaseAttr) ?? BaseAttr;
             string tip = $"{Label} ({attr})";
-            if (Warning) tip += "\n⚠ 대소문자가 다른 표기(예: _ja)를 TE 표기로 고쳤습니다 — 되돌리려면 Ctrl+Z";
+            if (NewlineMismatch)   // 추가(번역 모드 4회차)
+                tip += $"\n⚠ 줄바꿈(\\n) 개수가 원문과 다릅니다 — 원문 {PreTranslation.NewlineCount(Source)}개, 번역 {PreTranslation.NewlineCount(Value)}개";
+            if (IsFixed) tip += "\n⚠ 대소문자가 다른 표기(예: _ja)를 TE 표기로 고쳤습니다 — 되돌리려면 Ctrl+Z";
+            else if (NewlineMismatch) { }
             else if (!IsRequired) tip += Field == TranslationField.Name && Hint.Length > 0
                 ? "\n비워 두면 화자의 DB 이름이 나옵니다 (흐린 글씨). 다르게 보여야 할 때만 입력"
                 : "\n원문이 비어 있어 번역하지 않아도 됩니다";

@@ -50,6 +50,25 @@
                            ToolTip="원문이 있는 칸 중 번역을 채운 칸 (게임 Tools &gt; Localization &gt; Check Translations와 같은 기준)"/>
                 <CheckBox Content="번역 시 자동으로 무대 동기화" IsChecked="{Binding AutoStageSync}" VerticalAlignment="Center" Margin="18,0,0,0"
                           ToolTip="켜면 다른 줄의 칸으로 옮길 때 잠깐 멈춘 뒤 무대를 그 줄로 맞춤 (스크립트 탭 F5와 같음 — 보이스도 재생). 스크립트 표 줄 선택은 항상 따라감"/>
+                <!-- 추가(번역 모드 4회차): 가번역 · 취소 · 지침 편집 -->
+                <Button Content="가번역하기" Click="PreTranslate_Click" Margin="18,0,0,0" Padding="10,1"
+                        IsEnabled="{Binding CanPreTranslate}"
+                        ToolTip="이 막에서 원문이 있고 번역이 빈 칸을 한 번에 Claude Code로 가번역 (문맥 = 막 전체, 지침 = [지침 편집]).&#x0a;결과는 빈 칸에 바로 들어가고 Ctrl+Z 한 번으로 모두 되돌림. 이미 입력한 칸은 건드리지 않음"/>
+                <Button Content="취소" Command="{Binding CancelPreTranslateCommand}" Margin="4,0,0,0" Padding="10,1"
+                        ToolTip="실행 중인 가번역을 중지 (아무것도 넣지 않음)">
+                    <Button.Style>
+                        <Style TargetType="Button">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsTranslating}" Value="True">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
+                <Button Content="지침 편집" Click="EditGuide_Click" Margin="4,0,0,0" Padding="10,1"
+                        ToolTip="이 언어의 번역 지침(exe 옆 TranslationGuide_{언어}.md) 편집 — 가번역 때 함께 보냄. 파일이 없으면 지침 없이 가번역"/>
             </StackPanel>
         </DockPanel>
         <TextBlock DockPanel.Dock="Top" Text="{Binding StatusText}" Foreground="#FFC62828" TextWrapping="Wrap" Margin="0,0,0,4">

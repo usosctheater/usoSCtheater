@@ -45,6 +45,7 @@ public sealed partial class SettingsViewModel : ObservableObject
                          .Select((t, i) => new SlotSetting(i + 1, t.Length == 0 ? NoSlot : t, OnSlotChanged)).ToList();
         ScriptEditingNote = "";
         PathNote = "";
+        PreTranslateNote = "";   // 추가(번역 모드 4회차)
         // 다른 곳(스크립트 표 [폴더 지정…]·리소스 탭 [게임 폴더…])에서 바꿔도 표시를 맞춤
         messenger.Register<SettingsViewModel, SettingsChangedMessage>(this, static (r, m) => r.OnSettingsChanged(m));
     }
@@ -234,6 +235,74 @@ public sealed partial class SettingsViewModel : ObservableObject
     {
         _settings.ScriptLayout.ResetToDefaults();   // 객체는 그대로 (스크립트 탭이 바인딩 중)
         Changed(SettingsArea.ScriptLayout);
+    }
+
+    // ------------------------------------------------------------------ 추가(번역 모드 4회차): 가번역 (Claude Code)
+
+    /// <summary>지정한 claude 경로 (비우면 자동)</summary>
+    public string ClaudePathText => ShowPath(_settings.PreTranslate.ClaudePath);
+
+    /// <summary>실제로 실행할 claude (지정 → 기본 설치 위치 → PATH)</summary>
+    public string ClaudeResolvedText => ClaudeCli.Resolve(_settings.PreTranslate.ClaudePath) is { } p
+        ? p
+        : string.IsNullOrWhiteSpace(_settings.PreTranslate.ClaudePath)
+            ? $"(찾지 못함 — {ClaudeCli.DefaultInstallPath}에도 PATH에도 없음. Claude Code를 설치하거나 경로를 지정하세요)"
+            : "(지정한 파일이 없음)";
+
+    /// <summary>제한 시간 (분, 정수)</summary>
+    public string PreTranslateTimeoutText
+    {
+        get => _settings.PreTranslate.TimeoutMinutes.ToString();
+        set
+        {
+            if (int.TryParse(value?.Trim(), out int v) && v >= PreTranslateSettings.MinTimeout && v <= PreTranslateSettings.MaxTimeout)
+            {
+                PreTranslateNote = "";
+                if (v != _settings.PreTranslate.TimeoutMinutes)
+                {
+                    _settings.PreTranslate.TimeoutMinutes = v;
+                    Changed(SettingsArea.PreTranslate);
+                }
+            }
+            else PreTranslateNote = $"제한 시간: {PreTranslateSettings.MinTimeout}~{PreTranslateSettings.MaxTimeout} 사이의 정수만 입력할 수 있어 원래 값으로 되돌렸습니다";
+            OnPropertyChanged();
+        }
+    }
+
+    [ObservableProperty] public partial string PreTranslateNote { get; private set; }
+
+    /// <summary>[claude 지정…]: claude.exe(또는 claude.cmd)를 고름</summary>
+    [RelayCommand]
+    private void PickClaude()
+    {
+        string? start = ClaudeCli.Resolve(_settings.PreTranslate.ClaudePath) is { } p ? Path.GetDirectoryName(p) : null;
+        string? picked = _dialogs.PickFile("Claude Code 실행 파일", "Claude Code (claude.exe;claude.cmd)|claude.exe;claude.cmd|실행 파일 (*.exe;*.cmd)|*.exe;*.cmd", start);
+        if (picked == null) return;
+        _settings.PreTranslate.ClaudePath = picked;
+        PreTranslateNote = "";
+        Changed(SettingsArea.PreTranslate);
+        RefreshPreTranslate();
+    }
+
+    /// <summary>[기본값으로]: 경로 자동 · 제한 시간 5분</summary>
+    [RelayCommand]
+    private void ResetPreTranslate()
+    {
+        var d = new PreTranslateSettings();
+        _settings.PreTranslate.ClaudePath = d.ClaudePath;
+        _settings.PreTranslate.TimeoutMinutes = d.TimeoutMinutes;
+        PreTranslateNote = "기본값으로 되돌렸습니다";
+        Changed(SettingsArea.PreTranslate);
+        RefreshPreTranslate();
+        OnPropertyChanged(nameof(PreTranslateTimeoutText));
+    }
+
+    /// <summary>[다시 찾기]: 설치 후 TE를 끄지 않고 확인</summary>
+    [RelayCommand]
+    private void RefreshPreTranslate()
+    {
+        OnPropertyChanged(nameof(ClaudePathText));
+        OnPropertyChanged(nameof(ClaudeResolvedText));
     }
 
     // ------------------------------------------------------------------ 저장·알림

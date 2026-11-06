@@ -156,6 +156,33 @@ public sealed class ActDocument
         return parts.Count(p => p is AttributeEdit) + parts.Count(p => p is RootAttrEdit) / 2;
     }
 
+    /// <summary>
+    /// 추가(번역 모드 4회차): 여러 칸(줄 속성·루트 속성 섞임)을 한 단계로 설정 (가번역 적용 — Ctrl+Z 한 번에 모두 되돌림). Line이 null이면 루트 속성. 바꾼 칸 수
+    /// </summary>
+    public int SetValuesMany(IReadOnlyList<(ScriptLine? Line, string Attr, string? Value)> values, string label)
+    {
+        var parts = new List<IUndoAction>();
+        foreach (var (line, attr, value) in values)
+        {
+            string? v = string.IsNullOrEmpty(value) ? null : value;
+            if (line == null)
+            {
+                string? old = GetRootAttribute(attr);
+                if ((old ?? "") == (v ?? "")) continue;
+                parts.Add(new RootAttrEdit(this, attr, old, RootIndex(attr), v));
+            }
+            else
+            {
+                string? old = line.Find(attr);
+                if ((old ?? "") == (v ?? "")) continue;
+                parts.Add(new AttributeEdit(line, [new AttrChange(attr, old, line.IndexOf(attr), v)]));
+            }
+        }
+        if (parts.Count == 0) return 0;
+        Execute(new MultiEdit(parts, label));
+        return parts.Count;
+    }
+
     private int RootIndex(string name) =>
         ExtraRootAttributes.FindIndex(a => string.Equals(a.Key, name, StringComparison.Ordinal));
 

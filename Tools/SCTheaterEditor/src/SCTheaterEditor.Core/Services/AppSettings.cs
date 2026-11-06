@@ -40,6 +40,9 @@ public sealed class AppSettings
     /// <summary>추가(번역 모드 3회차): 메인 창 위치·크기·최대화</summary>
     public MainWindowSettings MainWindow { get; set; } = new();
 
+    /// <summary>추가(번역 모드 4회차): 가번역 (Claude Code 경로·제한 시간) — 설정 탭 '가번역' 구역</summary>
+    public PreTranslateSettings PreTranslate { get; set; } = new();
+
     /// <summary>읽는 중에 생긴 일 (예전 설정 이전, 손상 복구 등). 로그로 알리기 위한 값, 저장하지 않음</summary>
     [JsonIgnore]
     public string? LoadNotice { get; private set; }
@@ -299,6 +302,18 @@ public sealed class TranslationWindowSettings
 
     /// <summary>번역 창에서 다른 줄로 옮기면 멈춘 뒤 무대 동기화(F5와 같음, 소리 포함). 스크립트 표 줄 선택은 항상 따라감</summary>
     public bool AutoStageSync { get; set; }
+}
+
+/// <summary>추가(번역 모드 4회차): 가번역</summary>
+public sealed class PreTranslateSettings
+{
+    public const int MinTimeout = 1, MaxTimeout = 30;
+
+    /// <summary>claude 실행 파일 (비우면 기본 설치 위치 %USERPROFILE%\.local\bin\claude.exe → PATH)</summary>
+    public string? ClaudePath { get; set; }
+
+    /// <summary>한 번 실행의 제한 시간(분) — 넘으면 Claude Code를 끝내고 아무것도 넣지 않음</summary>
+    public int TimeoutMinutes { get; set; } = 5;
 }
 
 /// <summary>추가(번역 모드 3회차): 메인 창 (위치가 없거나 화면 밖이면 화면 가운데, 크기는 작업 영역 안으로)</summary>

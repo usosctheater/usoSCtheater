@@ -47,7 +47,11 @@ public sealed class MainViewModel
 
     /// <summary>추가(번역 모드 3회차): 번역 창을 열 때마다 새로 만듦 (닫으면 화면이 Dispose). 무대 동기화 = 스크립트 탭 F5와 같은 명령</summary>
     public TranslationViewModel CreateTranslation() =>
-        new(Editor, GameData, Settings.Translation, _saveSettings, () => Script.SyncFromScriptCommand.Execute(null), _ui);
+        new(Editor, GameData, Settings.Translation, _saveSettings, () => Script.SyncFromScriptCommand.Execute(null), _ui,
+            new ClaudeCli(() => Settings.PreTranslate.ClaudePath, AppLog.Shared),          // 추가(번역 모드 4회차): 가번역
+            new TranslationGuideStore(TranslationGuideStore.DefaultFolder),
+            () => TimeSpan.FromMinutes(Math.Clamp(Settings.PreTranslate.TimeoutMinutes, PreTranslateSettings.MinTimeout, PreTranslateSettings.MaxTimeout)),
+            AppLog.Shared);
 
     private void OnGameDataChanged()
     {

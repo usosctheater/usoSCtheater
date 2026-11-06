@@ -27,7 +27,12 @@ public partial class TranslationWindow : Window
         Height = place.Height;
         if (place.Left is { } l && place.Top is { } t && WindowPlacement.IsOnScreen(l, t)) { Left = l; Top = t; }
         else WindowStartupLocation = WindowStartupLocation.CenterOwner;
-        Closing += (_, _) => { CommitPending(); Store(); };
+        Closing += (_, e) =>
+        {
+            if (!ConfirmCloseGuide()) { e.Cancel = true; return; }   // 추가(번역 모드 4회차): 저장 안 한 번역 지침
+            CommitPending();
+            Store();
+        };
         Closed += (_, _) => _vm.Dispose();
         LocationChanged += (_, _) => Store();
         SizeChanged += (_, _) => Store();
@@ -48,6 +53,34 @@ public partial class TranslationWindow : Window
     public void CommitPending()
     {
         if (FocusManager.GetFocusedElement(this) is TextBox tb) tb.GetBindingExpression(TextBox.TextProperty)?.UpdateSource();
+    }
+
+    // 추가(번역 모드 4회차): [가번역하기] — 입력 중인 칸을 먼저 확정 (그 칸은 가번역하지 않음)
+    private void PreTranslate_Click(object sender, RoutedEventArgs e)
+    {
+        CommitPending();
+        if (_vm.PreTranslateCommand.CanExecute(null)) _vm.PreTranslateCommand.Execute(null);
+    }
+
+    // 추가(번역 모드 4회차): [지침 편집] — 언어별 지침 창 (이 창 소속, 언어마다 하나)
+    private GuideEditorWindow? _guide;
+
+    /// <summary>지침 창이 열려 있으면 (저장 안 한 내용은 물어서) 닫음. 취소하면 false</summary>
+    public bool ConfirmCloseGuide() => _guide == null || _guide.TryClose();
+
+    private void EditGuide_Click(object sender, RoutedEventArgs e)
+    {
+        if (_guide is { } open && open.GuideLanguage == _vm.SelectedLanguage)
+        {
+            if (open.WindowState == WindowState.Minimized) open.WindowState = WindowState.Normal;
+            open.Activate();
+            return;
+        }
+        if (_guide != null && !_guide.TryClose()) return;   // 다른 언어 지침 창 — 저장 확인 후 닫음
+        if (_vm.CreateGuideEditor() is not { } gvm) return;
+        _guide = new GuideEditorWindow(gvm) { Owner = this };
+        _guide.Closed += (s, _) => { if (_guide == s) _guide = null; };
+        _guide.Show();
     }
 
     private void Cell_GotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)

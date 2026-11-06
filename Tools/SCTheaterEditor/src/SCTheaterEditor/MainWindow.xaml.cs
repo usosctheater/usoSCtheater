@@ -57,6 +57,7 @@ public partial class MainWindow : Window
         {
             _translationWindow?.CommitPending();      // 추가(번역 모드 3회차): 번역 창에서 입력 중(Enter 전)인 칸도 변경으로 쳐서 물음
             Views.ActEditorView.CommitFocusedBox();   // 변경: 입력 중인 칸도 변경으로 쳐서 물음
+            if (_translationWindow?.ConfirmCloseGuide() == false) { e.Cancel = true; return; }   // 추가(번역 모드 4회차): 저장 안 한 번역 지침
             if (!_vm.Editor.ConfirmDiscard()) e.Cancel = true;
             else _closingApp = true;   // 추가
         };
