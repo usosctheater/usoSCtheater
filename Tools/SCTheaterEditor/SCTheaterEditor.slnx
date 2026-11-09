@@ -2,6 +2,7 @@
   <Folder Name="/src/">
     <Project Path="src/SCTheaterEditor.Core/SCTheaterEditor.Core.csproj" />
     <Project Path="src/SCTheaterEditor/SCTheaterEditor.csproj" />
+    <Project Path="src/Shared/SCTheaterEditor.Shared.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/SCTheaterEditor.Tests/SCTheaterEditor.Tests.csproj" />

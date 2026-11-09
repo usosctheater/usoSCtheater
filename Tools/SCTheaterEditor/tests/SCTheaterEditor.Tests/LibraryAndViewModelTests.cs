@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.Messaging;
 using SCTheaterEditor.Models;
 using SCTheaterEditor.Services;
 using SCTheaterEditor.ViewModels;
+using UsoSCTheater.Shared;   // 추가(공유 라이브러리)
 
 namespace SCTheaterEditor.Tests;
 
@@ -329,7 +330,7 @@ public class ResourceViewModelTests
         int all = vm.Items.OfType<ResourceAssetItem>().Count();
         Assert.Contains(vm.Items.OfType<ResourceAssetItem>(), i => i.Asset.CgKey == "madoka_cb_1030210010");
         vm.ShowSd = false;
-        Assert.DoesNotContain(vm.Items.OfType<ResourceAssetItem>(), i => SpineKinds.Of(i.Asset.CgKey) == SpineKind.SD);
+        Assert.DoesNotContain(vm.Items.OfType<ResourceAssetItem>(), i => SpineKeys.KindOf(i.Asset.CgKey) == SpineKind.SD);   // 변경(공유 라이브러리)
         Assert.Equal(all - 1, vm.Items.OfType<ResourceAssetItem>().Count());
         vm.ShowSd = true;
         Assert.Equal(all, vm.Items.OfType<ResourceAssetItem>().Count());
@@ -355,7 +356,7 @@ public class ResourceViewModelTests
         Assert.Empty(vm.Items.OfType<ResourceAssetItem>());
     }
 
-    // 추가(리소스 탭 LD·SD): 게임 SpineKeys와 같은 분류
+    // 변경(공유 라이브러리): 분류 규칙은 공유 코드 하나 (게임과 같은 파일) — 이전 SpineKinds_SameAsGame
     [Theory]
     [InlineData("fuyuko_stand_3000180060", SpineKind.LD)]
     [InlineData("mei_stand_costume_1040190030", SpineKind.LD)]
@@ -366,7 +367,7 @@ public class ResourceViewModelTests
     [InlineData("mano_picture_motion_1010010010", SpineKind.Other)]
     [InlineData("broken", SpineKind.Other)]
     [InlineData("mano_stand_abc", SpineKind.Other)]
-    public void SpineKinds_SameAsGame(string key, SpineKind kind) => Assert.Equal(kind, SpineKinds.Of(key));
+    public void SpineKeys_KindOf(string key, SpineKind kind) => Assert.Equal(kind, SpineKeys.KindOf(key));
 
     [Fact]
     public void Open_SendsMessage_AndInfoShowsKey()
