@@ -6,6 +6,7 @@ using System.Collections;
 using Spine;
 using System.Xml;   // 추가: DefaultLipData.xml 파싱용
 using UsoSCTheater.Character;   //[LD 불러오기] Spine 인덱스·로드는 CharacterDatabase 경유
+using UsoSCTheater.Shared;   //[공유 라이브러리] SpineKeys · SpineKeyInfo · SpineKind
 
 public class CGManager : MonoBehaviour
 {

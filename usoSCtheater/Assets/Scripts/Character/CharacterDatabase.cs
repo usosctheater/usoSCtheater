@@ -4,6 +4,7 @@ using System.Linq;   //[CharId] SplitIds
 using System.Xml;
 using Spine.Unity;   //[Spine 인덱스] SkeletonDataAsset
 using UnityEngine;
+using UsoSCTheater.Shared;   //[공유 라이브러리] SpineKeys · SpineKeyInfo · SpineKind
 
 namespace UsoSCTheater.Character
 {
@@ -245,8 +246,8 @@ namespace UsoSCTheater.Character
                 Debug.LogWarning($"[CharacterDatabase] Spine 키 형식이 맞지 않음: '{key}'");
                 return null;
             }
-            SkeletonDataAsset data = Resources.Load<SkeletonDataAsset>(info.ResourcePath);
-            if (data == null) Debug.LogWarning($"[CharacterDatabase] SkeletonData 없음: Resources/{info.ResourcePath} (인덱스와 파일이 어긋남 → 등록 도구에서 [인덱스 다시 만들기])");
+            SkeletonDataAsset data = Resources.Load<SkeletonDataAsset>(info.ResourcePath());   //[공유 라이브러리] 속성 → 확장 메서드
+            if (data == null) Debug.LogWarning($"[CharacterDatabase] SkeletonData 없음: Resources/{info.ResourcePath()} (인덱스와 파일이 어긋남 → 등록 도구에서 [인덱스 다시 만들기])");
             return data;
         }
 

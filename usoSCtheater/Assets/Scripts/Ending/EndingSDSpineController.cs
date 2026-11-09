@@ -3,6 +3,7 @@ using Spine;
 using Spine.Unity;
 using UnityEngine;
 using UsoSCTheater.Character;   //[엔딩 SD] CharacterDatabase (SD 키 조회·로드)
+using UsoSCTheater.Shared;   //[공유 라이브러리] SpineKeys · SpineKeyInfo · SpineKind
 using UsoSCTheater.Scenario;    //[엔딩 SD] 재생한 시나리오의 등장인물
 
 namespace UsoSCTheater.Ending

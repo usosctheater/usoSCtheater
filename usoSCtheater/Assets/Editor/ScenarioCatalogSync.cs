@@ -284,7 +284,7 @@ public class ScenarioCatalogSync : AssetPostprocessor
         {
             if (e.spineKeys == null) continue;
             var missing = e.spineKeys
-                .Where(k => !UsoSCTheater.Character.CharacterDatabase.TryGetSpine(k, UsoSCTheater.Character.SpineKind.LD, out _))
+                .Where(k => !UsoSCTheater.Character.CharacterDatabase.TryGetSpine(k, UsoSCTheater.Shared.SpineKind.LD, out _))   //[공유 라이브러리] SpineKind namespace
                 .ToList();
             if (missing.Count > 0)
                 Debug.LogWarning($"[ScenarioCatalogSync] '{e.folderName}': 등록되지 않은 LD Spine {missing.Count}개 → Tools > Spine > Register Spine\n  {string.Join("\n  ", missing)}");
