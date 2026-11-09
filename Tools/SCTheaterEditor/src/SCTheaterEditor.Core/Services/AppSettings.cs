@@ -204,6 +204,14 @@ public sealed class ResourceSettings
 
     /// <summary>추가: 아이돌 필터에서 고른 유닛 (드롭다운)</summary>
     public string? SelectedUnit { get; set; }
+
+    /// <summary>추가(리소스 탭 LD·SD): 보일 분류 (LD = 대화, SD = 엔딩, 기타 = picture_motion 등)</summary>
+    public bool ShowLd { get; set; } = true;
+    public bool ShowSd { get; set; } = true;
+    public bool ShowOther { get; set; } = true;
+
+    /// <summary>추가(리소스 탭 막 사용 표시): 스크립트 탭에서 연 막이 쓰는 세트만 (켜면 아이돌 필터 무시)</summary>
+    public bool ActOnly { get; set; }
 }
 
 /// <summary>무대 재생 설정 (스크립트 탭의 선택 캐릭터 패널, 이전 뷰어 탭 설정을 그대로 사용)</summary>

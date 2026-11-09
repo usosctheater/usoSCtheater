@@ -320,6 +320,54 @@ public class ResourceViewModelTests
         Assert.Equal("◎ 0 · 세트 1 / 3개", vm.SummaryText);   // 변경: 앞에 게임 보유(◎) 개수
     }
 
+    // 추가(리소스 탭 LD·SD): SD를 끄면 cb 세트가 빠짐
+    [Fact]
+    public void KindFilter_HidesSd()
+    {
+        using var t = new TempFolder();
+        var (vm, _, _) = Make(t);
+        int all = vm.Items.OfType<ResourceAssetItem>().Count();
+        Assert.Contains(vm.Items.OfType<ResourceAssetItem>(), i => i.Asset.CgKey == "madoka_cb_1030210010");
+        vm.ShowSd = false;
+        Assert.DoesNotContain(vm.Items.OfType<ResourceAssetItem>(), i => SpineKinds.Of(i.Asset.CgKey) == SpineKind.SD);
+        Assert.Equal(all - 1, vm.Items.OfType<ResourceAssetItem>().Count());
+        vm.ShowSd = true;
+        Assert.Equal(all, vm.Items.OfType<ResourceAssetItem>().Count());
+    }
+
+    // 추가(리소스 탭 막 사용 표시): ▶ 표시, [이 막에서 쓰는 것만]은 아이돌 필터를 무시하고 끄면 평소 목록
+    [Fact]
+    public void ActKeys_MarkAndActOnly()
+    {
+        using var t = new TempFolder();
+        var (vm, _, _) = Make(t);
+        vm.SetActKeys(new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "MADOKA_CB_1030210010", "nobody_stand_1" });
+        var marked = vm.Items.OfType<ResourceAssetItem>().Where(i => i.InAct).ToList();
+        Assert.Equal("madoka_cb_1030210010", Assert.Single(marked).Asset.CgKey);   // 대소문자 무시, TE에 없는 키는 무시
+        foreach (var m in vm.Filter.VisibleMembers) m.IsChecked = false;          // 아이돌 필터 전부 끔
+        Assert.Empty(vm.Items.OfType<ResourceAssetItem>());
+        vm.ActOnly = true;
+        Assert.Equal("madoka_cb_1030210010", Assert.Single(vm.Items.OfType<ResourceAssetItem>()).Asset.CgKey);
+        vm.ShowSd = false;                                                          // LD·SD는 그대로 걸림
+        Assert.Empty(vm.Items.OfType<ResourceAssetItem>());
+        vm.ShowSd = true;
+        vm.ActOnly = false;                                                         // 끄면 평소 목록 (아이돌 필터 다시)
+        Assert.Empty(vm.Items.OfType<ResourceAssetItem>());
+    }
+
+    // 추가(리소스 탭 LD·SD): 게임 SpineKeys와 같은 분류
+    [Theory]
+    [InlineData("fuyuko_stand_3000180060", SpineKind.LD)]
+    [InlineData("mei_stand_costume_1040190030", SpineKind.LD)]
+    [InlineData("hiori_support_stand_2010010010", SpineKind.LD)]
+    [InlineData("toru_awake_stand_1040210050", SpineKind.LD)]
+    [InlineData("fuyuko_cb_1050180010", SpineKind.SD)]
+    [InlineData("madoka_awake_cb_costume_1040210050", SpineKind.SD)]
+    [InlineData("mano_picture_motion_1010010010", SpineKind.Other)]
+    [InlineData("broken", SpineKind.Other)]
+    [InlineData("mano_stand_abc", SpineKind.Other)]
+    public void SpineKinds_SameAsGame(string key, SpineKind kind) => Assert.Equal(kind, SpineKinds.Of(key));
+
     [Fact]
     public void Open_SendsMessage_AndInfoShowsKey()
     {

@@ -33,6 +33,7 @@ public sealed class MainViewModel
         Script.Editor = Editor;
         Editor.StampProvider = () => Script.CurrentStamp;   // 추가(4-2): 줄 추가 때 무대에서 선택한 캐릭터 정보
         Editor.VoiceMatch = VoiceMatch;   // 추가(번역 모드 5회차): [라이선스 내보내기]
+        Editor.UsedCgKeysChanged += () => Resource.SetActKeys(Editor.UsedCgKeys);   // 추가(리소스 탭 막 사용 표시): ▶ · [이 막에서 쓰는 것만]
         SettingsPage = new SettingsViewModel(settings, dialogs, saveSettings, messenger, log, gameData: gameData,   // 변경(번역 모드 2회차): gameData
                                              voices: VoiceMatch, voicePath: _voicePath);                         // 변경(번역 모드 5회차): 보이스
 

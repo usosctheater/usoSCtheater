@@ -41,6 +41,11 @@ public sealed partial class ResourceViewModel : ObservableObject
         _exporter = new GameSpineExporter(library);   // 추가
 
         Items = [];
+        // 추가(리소스 탭 LD·SD · 막 사용 표시): 저장된 체크 (RebuildItems 전에)
+        _showLd = settings.Resource.ShowLd;
+        _showSd = settings.Resource.ShowSd;
+        _showOther = settings.Resource.ShowOther;
+        _actOnly = settings.Resource.ActOnly;
         SearchText = "";
         SummaryText = "";
         InfoText = "";
@@ -90,6 +95,47 @@ public sealed partial class ResourceViewModel : ObservableObject
     [ObservableProperty] public partial string? PreviewPath { get; private set; }
 
     partial void OnSearchTextChanged(string value) => RebuildItems();
+
+    // ------------------------------------------------------------------ 추가(리소스 탭 LD·SD · 막 사용 표시)
+
+    private bool _showLd, _showSd, _showOther, _actOnly;
+    private IReadOnlySet<string> _actKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>[LD] 체크 — 대화(커뮤니케이션 씬) Spine</summary>
+    public bool ShowLd { get => _showLd; set => SetKindFlag(ref _showLd, value, v => _settings.Resource.ShowLd = v); }
+
+    /// <summary>[SD] 체크 — 엔딩 씬 Spine</summary>
+    public bool ShowSd { get => _showSd; set => SetKindFlag(ref _showSd, value, v => _settings.Resource.ShowSd = v); }
+
+    /// <summary>[기타] 체크 — LD·SD가 아닌 타입 (picture_motion 등)</summary>
+    public bool ShowOther { get => _showOther; set => SetKindFlag(ref _showOther, value, v => _settings.Resource.ShowOther = v); }
+
+    /// <summary>[이 막에서 쓰는 것만] — 켜면 스크립트 탭에서 연 막의 세트만 (아이돌 필터 무시, LD/SD·검색은 그대로), 끄면 평소 목록</summary>
+    public bool ActOnly { get => _actOnly; set => SetKindFlag(ref _actOnly, value, v => _settings.Resource.ActOnly = v); }
+
+    private void SetKindFlag(ref bool field, bool value, Action<bool> save, [System.Runtime.CompilerServices.CallerMemberName] string? name = null)
+    {
+        if (field == value) return;
+        field = value;
+        OnPropertyChanged(name);
+        save(value);
+        _saveSettings();
+        RebuildItems();
+    }
+
+    /// <summary>스크립트 탭에서 연 막이 쓰는 CG 키 (막 열기·CG 편집 때 앱이 넣음) → ▶ 표시·[이 막에서 쓰는 것만]</summary>
+    public void SetActKeys(IReadOnlySet<string> keys)
+    {
+        _actKeys = keys;
+        RebuildItems();
+    }
+
+    private bool KindAllowed(SpineAsset a) => SpineKinds.Of(a.CgKey) switch
+    {
+        SpineKind.LD => _showLd,
+        SpineKind.SD => _showSd,
+        _ => _showOther,
+    };
 
     partial void OnSelectedItemChanged(ResourceItem? value) => ShowInfo(SelectedAsset);
 
@@ -176,14 +222,16 @@ public sealed partial class ResourceViewModel : ObservableObject
         string? selectedSource = SelectedAsset?.SourcePath;
         var words = (SearchText ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries);
         var shown = _library.Assets
-            .Where(a => Filter.Allows(a.IdolId) && words.All(w => a.SearchText.Contains(w, StringComparison.OrdinalIgnoreCase)))
+            .Where(a => (_actOnly ? _actKeys.Contains(a.CgKey) : Filter.Allows(a.IdolId))   // 변경(막 사용 표시): 막만 보기면 아이돌 필터 무시
+                        && KindAllowed(a)                                                  // 추가(LD·SD)
+                        && words.All(w => a.SearchText.Contains(w, StringComparison.OrdinalIgnoreCase)))
             .ToList();
 
         var items = new List<ResourceItem>(shown.Count + 16);
         foreach (var group in shown.GroupBy(a => a.DressType))   // Assets가 의상 종류 순으로 정렬돼 있어 순서 유지
         {
             items.Add(new ResourceSeparator($"── {group.Key} ({group.Count()}) ──"));
-            items.AddRange(group.Select(a => new ResourceAssetItem(a, _gameKeys.Contains(a.CgKey))));   // 변경: 게임 보유 여부
+            items.AddRange(group.Select(a => new ResourceAssetItem(a, _gameKeys.Contains(a.CgKey), _actKeys.Contains(a.CgKey))));   // 변경: 게임 보유 여부, 막 사용(▶)
         }
         Items = items;
         // 변경: 앞에 ◎(게임 보유) 개수 — 보이는 목록 기준
@@ -245,10 +293,11 @@ public sealed class ResourceSeparator(string title) : ResourceItem
 }
 
 /// <summary>세트 1개: 의상명 · 타입 · CG 키</summary>
-public sealed class ResourceAssetItem(SpineAsset asset, bool inGame = false) : ResourceItem
+public sealed class ResourceAssetItem(SpineAsset asset, bool inGame = false, bool inAct = false) : ResourceItem
 {
     public SpineAsset Asset { get; } = asset;
     public bool InGame { get; } = inGame;   // 추가: 게임 Resources\Spine에 있음 → ◎
+    public bool InAct { get; } = inAct;     // 추가(막 사용 표시): 스크립트 탭에서 연 막이 씀 → ▶
     public string Title => Asset.DressName;
     public string Detail => $"{Asset.SpineType}  ·  {Asset.CgKey}";
 }

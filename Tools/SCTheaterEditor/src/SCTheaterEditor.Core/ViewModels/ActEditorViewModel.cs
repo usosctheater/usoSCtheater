@@ -951,5 +951,29 @@ public sealed partial class ActEditorViewModel : ObservableObject
             if (r.CgMissing) count++;
         }
         UnknownCgCount = count;
+        RefreshUsedCgKeys();   // 추가(리소스 탭 막 사용 표시): CG가 바뀌는 곳은 모두 여기를 지남
+    }
+
+    // ------------------------------------------------------------------ 추가(리소스 탭 막 사용 표시)
+
+    /// <summary>열린 막이 쓰는 CG 키 (TEXT·SETCG·CGGROUP의 CG — 빈 값·none·CGGROUP 이름 제외, 대소문자 무시). 막이 없으면 빈 집합</summary>
+    public IReadOnlySet<string> UsedCgKeys { get; private set; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>UsedCgKeys가 바뀜 (막 열기·CG 칸 편집·줄 추가/삭제·되돌리기) → 리소스 탭 ▶ 표시</summary>
+    public event Action? UsedCgKeysChanged;
+
+    private void RefreshUsedCgKeys()
+    {
+        var keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (Document != null)
+            foreach (var line in Document.Lines)
+            {
+                if (!IsCgLine(line)) continue;
+                string cg = line.Get("CG").Trim();
+                if (cg.Length > 0 && !cg.Equals("none", StringComparison.OrdinalIgnoreCase) && !_groupNames.Contains(cg)) keys.Add(cg);
+            }
+        if (keys.SetEquals(UsedCgKeys)) return;
+        UsedCgKeys = keys;
+        UsedCgKeysChanged?.Invoke();
     }
 }

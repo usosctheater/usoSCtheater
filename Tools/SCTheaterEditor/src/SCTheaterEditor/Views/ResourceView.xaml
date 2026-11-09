@@ -24,8 +24,13 @@
                     <TextBlock Text="{Binding Title}"/>
                     <TextBlock Text="{Binding Detail}" Foreground="Gray" Margin="12,0,0,0"/>
                 </StackPanel>
-                <TextBlock Grid.Column="1" Text="◎" Foreground="#FF2E7D32" Margin="8,0,0,0" ToolTip="게임 Resources\Spine에 있음"
-                           Visibility="{Binding InGame, Converter={StaticResource BoolToVis}}"/>
+                <!-- 변경(막 사용 표시): ▶(스크립트 탭에서 연 막이 씀) + ◎ — 오른쪽 끝 -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <TextBlock Text="▶" Foreground="#FF1565C0" Margin="8,0,0,0" ToolTip="스크립트 탭에서 연 막이 씀"
+                               Visibility="{Binding InAct, Converter={StaticResource BoolToVis}}"/>
+                    <TextBlock Text="◎" Foreground="#FF2E7D32" Margin="8,0,0,0" ToolTip="게임 Resources\Spine에 있음"
+                               Visibility="{Binding InGame, Converter={StaticResource BoolToVis}}"/>
+                </StackPanel>
             </Grid>
         </DataTemplate>
     </UserControl.Resources>
@@ -43,7 +48,23 @@
 
         <!-- 아이돌 필터 (유닛 드롭다운 → 멤버) -->
         <Border Grid.Row="0" Grid.ColumnSpan="3" BorderBrush="LightGray" BorderThickness="0,0,0,1" Padding="0,0,0,4" Margin="0,0,0,6">
-            <views:IdolFilterView DataContext="{Binding Filter}"/>
+            <views:IdolFilterView x:Name="FilterView" DataContext="{Binding Filter}">
+                <!-- 추가(리소스 탭 LD·SD · 막 사용 표시): 'n/33명 선택' 오른쪽 (값은 ResourceViewModel)
+                     변경(1회차 확인 후): 필터 화면 안이라 조상 찾기 바인딩이 이어지지 않음 → DataContext를 코드에서 ResourceViewModel로 직접
+                     (이 칸 안에는 x:Name을 붙일 수 없음 — UserControl 내용 범위 MC3093) -->
+                <views:IdolFilterView.Extra>
+                    <StackPanel Orientation="Horizontal">
+                        <CheckBox Content="LD" Margin="0,0,10,0" VerticalAlignment="Center" IsChecked="{Binding ShowLd}"
+                                  ToolTip="대화(커뮤니케이션 씬) Spine — stand · stand_costume · support_stand"/>
+                        <CheckBox Content="SD" Margin="0,0,10,0" VerticalAlignment="Center" IsChecked="{Binding ShowSd}"
+                                  ToolTip="엔딩 씬 Spine — cb · cb_costume"/>
+                        <CheckBox Content="기타" Margin="0,0,18,0" VerticalAlignment="Center" IsChecked="{Binding ShowOther}"
+                                  ToolTip="LD·SD가 아닌 타입 (picture_motion 등)"/>
+                        <CheckBox Content="이 막에서 쓰는 것만" VerticalAlignment="Center" IsChecked="{Binding ActOnly}"
+                                  ToolTip="스크립트 탭에서 연 막이 쓰는 세트(▶)만 보임 — 아이돌 필터는 무시, LD·SD·검색은 그대로. 끄면 평소 목록"/>
+                    </StackPanel>
+                </views:IdolFilterView.Extra>
+            </views:IdolFilterView>
         </Border>
 
         <!-- 왼쪽: 세트 목록 -->

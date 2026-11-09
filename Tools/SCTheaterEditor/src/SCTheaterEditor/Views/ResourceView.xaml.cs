@@ -12,7 +12,17 @@ public partial class ResourceView : UserControl
     /// <summary>목록 항목이 구분선인지 (ItemContainerStyle 트리거용)</summary>
     public static IValueConverter IsSeparatorConverter { get; } = new SeparatorCheck();
 
-    public ResourceView() => InitializeComponent();
+    public ResourceView()
+    {
+        InitializeComponent();
+        // 추가(리소스 탭 LD·SD, 1회차 확인 후 수정): 아이돌 필터 안에 넣은 체크 칸은 필터의 DataContext(IdolFilterViewModel)를 물려받으므로
+        // ResourceViewModel을 직접 넣음 (탭의 DataContext가 정해지거나 바뀔 때마다)
+        if (FilterView.Extra is System.Windows.FrameworkElement extra)
+        {
+            extra.DataContext = DataContext;
+            DataContextChanged += (_, e) => extra.DataContext = e.NewValue;
+        }
+    }
 
     private ResourceViewModel? Vm => DataContext as ResourceViewModel;
 
