@@ -4,7 +4,6 @@ using System.Xml;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
-using NUnit.Framework;
 // using Unity.GraphToolkit.Editor;
 using UnityEngine.EventSystems;
 using UsoSCTheater.Recording; // [녹화] 에디터/빌드 페이싱 분기용
