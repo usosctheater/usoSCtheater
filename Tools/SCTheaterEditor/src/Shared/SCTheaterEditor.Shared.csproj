@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- 추가(공유 라이브러리): 공유 규칙 사본 (원본 usoSCtheater/Packages/com.usosctheater.shared/Runtime) — 직접 고치지 않음, 원본을 고친 뒤 node sync-shared.js
+       Unity와 같은 조건(netstandard2.1 · C# 9 · 암시적 using 없음)으로 컴파일 → TE에서도 Unity에서 안 되는 문법·API가 막힘 -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <RootNamespace>UsoSCTheater.Shared</RootNamespace>
+    <AssemblyName>UsoSCTheater.Shared</AssemblyName>
+    <DebugType Condition="'$(Configuration)' == 'Release'">none</DebugType>
+  </PropertyGroup>
+
+  <!-- 빌드 전 비교 (복사는 하지 않음): 원본이 있는 환경에서만, 다르면 경고 -->
+  <PropertyGroup>
+    <SharedOriginalDir>$(MSBuildThisFileDirectory)..\..\..\..\usoSCtheater\Packages\com.usosctheater.shared\Runtime</SharedOriginalDir>
+    <SyncSharedScript>$(MSBuildThisFileDirectory)..\..\sync-shared.js</SyncSharedScript>
+  </PropertyGroup>
+  <Target Name="CheckSharedCopy" BeforeTargets="BeforeBuild" Condition="Exists('$(SharedOriginalDir)')">
+    <Exec Command="node &quot;$(SyncSharedScript)&quot; --check" IgnoreExitCode="true" ContinueOnError="true" StandardOutputImportance="low">
+      <Output TaskParameter="ExitCode" PropertyName="SyncSharedExit" />
+    </Exec>
+    <Warning Condition="'$(SyncSharedExit)' == '1'" Text="공유 라이브러리 사본(src/Shared)이 원본과 다름 → TE 폴더에서 node sync-shared.js 실행 (공유 코드는 원본만 고침)" />
+    <Warning Condition="'$(SyncSharedExit)' != '0' And '$(SyncSharedExit)' != '1'" Text="공유 라이브러리 사본 비교를 못 함 (node 없음 등, 종료 코드 $(SyncSharedExit)) — dotnet test의 비교 테스트로 확인" />
+  </Target>
+
+</Project>

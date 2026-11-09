@@ -5,6 +5,7 @@ using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using SCTheaterEditor.Models;
 using SCTheaterEditor.Services;
+using UsoSCTheater.Shared;   // 추가(공유 라이브러리): SpineKeys · SpineKind (사본 src/Shared)
 
 namespace SCTheaterEditor.ViewModels;
 
@@ -130,7 +131,7 @@ public sealed partial class ResourceViewModel : ObservableObject
         RebuildItems();
     }
 
-    private bool KindAllowed(SpineAsset a) => SpineKinds.Of(a.CgKey) switch
+    private bool KindAllowed(SpineAsset a) => SpineKeys.KindOf(a.CgKey) switch   // 변경(공유 라이브러리): SpineKinds.Of → SpineKeys.KindOf
     {
         SpineKind.LD => _showLd,
         SpineKind.SD => _showSd,

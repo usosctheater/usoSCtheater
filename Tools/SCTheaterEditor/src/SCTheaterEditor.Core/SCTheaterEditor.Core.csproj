@@ -27,6 +27,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- 추가(공유 라이브러리): 게임과 같은 규칙 (Spine 키 등) — 사본 프로젝트 -->
+    <ProjectReference Include="..\Shared\SCTheaterEditor.Shared.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <InternalsVisibleTo Include="SCTheaterEditor.Tests" />
   </ItemGroup>
 

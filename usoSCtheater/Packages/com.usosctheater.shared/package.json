@@ -1,0 +1,7 @@
+{
+  "name": "com.usosctheater.shared",
+  "version": "0.1.0",
+  "displayName": "usoSCtheater Shared",
+  "description": "게임·TE 공유 규칙 (순수 C#, UnityEngine 의존 없음). 이 패키지가 원본 — TE는 Tools/SCTheaterEditor/src/Shared 사본(sync-shared.ps1)",
+  "unity": "6000.4"
+}

@@ -6,6 +6,7 @@ using Spine.Unity;
 using UnityEditor;
 using UnityEngine;
 using UsoSCTheater.Character;
+using UsoSCTheater.Shared;   //[공유 라이브러리] SpineKeys · SpineKeyInfo · SpineKind
 
 /// <summary>
 /// Spine 등록 에디터 창 (구 SpineAutoImporter — 2026-10-27 이름 변경·개편, Atlas Converter 탭 삭제: TE가 atlas 이미지 이름을 맞춰 내보냄)
@@ -103,7 +104,7 @@ public class SpineRegisterTool : EditorWindow
     {
         if (kindFilter == 1 && r.kind != SpineKind.LD) return false;
         if (kindFilter == 2 && r.kind != SpineKind.SD) return false;
-        if (kindFilter == 3 && r.kind != SpineKind.Unknown) return false;
+        if (kindFilter == 3 && r.kind != SpineKind.Other) return false;   //[공유 라이브러리] Unknown → Other
         if (characterFilter > 0 && r.characterId != characterOptions[characterFilter]) return false;
         if (!string.IsNullOrEmpty(search) && r.key.IndexOf(search, System.StringComparison.OrdinalIgnoreCase) < 0) return false;
         if (unregisteredOnly && r.status == Status.Registered) return false;
@@ -129,7 +130,7 @@ public class SpineRegisterTool : EditorWindow
                 GUI.enabled = r.selectable;
                 r.selected = EditorGUILayout.Toggle(r.selected && r.selectable, GUILayout.Width(18));
                 GUI.enabled = true;
-                EditorGUILayout.LabelField(r.kind == SpineKind.Unknown ? "?" : r.kind.ToString(), GUILayout.Width(26));
+                EditorGUILayout.LabelField(r.kind == SpineKind.Other ? "?" : r.kind.ToString(), GUILayout.Width(26));   //[공유 라이브러리] Unknown → Other
                 EditorGUILayout.LabelField(new GUIContent(r.key, r.note), GUILayout.MinWidth(240));
                 EditorGUILayout.LabelField(new GUIContent(StatusLabel(r), r.note), GUILayout.Width(150));
                 EditorGUILayout.EndHorizontal();
@@ -190,8 +191,8 @@ public class SpineRegisterTool : EditorWindow
             {
                 string path = AssetDatabase.GUIDToAssetPath(guid);
                 string name = Path.GetFileNameWithoutExtension(path);
-                if (!name.EndsWith(SpineKeys.SkeletonDataSuffix)) continue;
-                string key = name.Substring(0, name.Length - SpineKeys.SkeletonDataSuffix.Length);
+                if (!name.EndsWith(SpineResources.SkeletonDataSuffix)) continue;   //[공유 라이브러리] SpineKeys → SpineResources
+                string key = name.Substring(0, name.Length - SpineResources.SkeletonDataSuffix.Length);
                 dataPaths[key] = path;
                 keys.Add(key);
             }
@@ -202,11 +203,11 @@ public class SpineRegisterTool : EditorWindow
                 var r = new Row { key = key, folder = folder, characterId = folderName };
                 dataPaths.TryGetValue(key, out r.skeletonDataPath);
 
-                if (!SpineKeys.TryParse(key, out r.info) || r.info.Kind == SpineKind.Unknown)
+                if (!SpineKeys.TryParse(key, out r.info) || r.info.Kind == SpineKind.Other)   //[공유 라이브러리] Unknown → Other
                 {
-                    r.kind = SpineKind.Unknown;
+                    r.kind = SpineKind.Other;
                     r.status = Status.Unknown;
-                    r.note = r.info == null ? "키 형식이 {캐릭터}_{타입}_{enzaId}가 아님" : $"모르는 타입 '{r.info.Type}' (SpineKeys에 추가 필요)";
+                    r.note = r.info == null ? "키 형식이 {캐릭터}_{타입}_{enzaId}가 아님" : $"모르는 타입 '{r.info.Type}' (공유 라이브러리 SpineKeys에 추가 필요)";
                     rows.Add(r);
                     continue;
                 }
@@ -234,7 +235,7 @@ public class SpineRegisterTool : EditorWindow
             SpineKeys.TryParse(key, out SpineKeyInfo info);
             rows.Add(new Row
             {
-                key = key, info = info, kind = info?.Kind ?? SpineKind.Unknown,
+                key = key, info = info, kind = info?.Kind ?? SpineKind.Other,   //[공유 라이브러리] Unknown → Other
                 characterId = info?.CharacterId ?? "?", status = Status.MissingFile,
                 note = "SkeletonData 없음 → [인덱스 다시 만들기]로 정리",
             });
@@ -321,7 +322,7 @@ public class SpineRegisterTool : EditorWindow
 
         foreach (Row r in rows)
         {
-            if (r.info == null || r.skeletonDataPath == null || r.kind == SpineKind.Unknown) continue;
+            if (r.info == null || r.skeletonDataPath == null || r.kind == SpineKind.Other) continue;   //[공유 라이브러리] Unknown → Other
             if (IsShaderApplied(r)) entries.Add(r.info);
         }
 

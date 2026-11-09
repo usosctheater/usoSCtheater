@@ -4,7 +4,6 @@ using System.Xml;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
-using NUnit.Framework;
 // using Unity.GraphToolkit.Editor;
 using UnityEngine.EventSystems;
 using UsoSCTheater.Recording; // [녹화] 에디터/빌드 페이싱 분기용
@@ -12,6 +11,7 @@ using UsoSCTheater.Capture;   // [캡처] TEXT 라인 자동 스크린샷
 using UsoSCTheater.Scenario;  //[용어 정리] 막 XML 루트 파싱(ActXml)
 using UsoSCTheater;             //[다국어] Localization
 using UsoSCTheater.Character;   //[CharId] CharacterDatabase · SpineKeys
+using UsoSCTheater.Shared;   //[공유 라이브러리] SpineKeys · SpineKeyInfo · SpineKind
 // using UnityEditor.Audio;
 
 public class DialogManager : MonoBehaviour
