@@ -168,7 +168,8 @@ public class EffectManager : MonoBehaviour
 
         if (!string.IsNullOrEmpty(se_out)) audioManager.PlaySE(se_out);
 
-        float screenW = Screen.width;
+        //[스테이지 레이아웃] 수정: Screen.width(실제 픽셀) → 캔버스 폭(1920단위) — 창 크기와 관계없이 같은 움직임
+        float screenW = CanvasSize(wipeMaskRect).x;
         float wipeMaskWidth = wipeMaskRect.rect.width;
 
         //평행사변형 양 끝이 화면 밖까지 가게
@@ -231,6 +232,13 @@ public class EffectManager : MonoBehaviour
         wipeMaskRect.gameObject.SetActive(false);
         wipeTransitionPanel.gameObject.SetActive(false);
 
+    }
+
+    //[스테이지 레이아웃] 추가: 이 UI가 속한 캔버스의 크기 (캔버스 단위 — 레터박스 안에서는 늘 1920×1080)
+    private static UnityEngine.Vector2 CanvasSize(RectTransform rect)
+    {
+        Canvas canvas = rect.GetComponentInParent<Canvas>();
+        return canvas != null ? ((RectTransform)canvas.rootCanvas.transform).rect.size : new UnityEngine.Vector2(Screen.width, Screen.height);
     }
 
     //[Iris 아이콘] 수정 (2026-10-29): 모든 아이콘(유닛·멤버 사인·기본)을 배경 원 위에 표시 (이전: 유닛은 배경 원 없이)
@@ -328,7 +336,7 @@ public class EffectManager : MonoBehaviour
 
     private IEnumerator EyeblinkCoroutine(Action onComplete)
     {
-        float screenH = Screen.height;
+        float screenH = CanvasSize(eyeblinkTop).y;   //[스테이지 레이아웃] 수정: Screen.height → 캔버스 높이(1080단위)
 
         //Top 패널: 화면 상단 밖에서 시작, 아래로 이동
         //Bottom 패널: 화면 하단 밖에서 시작, 위로 이동
