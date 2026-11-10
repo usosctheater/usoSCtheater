@@ -93,6 +93,8 @@ export class SpineActor {
     this.paused = false;
     this.clock = 0;           // 추가: 재생 시작(play·reset) 후 경과 초 (일시정지 반영, 시점 이동 시 그 초로)
     this.destroyed = false;
+    this.zoom = 1;                 // [스테이지 레이아웃] 추가: 효과 층 배율
+    this.pivot = { x: 0, y: 0 };   // [스테이지 레이아웃] 추가: head 본 기본 자세 위치 (Spine 객체 좌표)
   }
 
   /** 불러오기. 성공하면 C#에 보낼 정보를 돌려줌 (그사이 내려졌으면 null) */
@@ -112,6 +114,9 @@ export class SpineActor {
     this.applySkin(skin);
     spine.skeleton.setToSetupPose();
     spine.skeleton.updateWorldTransform();
+    const head = spine.skeleton.findBone("head");   // [스테이지 레이아웃] 추가: 게임 CGManager와 같은 줌 기준점 (기본 자세)
+    this.pivot = head ? { x: head.worldX, y: head.worldY } : { x: 0, y: 0 };
+    this.applyZoom();
 
     return {
       version: data.spineData.version || "",
@@ -126,6 +131,19 @@ export class SpineActor {
         loopStart: findEventTime(a, "loop_start"),
       })),
     };
+  }
+
+  /** [스테이지 레이아웃] 추가: 줌 = Spine 객체(효과 층)만 — 기준점 고정: 위치 = 기준점 × (1 − 배율) (공유 StageLayout.ZoomOffset과 같은 식) */
+  setZoom(z) {
+    this.zoom = z;
+    this.applyZoom();
+  }
+
+  applyZoom() {
+    if (!this.spine) return;
+    const z = this.zoom;
+    this.spine.scale.set(z);
+    this.spine.position.set(this.pivot.x * (1 - z), this.pivot.y * (1 - z));
   }
 
   destroy() {

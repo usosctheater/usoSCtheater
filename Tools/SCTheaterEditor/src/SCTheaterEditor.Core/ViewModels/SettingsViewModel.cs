@@ -237,6 +237,19 @@ public sealed partial class SettingsViewModel : ObservableObject
         }
     }
 
+    /// <summary>[스테이지 레이아웃] 추가: 무대 대사창 안내선 (점선) 켜기/끄기</summary>
+    public bool ShowDialogGuide
+    {
+        get => _settings.Editor.ShowDialogGuide;
+        set
+        {
+            if (_settings.Editor.ShowDialogGuide == value) return;
+            _settings.Editor.ShowDialogGuide = value;
+            Changed(SettingsArea.StageGuide);
+            OnPropertyChanged();
+        }
+    }
+
     /// <summary>[배치 기본값으로] — 패널 350 · 350, 무대 영역 : 표 = 3 : 2</summary>
     [RelayCommand]
     private void ResetLayout()

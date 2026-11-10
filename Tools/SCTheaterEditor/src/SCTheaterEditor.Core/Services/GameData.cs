@@ -1,5 +1,6 @@
 using System.IO;
 using System.Xml.Linq;
+using UsoSCTheater.Shared;   //[스테이지 레이아웃] StageTable
 
 namespace SCTheaterEditor.Services;
 
@@ -36,8 +37,12 @@ public sealed record GameDataFileState(string Name, GameDataState State)
 /// </summary>
 public sealed class GameData
 {
-    public const string CharacterFile = "CharacterData.xml", LipFile = "DefaultLipData.xml", LanguageFile = "LanguageData.xml";
-    public static readonly IReadOnlyList<string> Files = [CharacterFile, LipFile, LanguageFile];
+    public const string CharacterFile = "CharacterData.xml", LipFile = "DefaultLipData.xml", LanguageFile = "LanguageData.xml",
+                        StageFile = "StageData.xml";   //[스테이지 레이아웃] 추가: 4번째 복사본
+    public static readonly IReadOnlyList<string> Files = [CharacterFile, LipFile, LanguageFile, StageFile];   //[스테이지 레이아웃] StageFile 추가
+
+    //[스테이지 레이아웃] 추가: 복사본이 없을 때의 빈 표 (코드 기본값 없음 — 숫자 원본은 StageData.xml 하나)
+    public static readonly StageTable EmptyStage = new([], null);
     public static string DefaultFolder => Path.Combine(AppContext.BaseDirectory, "Data");
 
     private static readonly IReadOnlyList<LanguageInfo> LanguageFallback = [new("ko", "한국어", true), new("ja", "日本語", false, "、")];
@@ -59,6 +64,9 @@ public sealed class GameData
     public LipRules Lips { get; } = new();
     public IReadOnlyList<LanguageInfo> Languages { get; private set; } = LanguageFallback;
     public IReadOnlyList<GameDataFileState> States { get; private set; } = [];
+
+    /// <summary>[스테이지 레이아웃] 추가: 무대 배치 표 (StageData.xml 복사본). 바뀌면 Changed</summary>
+    public StageTable Stage { get; private set; } = EmptyStage;
     public bool HasProblem => States.Any(s => s.IsProblem);
 
     /// <summary>읽기·비교 결과가 바뀜 (화면 스레드에서만 부름)</summary>
@@ -112,6 +120,23 @@ public sealed class GameData
         Characters.ReplaceWith(Read(CharacterFile, CharacterData.Parse) ?? new CharacterData([]));
         Lips.ReplaceWith(Read(LipFile, LipRules.Parse) ?? new LipRules());
         Languages = Read(LanguageFile, ParseLanguages) is { Count: > 0 } list ? list : LanguageFallback;
+        Stage = ReadStage();   //[스테이지 레이아웃] 추가
+    }
+
+    //[스테이지 레이아웃] 추가: 해석 문제는 공유 StageTable이 문구를 만들고 여기서 로그로
+    private StageTable ReadStage()
+    {
+        string path = CopyPath(StageFile);
+        string? xml = null;
+        if (File.Exists(path))
+        {
+            try { xml = File.ReadAllText(path); }
+            catch (Exception ex) { _log.Error($"게임 데이터 읽기 실패: {path}", ex); }
+        }
+        var warnings = new List<string>();
+        var table = StageTable.Parse(xml, warnings);
+        foreach (var w in warnings) _log.Warn($"게임 데이터 {StageFile}: {w}");
+        return table;
     }
 
     private T? Read<T>(string name, Func<string, T> parse) where T : class

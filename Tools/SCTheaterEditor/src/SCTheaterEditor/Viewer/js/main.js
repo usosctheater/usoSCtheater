@@ -21,6 +21,8 @@ onMessage((msg) => {
     case "addActor": stage.add(msg); break;
     case "removeActor": stage.remove(msg.id); break;
     case "place": stage.place(msg); break;
+    case "order": stage.setOrder(msg.ids); break;   // [스테이지 레이아웃] 추가: 앞뒤 순서
+    case "guide": stage.setGuide(msg); break;       // [스테이지 레이아웃] 추가: 대사창 안내선
     case "show": stage.show(msg.id, msg.visible); break;
     case "preview": stage.setPreview(msg.id, msg.preview); break;
     case "select": stage.select(msg.id); break;

@@ -12,26 +12,32 @@ public class StageStateCalculatorTests
     private static ScriptLine Text(string cg, string pos = "", string anim = "") =>
         L(("Type", "TEXT"), ("Name", ""), ("Text", "…"), ("CG", cg), ("Position", pos), ("Animation", anim));
 
+    //[스테이지 레이아웃] 변경: 자리는 공유 StagePlanner ("N-i") — 아래 테스트의 left·right·center는 3-1·3-3·3-2로
+    private static StageSnapshot Compute(IReadOnlyList<ScriptLine> lines, int index) => StageStateCalculator.Compute(lines, index, TestData.Stage());
+
+    private static ScriptLine Zoom(string cg, string value, string pos = "") =>
+        L(("Type", "TEXT"), ("Name", ""), ("Text", "…"), ("CG", cg), ("Position", pos), ("Effect", "zoom"), ("Value", value));
+
     [Fact]
-    public void Transition_ClearsVisible_ButKeepsMemory()
+    public void Transition_ClearsVisible_KeepsAnimation_ReEnterIsAutoPlaced()
     {
         var lines = new[]
         {
             L(("Type", "BG"), ("ResourceKey", "bg_office")),
-            Text("a", "left", "smile1 face_smile"),
-            Text("b", "right", "wait"),
+            Text("a", "3-1", "smile1 face_smile"),
+            Text("b", "3-3", "wait"),
             L(("Type", "TRANSITION"), ("Effect", "fade")),
-            Text("a"),   // 위치·애니메이션 비움 → 기억한 값
+            Text("a"),   // 위치·애니메이션 비움 → 애니메이션은 기억, 자리는 새 등장이라 자동 배치 (게임과 같음)
         };
-        var before = StageStateCalculator.Compute(lines, 2);
+        var before = Compute(lines, 2);
         Assert.Equal("bg_office", before.Background);
         Assert.Equal(new[] { "a", "b" }, before.Actors.Select(a => a.CgKey));
 
-        var s = StageStateCalculator.Compute(lines, 4);
+        var s = Compute(lines, 4);
         Assert.Null(s.Background);
         var a = Assert.Single(s.Actors);
-        Assert.Equal(new StageActorState("a", "left", "smile1 face_smile"), a);
-        Assert.Empty(s.Notes);
+        Assert.Equal(new StageActorState("a", "1-1", "smile1 face_smile"), a);
+        Assert.Contains("Position 없음", Assert.Single(s.Notes));
     }
 
     [Fact]
@@ -39,12 +45,12 @@ public class StageStateCalculatorTests
     {
         var lines = new[]
         {
-            Text("a", "left"), Text("b", "right"),
+            Text("a", "3-1"), Text("b", "3-3"),
             L(("Type", "SETCG"), ("CG", "a"), ("Effect", "clean")),
             Text("none"),
         };
-        Assert.Equal(new[] { "b" }, StageStateCalculator.Compute(lines, 2).Actors.Select(a => a.CgKey));
-        Assert.Empty(StageStateCalculator.Compute(lines, 3).Actors);
+        Assert.Equal(new[] { "b" }, Compute(lines, 2).Actors.Select(a => a.CgKey));
+        Assert.Empty(Compute(lines, 3).Actors);
     }
 
     [Fact]
@@ -52,40 +58,86 @@ public class StageStateCalculatorTests
     {
         var lines = new[]
         {
-            L(("Type", "CGGROUP"), ("GroupId", "g1"), ("CG", "a"), ("Position", "left"), ("Animation", "wait")),
-            L(("Type", "CGGROUP"), ("GroupId", "g1"), ("CG", "b"), ("Position", "right"), ("Animation", "wait")),
+            L(("Type", "CGGROUP"), ("GroupId", "g1"), ("CG", "a"), ("Position", "3-1"), ("Animation", "wait")),
+            L(("Type", "CGGROUP"), ("GroupId", "g1"), ("CG", "b"), ("Position", "3-3"), ("Animation", "wait")),
             Text("g1"),
             L(("Type", "TRANSITION")),
             Text("g1"),
         };
-        var s = StageStateCalculator.Compute(lines, 2);
-        Assert.Equal(new[] { ("a", "left"), ("b", "right") }, s.Actors.Select(a => (a.CgKey, a.Position)));
+        var s = Compute(lines, 2);
+        Assert.Equal(new[] { ("a", "3-1"), ("b", "3-3") }, s.Actors.Select(a => (a.CgKey, a.Position)));
 
         // 게임과 같이 그룹은 막 동안 유지 → TRANSITION 뒤에도 g1 = 멤버 a·b (미결 #7)
-        var after = StageStateCalculator.Compute(lines, 4);
-        Assert.Equal(new[] { ("a", "left"), ("b", "right") }, after.Actors.Select(a => (a.CgKey, a.Position)));
+        var after = Compute(lines, 4);
+        Assert.Equal(new[] { ("a", "3-1"), ("b", "3-3") }, after.Actors.Select(a => (a.CgKey, a.Position)));
         Assert.Equal(new[] { "a", "b" }, after.LineActors);
         Assert.Empty(after.Notes);
     }
 
     [Fact]
-    public void MissingOrUnknownPosition_FallsBackToCenter_WithNote()
+    public void EmptyPosition_AutoPlaced_InvalidPosition_Skipped()   //[스테이지 레이아웃] 변경: 이전 'center 대체 + 안내'
     {
         var lines = new[] { Text("a"), Text("b", "nowhere") };
-        var s = StageStateCalculator.Compute(lines, 1);
-        Assert.All(s.Actors, a => Assert.Equal("center", a.Position));
-        Assert.Null(s.Actors[0].Animation);
+        var s = Compute(lines, 1);
+        Assert.Equal(new StageActorState("a", "1-1", null), Assert.Single(s.Actors));   // b는 Pos 오류 → 건너뜀
         Assert.Equal(2, s.Notes.Count);
-        Assert.Contains("위치 없음", s.Notes[0]);
-        Assert.Contains("모르는 위치 'nowhere'", s.Notes[1]);
+        Assert.Contains("Position 없음", s.Notes[0]);
+        Assert.Contains("\"nowhere\" 오류", s.Notes[1]);
+        Assert.Empty(s.LineActors!);
     }
 
     [Fact]
-    public void UnknownPosition_UsesRememberedPosition()
+    public void Existing_InvalidPosition_StaysInPlace()   //[스테이지 레이아웃] 변경: 이전 '모르는 위치 = 기억한 위치'
     {
-        var lines = new[] { Text("a", "left"), Text("a", "nowhere", "smile1") };
-        var a = Assert.Single(StageStateCalculator.Compute(lines, 1).Actors);
-        Assert.Equal(new StageActorState("a", "left", "smile1"), a);
+        var lines = new[] { Text("a", "3-1"), Text("a", "nowhere", "smile1") };
+        var a = Assert.Single(Compute(lines, 1).Actors);
+        Assert.Equal(new StageActorState("a", "3-1", null), a);   // 줄 전체를 건너뜀 (애니메이션도) — 게임과 같음
+    }
+
+    [Fact]
+    public void Order_LatestCgIsFront()   //[스테이지 레이아웃] 추가: Actors = 뒤 → 앞
+    {
+        var lines = new[] { Text("a", "3-1"), Text("b", "3-3"), Text("a") };
+        Assert.Equal(new[] { "a", "b" }, Compute(lines, 1).Actors.Select(a => a.CgKey));
+        Assert.Equal(new[] { "b", "a" }, Compute(lines, 2).Actors.Select(a => a.CgKey));
+    }
+
+    [Fact]
+    public void Zoom_KeptOnNextCgLine_ResetByCleanTransitionAndValueOne()   //[스테이지 레이아웃] 추가
+    {
+        var lines = new[]
+        {
+            Text("a", "3-1"),
+            Zoom("a", "1.7"),
+            Text("a", "", "smile1"),                                   // 다음 CG 줄 — 줌 유지
+            Zoom("a", "1"),                                            // Value = 1로 되돌림
+            Zoom("a", "1.5"),
+            L(("Type", "SETCG"), ("CG", "a"), ("Effect", "clean")),
+            Text("a", "3-1"),                                          // 다시 올림 → 1
+            Zoom("a", "2"),
+            L(("Type", "TRANSITION")),
+            Text("a", "3-1"),
+        };
+        Assert.Equal(1.7, Compute(lines, 1).Actors[0].Zoom);
+        Assert.Equal(1.7, Compute(lines, 2).Actors[0].Zoom);
+        Assert.Equal(1, Compute(lines, 3).Actors[0].Zoom);
+        Assert.Equal(1, Compute(lines, 6).Actors[0].Zoom);
+        Assert.Equal(2, Compute(lines, 7).Actors[0].Zoom);
+        Assert.Equal(1, Compute(lines, 9).Actors[0].Zoom);
+    }
+
+    [Fact]
+    public void Zoom_OnGroup_Ignored_WithNote()   //[스테이지 레이아웃] 추가: 게임처럼 반영하지 않음 (미결 #8)
+    {
+        var lines = new[]
+        {
+            L(("Type", "CGGROUP"), ("GroupId", "g1"), ("CG", "a"), ("Position", "3-1")),
+            L(("Type", "CGGROUP"), ("GroupId", "g1"), ("CG", "b"), ("Position", "3-3")),
+            Zoom("g1", "2"),
+        };
+        var s = Compute(lines, 2);
+        Assert.All(s.Actors, a => Assert.Equal(1, a.Zoom));
+        Assert.Contains(s.Notes, n => n.Contains("CGGROUP 줌"));
     }
 
     [Fact]

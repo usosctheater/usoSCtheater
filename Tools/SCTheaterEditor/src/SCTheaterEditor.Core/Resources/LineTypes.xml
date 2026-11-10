@@ -13,7 +13,7 @@
     <Field Attr="Text" Label="대사" Width="520" Hint="대사. \n은 줄바꿈"/>
     <Field Attr="Voice" Label="보이스 키" Width="90" Hint="보이스 키. 여러 개는 공백(쉼표)으로 구분해 동시 출력 (CGGroup과 함께)"/>
     <Field Attr="CG" Label="스파인 키" Width="170" Hint="스파인 키 또는 CGGroup 그룹명. none = 모든 스파인 내림"/>
-    <Field Attr="Position" Label="위치" Width="90" Hint="3분할 left / center / right, 5분할 wide_far_left / wide_left / wide_center / wide_right / wide_far_right"/>
+    <Field Attr="Position" Label="위치" Width="90" Hint="N-i — N분할(StageData에 있는 1~6)의 왼쪽부터 i번째 칸 (예 3-1). 비우면 자동 배치"/>
     <Field Attr="Animation" Label="애니메이션" Width="220" Hint="트랙 4개(Base / Face / Lip / Arm), 공백 구분 (예: wait3 face_anger)"/>
     <Field Attr="Effect" Label="이펙트" Width="70" Hint="zoom만 지원"/>
     <Field Attr="Value" Label="이펙트 수치" Width="75" Hint="zoom 배율 (미입력 시 1)"/>
@@ -47,16 +47,16 @@
   </Type>
   <Type Id="SETCG">
     <Field Attr="CG" Label="스파인 키" Width="170" Hint="스파인 키 또는 CGGroup 그룹명. none = 모든 스파인 내림"/>
-    <Field Attr="Position" Label="위치" Width="90" Hint="3분할 / 5분할 위치"/>
+    <Field Attr="Position" Label="위치" Width="90" Hint="N-i — N분할(StageData에 있는 1~6)의 왼쪽부터 i번째 칸 (예 3-1). 비우면 자동 배치"/>
     <Field Attr="Animation" Label="애니메이션" Width="220" Hint="공백 구분 트랙 애니메이션"/>
     <Field Attr="Effect" Label="이펙트" Width="70" Hint="clean = 이 스파인만 내림 / zoom"/>
     <Field Attr="Value" Label="이펙트 수치" Width="75" Hint="zoom 배율"/>
     <Field Attr="Duration" Label="이펙트 시간" Width="75" Hint="zoom 시간"/>
   </Type>
   <Type Id="CGGROUP">
-    <Field Attr="GroupId" Label="그룹명" Width="160" Hint="그룹 이름. 같은 그룹명끼리 묶임 (최대 5명). 멤버의 화자는 스파인 키의 캐릭터로 자동"/>
+    <Field Attr="GroupId" Label="그룹명" Width="160" Hint="그룹 이름. 같은 그룹명끼리 묶임 (최대 6명). 멤버의 화자는 스파인 키의 캐릭터로 자동"/>
     <Field Attr="CG" Label="스파인 키" Width="170" Hint="그룹에 넣을 스파인 키"/>
-    <Field Attr="Position" Label="위치" Width="90" Hint="3분할 / 5분할 위치"/>
+    <Field Attr="Position" Label="위치" Width="90" Hint="N-i — N분할(StageData에 있는 1~6)의 왼쪽부터 i번째 칸 (예 3-1). 비우면 자동 배치"/>
     <Field Attr="Animation" Label="애니메이션" Width="220" Hint="공백 구분 트랙 애니메이션"/>
   </Type>
   <Type Id="IMAGE">

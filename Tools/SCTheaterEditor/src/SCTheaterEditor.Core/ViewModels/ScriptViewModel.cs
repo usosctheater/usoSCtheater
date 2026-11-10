@@ -7,6 +7,7 @@ using CommunityToolkit.Mvvm.Messaging;
 using SCTheaterEditor.Script;
 using SCTheaterEditor.Services;
 using SCTheaterEditor.Stage;
+using UsoSCTheater.Shared;   //[스테이지 레이아웃] StageTable · StageLayout(화면 크기)
 
 namespace SCTheaterEditor.ViewModels;
 
@@ -39,11 +40,16 @@ public sealed partial class ScriptViewModel : ObservableObject
     private StageActor? _replaced;                    // 무대가 꽉 차 미리보기가 자리를 대신 쓰는 캐릭터
     private StageActor? _selectedBeforePreview;
     private bool _initializing = true;                // 생성 중 (배경 기본값이 저장된 설정을 덮어쓰지 않도록)
+    private readonly Func<StageTable> _stage;         //[스테이지 레이아웃] 추가: 무대 배치 표 (StageData.xml 복사본)
+    private bool _syncingSplit;                       //[스테이지 레이아웃] 추가: 분할 콤보를 코드에서 맞추는 중
+    private const double UnitScale = 1.0;             //[스테이지 레이아웃] 옛 StageLayout에서 이동 (Spine 1단위 = 화면 1px, 크기 100 기준)
 
     public ScriptViewModel(AppSettings settings, SpineLibrary library, BackgroundLibrary backgrounds, IStageHost host,
                            LipRules lipRules, IMessenger messenger, Action saveSettings, AppLog log,
-                           AudioMemoStore? audioMemos = null)   // 추가(6회차): 오디오 메모 (없으면 저장하지 않는 빈 메모)
+                           AudioMemoStore? audioMemos = null,   // 추가(6회차): 오디오 메모 (없으면 저장하지 않는 빈 메모)
+                           Func<StageTable>? stageTable = null)   //[스테이지 레이아웃] 추가 (앱은 GameData.Stage)
     {
+        _stage = stageTable ?? (() => GameData.EmptyStage);   //[스테이지 레이아웃]
         Audio = new AudioListViewModel(settings, audioMemos ?? new AudioMemoStore(null), Send, messenger, log);   // 추가(6회차)
         Layout = new ScriptLayoutViewModel(settings, saveSettings, messenger);   // 추가(7회차): 화면 배치
         _settings = settings;
@@ -66,7 +72,7 @@ public sealed partial class ScriptViewModel : ObservableObject
         TrackStateText = "";
         TimeText = "-";
         LipSecondsText = settings.Viewer.LipSeconds.ToString("0.##", CultureInfo.InvariantCulture);
-        Split = 3;
+        SplitOptions = _stage().Rows.Select(r => r.Count).ToList();   //[스테이지 레이아웃] 변경: Split = 3 → 분할 목록 (캐릭터가 없으면 Split 0)
 
         _host.EventReceived += OnStageEvent;
         // 추가(8회차): 오디오를 고르거나 재생하면 재생 바 대상 = 오디오, 미리 듣기 상태가 바뀌면 바·버튼 갱신
@@ -85,6 +91,7 @@ public sealed partial class ScriptViewModel : ObservableObject
         messenger.Register<ScriptViewModel, SettingsChangedMessage>(this, static (r, m) =>
         {
             if (m.Area == SettingsArea.ResourcesFolder) r.OnResourcesFolderChanged();
+            if (m.Area == SettingsArea.StageGuide) r.SendGuide();   //[스테이지 레이아웃] 추가: 대사창 안내선 켜기/끄기
         });
 
         RefreshBackgrounds();
@@ -121,8 +128,17 @@ public sealed partial class ScriptViewModel : ObservableObject
     [NotifyCanExecuteChangedFor(nameof(ConfirmPreviewCommand), nameof(CancelPreviewCommand))]
     public partial StageActor? Preview { get; private set; }
 
-    /// <summary>지금 무대의 분할 (3 / 5)</summary>
+    /// <summary>지금 무대의 분할 N (캐릭터가 없으면 0)</summary>   //[스테이지 레이아웃] 주석 변경 (이전: 3 / 5)
     [ObservableProperty] public partial int Split { get; private set; }
+
+    //[스테이지 레이아웃] 추가: 분할 콤보 — 목록 = StageData 행, 고르면 무대 전원을 그 분할로
+    [ObservableProperty] public partial IReadOnlyList<int> SplitOptions { get; private set; }
+    [ObservableProperty] public partial int? SplitChoice { get; set; }
+
+    partial void OnSplitChoiceChanged(int? value)
+    {
+        if (!_syncingSplit && value is int n && n != Split) SetSplit(n);
+    }
 
     [ObservableProperty] public partial string StatusText { get; private set; }
 
@@ -221,15 +237,21 @@ public sealed partial class ScriptViewModel : ObservableObject
 
         _positionsBeforePreview = Actors.ToDictionary(a => a.Id, a => a.Position);
         _selectedBeforePreview = SelectedActor;
-        var (remap, position) = StageLayout.NextSlot(Actors.Select(a => a.Position).ToList());
+        //[스테이지 레이아웃] 변경: StageLayout.NextSlot(자리 이름) → StageEditLayout.NextSlot(표, Id·자리) — 빈 칸 없으면 무대 전원을 N+1로
+        var (remap, position) = StageEditLayout.NextSlot(_stage(), Actors.Select(a => (a.Id, a.Position)).ToList());
         if (position == null)
         {
-            // 꽉 참(5명): 선택한 캐릭터(없으면 마지막) 자리를 미리보기가 대신 씀 — 적용하면 그 캐릭터를 내림
+            // 꽉 참(표의 가장 큰 분할): 선택한 캐릭터(없으면 마지막) 자리를 미리보기가 대신 씀 — 적용하면 그 캐릭터를 내림
+            if (Actors.Count == 0)   //[스테이지 레이아웃] 추가: 표가 비어 있으면(StageData 없음) 올릴 자리가 없음
+            {
+                StatusText = "StageData가 없어 무대에 올릴 수 없습니다 — 설정 탭 > 게임 데이터";
+                return;
+            }
             _replaced = SelectedActor ?? Actors.Last();
             position = _replaced.Position;
         }
         foreach (var a in Actors)
-            if (remap.TryGetValue(a.Position, out var moved)) a.Position = moved;
+            if (remap.TryGetValue(a.Id, out var moved)) a.Position = moved;   //[스테이지 레이아웃] 자리 이름 → Id 기준
 
         // 변경(8회차): 리소스 탭에서 연 캐릭터는 자동 재생하지 않음 (멈춘 채 첫 프레임, 애니메이션을 고르거나 Space로 재생)
         var actor = new StageActor(++_nextId, asset, position) { IsPreview = !immediate, Paused = true };
@@ -324,20 +346,18 @@ public sealed partial class ScriptViewModel : ObservableObject
 
     // ------------------------------------------------------------------ 자리
 
-    /// <summary>3/5분할 전환 (5→3은 3명 이하일 때만)</summary>
-    [RelayCommand]
-    private void SetSplit(string? value)
+    //[스테이지 레이아웃] 변경: [RelayCommand] SetSplit(string "3"/"5") → 분할 콤보에서 (int). 순서를 지키며 X가 가장 가까운 칸, 인원 ≤ 새 N일 때만
+    private void SetSplit(int split)
     {
-        int split = value == "5" ? 5 : 3;
         var visible = Actors.Where(a => a != _replaced).ToList();
-        var map = StageLayout.ToSplit(visible.Select(a => a.Position).ToList(), split);
+        var map = StageEditLayout.ToSplit(_stage(), visible.Select(a => (a.Id, a.Position)).ToList(), split);
         if (map == null)
         {
-            StatusText = "3분할로 바꾸려면 무대의 캐릭터가 3명 이하여야 합니다";
-            OnPropertyChanged(nameof(Split));   // 추가: 누른 라디오 버튼이 스스로 체크된 것을 지금 분할로 되돌림
+            StatusText = $"{split}분할로 바꾸려면 무대의 캐릭터가 {split}명 이하여야 합니다";
+            UpdateSplit();   // 콤보를 지금 분할로 되돌림
             return;
         }
-        foreach (var a in visible) a.Position = map[a.Position];
+        foreach (var a in visible) a.Position = map[a.Id];
         PlaceAll();
         UpdateSplit();
     }
@@ -347,23 +367,58 @@ public sealed partial class ScriptViewModel : ObservableObject
     {
         var actor = Actors.FirstOrDefault(a => a.Id == id);
         if (actor == null) return;
-        string target = StageLayout.Snap(x, Split);
+        if (StageEditLayout.Snap(_stage(), x, Split) is not { } target)   //[스테이지 레이아웃] 변경: Snap(표) — 표에 없는 분할이면 제자리로
+        {
+            PlaceAll();
+            return;
+        }
         var other = Actors.FirstOrDefault(a => a != actor && a != _replaced && a.Position == target);
         if (other != null) other.Position = actor.Position;
         actor.Position = target;
         PlaceAll();
     }
 
+    //[스테이지 레이아웃] 변경: 자리 이름 표 → StageData 행 (X·바닥선·크기/100) + 줌. 표에 없는 분할이면 그 캐릭터는 옮기지 않고 안내
     private void PlaceAll()
     {
+        var missing = new List<string>();
         foreach (var a in Actors)
         {
-            var p = StageLayout.Get(a.Position) ?? StageLayout.Get("center")!;
-            Send(new PlaceActor(a.Id, p.X, StageLayout.BaseY, p.Scale));
+            if (StageEditLayout.Place(_stage(), a.Position) is { } p) Send(new PlaceActor(a.Id, p.X, p.Y, p.Scale, a.Zoom));
+            else missing.Add($"{a.Asset.CgKey}({a.Position})");
+        }
+        if (missing.Count > 0) StatusText = $"StageData에 없는 분할 — 배치 못 함: {string.Join(", ", missing)}";
+    }
+
+    //[스테이지 레이아웃] 변경: 분할 콤보도 함께
+    private void UpdateSplit()
+    {
+        Split = StageEditLayout.SplitOf(Actors.Where(a => a != _replaced).Select(a => a.Position));
+        _syncingSplit = true;
+        SplitChoice = Split > 0 ? Split : null;
+        _syncingSplit = false;
+    }
+
+    //[스테이지 레이아웃] 추가: StageData 복사본이 바뀜 (설정 탭 [게임 데이터 다시 복사] 등)
+    public void OnStageDataChanged()
+    {
+        SplitOptions = _stage().Rows.Select(r => r.Count).ToList();
+        UpdateSplit();
+        if (_stageReady)
+        {
+            PlaceAll();
+            SendGuide();
         }
     }
 
-    private void UpdateSplit() => Split = StageLayout.SplitOf(Actors.Where(a => a != _replaced).Select(a => a.Position));
+    //[스테이지 레이아웃] 추가: 대사창 안내선 (설정 탭 켜기/끄기 + StageData DialogGuide)
+    private void SendGuide()
+    {
+        var g = _stage().DialogGuide;
+        Send(g != null && _settings.Editor.ShowDialogGuide
+            ? new SetGuide(true, g.X, g.Y, g.Width, g.Height)
+            : new SetGuide(false, 0, 0, 0, 0));
+    }
 
     // ------------------------------------------------------------------ 배경
 
@@ -731,6 +786,7 @@ public sealed partial class ScriptViewModel : ObservableObject
                 Send(new AddActor(actor.Id, StageUrls.SpineFolder(asset.RelativeFolder), asset.JsonFile, asset.AtlasFile, actor.Label, false));
             }
             actor.Position = st.Position;
+            actor.Zoom = st.Zoom;   //[스테이지 레이아웃] 추가: 게임 줌의 끝난 상태
             if (st.Animation != null)
             {
                 // 게임 PlayAnimation과 같이 전체 트랙을 새 문자열로
@@ -764,6 +820,10 @@ public sealed partial class ScriptViewModel : ObservableObject
         }
 
         PlaceAll();
+        //[스테이지 레이아웃] 추가: 앞뒤 = 게임 정렬 순서 (snapshot.Actors가 뒤 → 앞)
+        Send(new OrderActors(snapshot.Actors
+            .Select(st => Actors.FirstOrDefault(a => string.Equals(a.Asset.CgKey, st.CgKey, StringComparison.OrdinalIgnoreCase))?.Id)
+            .OfType<int>().ToList()));
         UpdateSplit();
         if (SelectedActor != null && !Actors.Contains(SelectedActor)) SelectedActor = null;
 
@@ -1036,7 +1096,8 @@ public sealed partial class ScriptViewModel : ObservableObject
         _linePaused = false;
         _lineSoundsPending = false;
         if (Target is PlayTarget.Line or PlayTarget.Audio) SetTarget(SelectedActor != null ? PlayTarget.Actor : PlayTarget.Stage);
-        Send(new StageConfig(AnimationScript.TrackCount, StageLayout.ScreenWidth, StageLayout.ScreenHeight, StageLayout.UnitScale));
+        Send(new StageConfig(AnimationScript.TrackCount, StageLayout.ScreenWidth, StageLayout.ScreenHeight, UnitScale));   //[스테이지 레이아웃] 화면 크기 = 공유 StageLayout, UnitScale은 이 파일
+        SendGuide();   //[스테이지 레이아웃] 추가
         SendBackground();
         Send(new WatchBones(BonesVisible));   // 변경: 무대 전체 일시정지 대신 (캐릭터별 일시정지는 불러온 뒤 OnActorLoaded에서)
         foreach (var a in Actors)

@@ -55,8 +55,9 @@ public class GameDataTests
         Assert.True(env.Data.HasProblem);
         Assert.Equal("아사히", held.KoreanName("asahi"));
 
-        Assert.Equal(3, env.Data.CopyAllFromGame());
+        Assert.Equal(GameData.Files.Count, env.Data.CopyAllFromGame());   //[스테이지 레이아웃] 3 → 파일 수 (StageData 추가로 4)
         Assert.False(env.Data.HasProblem);
+        Assert.Equal(new[] { 1, 2, 3, 4, 5, 6 }, env.Data.Stage.Rows.Select(r => r.Count));   //[스테이지 레이아웃] StageData 복사본을 읽음
         Assert.Equal("새이름", held.KoreanName("asahi"));   // 같은 객체 안이 바뀜
         Assert.Equal(1, held.Count);
     }

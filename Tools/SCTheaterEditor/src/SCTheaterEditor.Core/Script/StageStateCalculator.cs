@@ -1,33 +1,40 @@
-using SCTheaterEditor.Services;
+using System.Globalization;
+using UsoSCTheater.Shared;   //[스테이지 레이아웃] StagePlanner · StageTable
 
 namespace SCTheaterEditor.Script;
 
-/// <summary>동기화 결과의 캐릭터 1명. Animation이 null이면 아직 애니메이션이 정해진 적 없음 (무대 기본값 wait)</summary>
-public sealed record StageActorState(string CgKey, string Position, string? Animation);
+/// <summary>
+/// 동기화 결과의 캐릭터 1명. Position = "N-i", Animation이 null이면 아직 애니메이션이 정해진 적 없음 (무대 기본값 wait),
+/// Zoom = 효과 층 배율 (게임 줌의 끝난 상태)   //[스테이지 레이아웃] Zoom 추가
+/// </summary>
+public sealed record StageActorState(string CgKey, string Position, string? Animation, double Zoom = 1);
 
 /// <summary>
 /// 스크립트의 한 줄 시점 무대 상태 (배경 키·보이는 캐릭터·안내).
 /// 추가(9회차): LineActors = 선택한 줄(TEXT·SETCG)이 올린 CG 키 — 그룹이면 멤버 전원(그룹 순서), 없으면 빈 목록 (null = 모름, 직접 만든 스냅샷)
+/// [스테이지 레이아웃] Actors 순서 = 뒤 → 앞 (게임 정렬 순서와 같음)
 /// </summary>
 public sealed record StageSnapshot(int LineIndex, string? Background, IReadOnlyList<StageActorState> Actors, IReadOnlyList<string> Notes,
                                    IReadOnlyList<string>? LineActors = null);
 
 /// <summary>
-/// [스크립트에 무대 동기화]용 무대 상태 계산 — 게임(DialogManager.ShowLine·ProcessSetCG·ClearScreen, CGManager.SetCG)과 같은 규칙.
+/// [스크립트에 무대 동기화]용 무대 상태 계산 — 게임(DialogManager.ShowLine·ProcessSetCG·ClearScreen, CGManager.SetCG·SetZoom)과 같은 규칙.
 /// 막 첫 줄부터 선택한 줄까지 한 번 훑는다 (1,000줄이어도 1ms 안쪽):
-/// - 캐릭터별 마지막 위치·애니메이션은 막 전체에서 기억 (게임은 내렸다 다시 올려도 GameObject의 위치·애니메이션이 남아 있음)
-///   → 위치가 비었거나 모르는 값이면 마지막 위치, 애니메이션이 비었으면 마지막 애니메이션 (그것도 없으면 위치 center + 안내)
+/// - [스테이지 레이아웃] 변경: 자리는 공유 StagePlanner (게임·카탈로그 동기화와 같은 코드) — 이전의 '캐릭터별 마지막 위치 기억'·center 대체는 삭제
+///   (내렸다 다시 올린 캐릭터의 빈 Position = 자동 배치, 게임과 같음). Pos 오류·분할 불일치 = 그 줄에서 건너뜀 + 안내
+/// - 애니메이션은 캐릭터별로 막 전체에서 기억 (게임은 내렸다 다시 올려도 오브젝트에 남음)
+/// - [스테이지 레이아웃] 줌: CG가 있는 TEXT·SETCG의 Effect="zoom" + Value(기본 1)를 기억, 다음 CG 줄에서도 유지,
+///   SETCG clean·TRANSITION·CG="none"이면 1. CGGROUP 줌은 게임처럼 반영하지 않음(안내). 끝난 상태만 (Duration 무시)
 /// - 보이는 캐릭터·배경은 TRANSITION에서 비움 (ClearScreen)
 /// - CG="none"(TEXT·SETCG) = 모두 내림, SETCG Effect="clean" = 그 캐릭터(그룹이면 멤버)만 내림
 /// - CGGROUP: 게임은 막을 읽을 때 모든 CGGROUP 줄을 그룹으로 등록하고 막 동안 유지 (TRANSITION에서 지우지 않음, 새 막 LoadAct에서만 초기화)
 ///   → 게임과 똑같이 따름 (핸드오프 미결 #7 '스크립트 동안 유지', 2026-10-26)
-/// 줌·플래시백 등 효과는 반영하지 않음
 /// </summary>
 public static class StageStateCalculator
 {
-    public const string DefaultPosition = "center";
+    //[스테이지 레이아웃] 삭제: DefaultPosition ("center")
 
-    public static StageSnapshot Compute(IReadOnlyList<ScriptLine> lines, int index)
+    public static StageSnapshot Compute(IReadOnlyList<ScriptLine> lines, int index, StageTable table)   //[스테이지 레이아웃] table 추가
     {
         if (lines.Count == 0) return new StageSnapshot(-1, null, [], []);
         index = Math.Clamp(index, 0, lines.Count - 1);
@@ -42,30 +49,13 @@ public static class StageStateCalculator
             list.Add((l.Get("CG"), l.Get("Position"), l.Get("Animation")));
         }
 
-        var memory = new Dictionary<string, (string? Pos, string? Anim)>(StringComparer.Ordinal);
-        var visible = new List<string>();
+        var planner = new StagePlanner(table);   //[스테이지 레이아웃]
+        var anims = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+        var zooms = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);   //[스테이지 레이아웃]
         var notes = new List<string>();
+        var warnings = new List<string>();
         string? background = null;
         var lineActors = new List<string>();   // 추가(9회차): 선택한 줄이 올린 캐릭터
-
-        void Show(string key, string pos, string anim, int line)
-        {
-            memory.TryGetValue(key, out var mem);
-            string p = pos.Trim();
-            string? position = StageLayout.Get(p) != null ? p : mem.Pos;
-            if (position == null)
-            {
-                position = DefaultPosition;
-                notes.Add(p.Length == 0 ? $"{line + 1}번 줄: {key} 위치 없음 → {DefaultPosition}" : $"{line + 1}번 줄: {key} 모르는 위치 '{p}' → {DefaultPosition}");
-            }
-            string a = anim.Trim();
-            string? animation = a.Length > 0 ? a : mem.Anim;
-            memory[key] = (position, animation);
-            if (!visible.Contains(key)) visible.Add(key);
-        }
-
-        IEnumerable<string> Targets(string cg) =>
-            groups.TryGetValue(cg, out var members) ? members.Select(m => m.Cg) : [cg];
 
         for (int i = 0; i <= index; i++)
         {
@@ -73,7 +63,8 @@ public static class StageStateCalculator
             switch (l.Type.ToUpperInvariant())
             {
                 case "TRANSITION":
-                    visible.Clear();
+                    planner.Clear();
+                    zooms.Clear();
                     background = null;   // 그룹 정의는 유지 (미결 #7)
                     break;
 
@@ -85,33 +76,54 @@ public static class StageStateCalculator
                 case "TEXT":
                 case "SETCG":
                     string cg = l.Get("CG").Trim();
-                    if (cg.Length == 0) break;
+                    if (cg.Length == 0) break;   // 게임: CG가 빈 줄의 줌은 무시
                     bool setcg = l.Type.Equals("SETCG", StringComparison.OrdinalIgnoreCase);
+                    bool isGroup = groups.TryGetValue(cg, out var members);
+                    var targets = isGroup
+                        ? members!.Select(m => (Cg: m.Cg.Trim(), m.Pos, m.Anim)).ToList()
+                        : [(cg, l.Get("Position"), l.Get("Animation"))];
                     if (setcg && l.Get("Effect").Trim().Equals("clean", StringComparison.OrdinalIgnoreCase))
                     {
-                        foreach (var t in Targets(cg)) visible.Remove(t);
+                        foreach (var t in targets)
+                        {
+                            planner.Remove(t.Cg);
+                            zooms.Remove(t.Cg);
+                        }
                         break;
                     }
                     if (cg.Equals("none", StringComparison.OrdinalIgnoreCase))
                     {
-                        visible.Clear();
+                        planner.Clear();
+                        zooms.Clear();
                         break;
                     }
-                    if (groups.TryGetValue(cg, out var members))
+
+                    planner.StartLine();
+                    foreach (var t in targets)
                     {
-                        foreach (var m in members) Show(m.Cg.Trim(), m.Pos, m.Anim, i);
-                        if (i == index) lineActors.AddRange(members.Select(m => m.Cg.Trim()).Distinct());   // 추가(9회차)
+                        if (t.Pos.Trim().Length == 0) notes.Add($"{i + 1}번 줄: {t.Cg} Position 없음 (자동 배치)");
+                        warnings.Clear();
+                        bool shown = planner.Show(t.Cg, t.Pos, warnings);
+                        foreach (var w in warnings) notes.Add($"{i + 1}번 줄: {w}");
+                        if (!shown) continue;
+                        if (t.Anim.Trim().Length > 0) anims[t.Cg] = t.Anim.Trim();
+                        if (i == index && !lineActors.Contains(t.Cg)) lineActors.Add(t.Cg);   // 추가(9회차)
                     }
-                    else
+
+                    //[스테이지 레이아웃] 줌 (끝난 상태)
+                    if (l.Get("Effect").Trim().Equals("zoom", StringComparison.OrdinalIgnoreCase))
                     {
-                        Show(cg, l.Get("Position"), l.Get("Animation"), i);
-                        if (i == index) lineActors.Add(cg);   // 추가(9회차)
+                        if (isGroup) notes.Add($"{i + 1}번 줄: CGGROUP 줌은 게임에서 반영하지 않음 (미결 #8)");
+                        else if (planner.Contains(cg))
+                            zooms[cg] = double.TryParse(l.Get("Value"), NumberStyles.Float, CultureInfo.InvariantCulture, out double z) ? z : 1;
                     }
                     break;
             }
         }
 
-        var actors = visible.Select(k => new StageActorState(k, memory[k].Pos!, memory[k].Anim)).ToList();
+        var actors = planner.Placements()   //[스테이지 레이아웃] 뒤 → 앞
+            .Select(p => new StageActorState(p.Key, p.Pos, anims.GetValueOrDefault(p.Key), zooms.GetValueOrDefault(p.Key, 1)))
+            .ToList();
         return new StageSnapshot(index, background, actors, notes, lineActors);
     }
 }

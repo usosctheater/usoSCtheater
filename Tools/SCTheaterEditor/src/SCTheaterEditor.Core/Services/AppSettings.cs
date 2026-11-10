@@ -268,6 +268,9 @@ public sealed class EditorSettings
 
     /// <summary>추가: 조합키 슬롯 1~9의 줄 종류 ("" = 빈 슬롯). 비어 있으면 기본값(드롭다운 순서) — LineSlots.Normalize</summary>
     public List<string> LineSlots { get; set; } = new();
+
+    /// <summary>[스테이지 레이아웃] 추가: 무대에 대사창 안내선 (점선) 표시 — 위치·크기는 StageData.xml DialogGuide</summary>
+    public bool ShowDialogGuide { get; set; } = true;
 }
 
 /// <summary>
