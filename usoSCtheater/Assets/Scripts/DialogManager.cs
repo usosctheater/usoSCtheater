@@ -250,6 +250,8 @@ public class DialogManager : MonoBehaviour
         // CG - 키가 있을 때만
         else if (!string.IsNullOrEmpty(line.cgKey))
         {
+            cgManager.BeginLine();   //[스테이지 레이아웃] 추가: 이 줄의 앞뒤 순서 (그룹 멤버 공통)
+
             //CG 키가 CGGroup인 경우
             if (cgGroupDict.ContainsKey(line.cgKey))
             {
@@ -281,7 +283,7 @@ public class DialogManager : MonoBehaviour
         if (line.effect == "zoom" && !string.IsNullOrEmpty(line.cgKey))
         {
             if (cgGroupDict.ContainsKey(line.cgKey)) Debug.LogWarning($"[DialogManager] CGGroup({line.cgKey})에 Zoom하는 기능은 별도 구현이 필요합니다.");
-            else cgManager.SetZoom(line.cgKey, line.cgPos, line.value, line.duration);
+            else cgManager.SetZoom(line.cgKey, line.value, line.duration);   //[스테이지 레이아웃] line.cgPos 인자 삭제 (크기는 배치 층)
         }
 
         //보이스 재생
@@ -421,6 +423,8 @@ public class DialogManager : MonoBehaviour
             return;
         }
 
+        cgManager.BeginLine();   //[스테이지 레이아웃] 추가: 이 줄의 앞뒤 순서 (그룹 멤버 공통)
+
         // CG 키가 CGGroup인 경우
         // 주의: Lip 재사용 정보(lastLipTargets/lastLineSpeakerId)는 여기서 절대 건드리지 않음.
         if (cgGroupDict.ContainsKey(node.setCgKey))
@@ -438,7 +442,7 @@ public class DialogManager : MonoBehaviour
         if (node.setCgEffect == "zoom")
         {
             if (cgGroupDict.ContainsKey(node.setCgKey)) Debug.LogWarning($"[DialogManager] CGGroup({node.setCgKey})에 Zoom하는 기능은 별도 구현이 필요합니다.");
-            else cgManager.SetZoom(node.setCgKey, node.setCgPos, node.setCgValue, node.setCgDuration);
+            else cgManager.SetZoom(node.setCgKey, node.setCgValue, node.setCgDuration);   //[스테이지 레이아웃] node.setCgPos 인자 삭제 (크기는 배치 층)
         }
     }
 

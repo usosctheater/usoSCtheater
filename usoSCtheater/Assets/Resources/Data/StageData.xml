@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    무대 배치 (스테이지 레이아웃, 2026-11-10). 숫자 값의 원본은 이 파일 하나 — 코드 기본값 없음 (없거나 깨지면 경고 + 캐릭터가 나오지 않음)
+    게임 CGManager·카탈로그 동기화·TE(복사본)가 공유 라이브러리 UsoSCTheater.Shared.StageTable로 읽음
+    Row: Count = 분할 수 N (막 XML Position "N-i"의 N), Width = 사용 폭 (X = ((i − 0.5) / N − 0.5) × Width),
+         Scale = 크기 (100 = Spine 원래 크기), BaseY = 바닥선 (화면 중심 기준 px, 위가 +)
+         3·5명 = 이전 CGManager 값, 1·2·4·6명 = 임시값 (TE에서 보며 조정)
+    DialogGuide: TE 무대의 대사창 안내선 (가운데 X·Y + 크기, CommunicationScene DialogBox 기준). 게임은 쓰지 않음
+-->
+<StageData>
+  <Row Count="1" Width="1440" Scale="100" BaseY="-180" />
+  <Row Count="2" Width="960" Scale="100" BaseY="-180" />
+  <Row Count="3" Width="1440" Scale="100" BaseY="-180" />
+  <Row Count="4" Width="1920" Scale="70" BaseY="-180" />
+  <Row Count="5" Width="1920" Scale="60" BaseY="-180" />
+  <Row Count="6" Width="1920" Scale="50" BaseY="-180" />
+  <DialogGuide X="0" Y="-381" Width="1344" Height="259" />
+</StageData>
