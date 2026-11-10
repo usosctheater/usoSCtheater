@@ -7,57 +7,63 @@ using SCTheaterEditor.ViewModels;
 
 namespace SCTheaterEditor.Tests;
 
-public class StageLayoutTests
+/// <summary>[스테이지 레이아웃] 변경: 옛 StageLayoutTests(자리 이름 8개) → TE 무대 편집 계산 (StageData 표, "N-i")</summary>
+public class StageEditLayoutTests
 {
+    private static readonly UsoSCTheater.Shared.StageTable T = TestData.Stage();
+    private static IReadOnlyList<(int Id, string Pos)> O(params string[] pos) => pos.Select((p, i) => (i + 1, p)).ToList();
+
     [Fact]
-    public void Positions_MatchCGManager()
+    public void Place_UsesStageDataRows()
     {
-        Assert.Equal(-480, StageLayout.Get("left")!.X);
-        Assert.Equal(768, StageLayout.Get("wide_far_right")!.X);
-        Assert.Equal(0.6, StageLayout.Get("wide_center")!.Scale);
-        Assert.Equal(1.0, StageLayout.Get("center")!.Scale);
+        var p = StageEditLayout.Place(T, "3-1")!.Value;
+        Assert.Equal(-480, p.X, 6);
+        Assert.Equal(-180, p.Y, 6);
+        Assert.Equal(1.0, p.Scale, 6);
+        p = StageEditLayout.Place(T, "5-5")!.Value;
+        Assert.Equal(768, p.X, 6);
+        Assert.Equal(0.6, p.Scale, 6);
+        Assert.Null(StageEditLayout.Place(T, "9-1"));
+        Assert.Null(StageEditLayout.Place(T, "left"));
     }
 
     [Fact]
-    public void NextSlot_FillsThreeThenSwitchesToFive()
+    public void NextSlot_FillsGap_ElseGrowsSplit_KeepingOrder()
     {
-        Assert.Equal("center", StageLayout.NextSlot([]).position);
-        Assert.Equal("left", StageLayout.NextSlot(["center"]).position);
-        Assert.Equal("right", StageLayout.NextSlot(["center", "left"]).position);
+        Assert.Equal("1-1", StageEditLayout.NextSlot(T, O()).Position);
 
-        var (remap, pos) = StageLayout.NextSlot(["center", "left", "right"]);
-        Assert.Equal("wide_far_left", pos);
-        Assert.Equal("wide_left", remap["left"]);
-        Assert.Equal("wide_center", remap["center"]);
-        Assert.Equal("wide_right", remap["right"]);
+        var (remap, pos) = StageEditLayout.NextSlot(T, O("1-1"));
+        Assert.Equal("2-2", pos);
+        Assert.Equal("2-1", remap[1]);
 
-        Assert.Equal("wide_far_right", StageLayout.NextSlot(["wide_center", "wide_left", "wide_right", "wide_far_left"]).position);
-        Assert.Null(StageLayout.NextSlot(["wide_center", "wide_left", "wide_right", "wide_far_left", "wide_far_right"]).position);
+        Assert.Equal("3-2", StageEditLayout.NextSlot(T, O("3-1", "3-3")).Position);   // 빈 칸이 있으면 그 칸
+
+        (remap, pos) = StageEditLayout.NextSlot(T, O("3-3", "3-1", "3-2"));
+        Assert.Equal("4-4", pos);                                                     // 새 캐릭터는 오른쪽 끝
+        Assert.Equal(("4-3", "4-1", "4-2"), (remap[1], remap[2], remap[3]));          // 왼쪽→오른쪽 순서 유지
+
+        Assert.Null(StageEditLayout.NextSlot(T, O("6-1", "6-2", "6-3", "6-4", "6-5", "6-6")).Position);   // 가장 큰 분할이 다 참
     }
 
     [Fact]
-    public void ToSplit_FiveToThree_KeepsOrder_AndRejectsMoreThanThree()
+    public void ToSplit_KeepsOrder_NearestSlots_RejectsTooMany()
     {
-        var map = StageLayout.ToSplit(["wide_far_left", "wide_center", "wide_far_right"], 3)!;
-        Assert.Equal("left", map["wide_far_left"]);
-        Assert.Equal("center", map["wide_center"]);
-        Assert.Equal("right", map["wide_far_right"]);
-
-        var two = StageLayout.ToSplit(["wide_far_left", "wide_left"], 3)!;
-        Assert.Equal("left", two["wide_far_left"]);
-        Assert.Equal("center", two["wide_left"]);
-
-        Assert.Null(StageLayout.ToSplit(["wide_far_left", "wide_left", "wide_center", "wide_right"], 3));
-        Assert.Equal("wide_right", StageLayout.ToSplit(["right"], 5)!["right"]);
+        var map = StageEditLayout.ToSplit(T, O("3-1", "3-3"), 5)!;
+        Assert.Equal(("5-2", "5-4"), (map[1], map[2]));          // X −480·480 → −384·384가 가장 가까움
+        map = StageEditLayout.ToSplit(T, O("5-1", "5-3", "5-5"), 3)!;
+        Assert.Equal(("3-1", "3-2", "3-3"), (map[1], map[2], map[3]));
+        Assert.Null(StageEditLayout.ToSplit(T, O("4-1", "4-2", "4-3", "4-4"), 3));
+        Assert.Null(StageEditLayout.ToSplit(T, O("3-1"), 9));
     }
 
     [Theory]
-    [InlineData(-400, 3, "left")]
-    [InlineData(200, 3, "center")]
-    [InlineData(260, 3, "right")]
-    [InlineData(-700, 5, "wide_far_left")]
-    [InlineData(100, 5, "wide_center")]
-    public void Snap(double x, int split, string expected) => Assert.Equal(expected, StageLayout.Snap(x, split));
+    [InlineData(-400, 3, "3-1")]
+    [InlineData(200, 3, "3-2")]
+    [InlineData(260, 3, "3-3")]
+    [InlineData(-700, 5, "5-1")]
+    [InlineData(100, 5, "5-3")]
+    [InlineData(-500, 6, "6-2")]
+    public void Snap(double x, int split, string expected) => Assert.Equal(expected, StageEditLayout.Snap(T, x, split));
 }
 
 public class StageMessageTests
@@ -184,7 +190,8 @@ public class ScriptViewModelTests
             Library.Rebuild();
             Messenger.Register<ShowTabMessage>(Tabs, (r, msg) => ((List<AppTab>)r).Add(msg.Tab));
             var bg = new BackgroundLibrary(Path.Combine(Temp.Path, "Backgrounds"));
-            Vm = new ScriptViewModel(Settings, Library, bg, Stage, TestData.Lips(), Messenger, () => { }, new AppLog());   // 변경(번역 모드 2회차)
+            Vm = new ScriptViewModel(Settings, Library, bg, Stage, TestData.Lips(), Messenger, () => { }, new AppLog(),   // 변경(번역 모드 2회차)
+                                     stageTable: TestData.Stage);   //[스테이지 레이아웃]
             Stage.Raise(new StageReady());
         }
 
@@ -206,7 +213,7 @@ public class ScriptViewModelTests
 
         var a = Assert.Single(c.Vm.Actors);
         Assert.True(a.IsPreview);
-        Assert.Equal("center", a.Position);
+        Assert.Equal("1-1", a.Position);   //[스테이지 레이아웃] center → 1-1 (혼자면 1분할)
         Assert.Same(a, c.Vm.Preview);
         Assert.Same(a, c.Vm.SelectedActor);
         Assert.Contains(AppTab.Script, c.Tabs);
@@ -222,16 +229,18 @@ public class ScriptViewModelTests
     public void Preview_Escape_RestoresStageAndGoesBack()
     {
         using var c = new Ctx();
+        //[스테이지 레이아웃] 변경: 빈 칸이 없으면 무대 전원을 N+1로 (1 → 2 → 3분할), 새 캐릭터는 오른쪽 끝
         for (int i = 0; i < 3; i++) c.Vm.Open(c.Asset(i), immediate: true);
-        Assert.Equal(new[] { "center", "left", "right" }, c.Vm.Actors.Select(a => a.Position));
+        Assert.Equal(new[] { "3-1", "3-2", "3-3" }, c.Vm.Actors.Select(a => a.Position));
 
-        c.Vm.Open(c.Asset(3), immediate: false);   // 4명째 → 5분할 전환 + wide_far_left
-        Assert.Equal(5, c.Vm.Split);
-        Assert.Equal(new[] { "wide_center", "wide_left", "wide_right", "wide_far_left" }, c.Vm.Actors.Select(a => a.Position));
+        c.Vm.Open(c.Asset(3), immediate: false);   // 4명째 → 4분할 전환 + 4-4
+        Assert.Equal(4, c.Vm.Split);
+        Assert.Equal(4, c.Vm.SplitChoice);
+        Assert.Equal(new[] { "4-1", "4-2", "4-3", "4-4" }, c.Vm.Actors.Select(a => a.Position));
 
         Assert.True(c.Vm.HandleKey("Escape"));
         Assert.Equal(3, c.Vm.Actors.Count);
-        Assert.Equal(new[] { "center", "left", "right" }, c.Vm.Actors.Select(a => a.Position));
+        Assert.Equal(new[] { "3-1", "3-2", "3-3" }, c.Vm.Actors.Select(a => a.Position));
         Assert.Equal(3, c.Vm.Split);
         Assert.Equal(AppTab.Resource, c.Tabs.Last());
     }
@@ -239,17 +248,17 @@ public class ScriptViewModelTests
     [Fact]
     public void Full_PreviewReplacesSelected_OnConfirm()
     {
-        using var c = new Ctx();
-        for (int i = 0; i < 5; i++) c.Vm.Open(c.Asset(i), immediate: true);
+        using var c = new Ctx(setCount: 7);   //[스테이지 레이아웃] 꽉 참 = 6명 (StageData 가장 큰 분할)
+        for (int i = 0; i < 6; i++) c.Vm.Open(c.Asset(i), immediate: true);
         var target = c.Vm.Actors[1];
         c.Vm.SelectedActor = target;
 
-        c.Vm.Open(c.Asset(5), immediate: false);
+        c.Vm.Open(c.Asset(6), immediate: false);
         Assert.Equal(target.Position, c.Vm.Preview!.Position);
         Assert.False(c.Stage.Last<ShowActor>().Visible);
 
         c.Vm.ConfirmPreviewCommand.Execute(null);
-        Assert.Equal(5, c.Vm.Actors.Count);
+        Assert.Equal(6, c.Vm.Actors.Count);
         Assert.DoesNotContain(target, c.Vm.Actors);
         Assert.Equal(target.Id, c.Stage.Last<RemoveActor>().Id);
     }
@@ -269,12 +278,12 @@ public class ScriptViewModelTests
     public void Drop_SwapsWithOccupant()
     {
         using var c = new Ctx();
-        c.Vm.Open(c.Asset(0), immediate: true);   // center
-        c.Vm.Open(c.Asset(1), immediate: true);   // left
+        c.Vm.Open(c.Asset(0), immediate: true);   // 2-1 (둘째가 오며 1-1 → 2-1)   //[스테이지 레이아웃]
+        c.Vm.Open(c.Asset(1), immediate: true);   // 2-2
         var first = c.Vm.Actors[0];
-        c.Stage.Raise(new ActorDropped(first.Id, -470));   // left 근처에 놓음
-        Assert.Equal("left", first.Position);
-        Assert.Equal("center", c.Vm.Actors[1].Position);
+        c.Stage.Raise(new ActorDropped(first.Id, 230));   // 2-2(X 240) 근처에 놓음
+        Assert.Equal("2-2", first.Position);
+        Assert.Equal("2-1", c.Vm.Actors[1].Position);
     }
 
     [Fact]
@@ -283,10 +292,12 @@ public class ScriptViewModelTests
         using var c = new Ctx();
         c.Vm.Open(c.Asset(0), immediate: true);
         c.Vm.Open(c.Asset(1), immediate: true);
-        c.Vm.SetSplitCommand.Execute("5");
-        Assert.Equal(new[] { "wide_center", "wide_left" }, c.Vm.Actors.Select(a => a.Position));
-        c.Vm.SetSplitCommand.Execute("3");
-        Assert.Equal(new[] { "center", "left" }, c.Vm.Actors.Select(a => a.Position));
+        //[스테이지 레이아웃] 변경: 3/5 라디오 → 분할 콤보 (순서 유지, 가장 가까운 칸)
+        c.Vm.SplitChoice = 5;   // 2-1·2-2 (X ±240) → ±384
+        Assert.Equal(new[] { "5-2", "5-4" }, c.Vm.Actors.Select(a => a.Position));
+        Assert.Equal(5, c.Vm.Split);
+        c.Vm.SplitChoice = 3;   // ±384 → ±480
+        Assert.Equal(new[] { "3-1", "3-3" }, c.Vm.Actors.Select(a => a.Position));
 
         c.Vm.SelectedActor = c.Vm.Actors[0];
         Assert.True(c.Vm.HandleKey("Delete"));
@@ -336,11 +347,10 @@ public class ScriptViewModelTests
     {
         using var c = new Ctx();
         for (int i = 0; i < 4; i++) c.Vm.Open(c.Asset(i), immediate: true);
-        var changed = new List<string?>();
-        c.Vm.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
-        c.Vm.SetSplitCommand.Execute("3");
-        Assert.Equal(5, c.Vm.Split);
-        Assert.Contains(nameof(ScriptViewModel.Split), changed);   // 라디오 버튼 표시를 5분할로 되돌림
+        c.Vm.SplitChoice = 3;   //[스테이지 레이아웃] 변경: 라디오 → 콤보 (4명은 3분할 불가)
+        Assert.Equal(4, c.Vm.Split);
+        Assert.Equal(4, c.Vm.SplitChoice);   // 콤보 표시를 지금 분할로 되돌림
+        Assert.Contains("3명 이하", c.Vm.StatusText);
     }
 
     [Fact]
@@ -418,19 +428,19 @@ public class ScriptViewModelTests
     {
         using var c = new Ctx();
         string k0 = c.Asset(0).CgKey, k1 = c.Asset(1).CgKey;
-        c.Vm.ApplySnapshot(Snap((k0, "left", "smile1 face_anger"), (k1, "right", null)));
+        c.Vm.ApplySnapshot(Snap((k0, "3-1", "smile1 face_anger"), (k1, "3-3", null)));   //[스테이지 레이아웃] left·right → 3-1·3-3
         Assert.Equal(2, c.Stage.Sent.OfType<AddActor>().Count());
-        Assert.Equal(new[] { "left", "right" }, c.Vm.Actors.Select(a => a.Position));
+        Assert.Equal(new[] { "3-1", "3-3" }, c.Vm.Actors.Select(a => a.Position));
         Assert.Equal("smile1 face_anger", c.Vm.Actors[0].AnimationText);
         var first = c.Vm.Actors[0];
 
-        c.Vm.ApplySnapshot(Snap((k1, "center", null)));             // k0은 숨겨 둠
+        c.Vm.ApplySnapshot(Snap((k1, "3-2", null)));             // k0은 숨겨 둠
         Assert.Equal(k1, Assert.Single(c.Vm.Actors).Asset.CgKey);
         Assert.Equal(1, c.Vm.HiddenCount);
         Assert.Equal(new ShowActor(first.Id, false), c.Stage.Last<ShowActor>());
         Assert.Empty(c.Stage.Sent.OfType<RemoveActor>());
 
-        c.Vm.ApplySnapshot(Snap((k1, "left", null), (k0, "right", null)));   // 다시 올림 → 새로 불러오지 않음
+        c.Vm.ApplySnapshot(Snap((k1, "3-1", null), (k0, "3-3", null)));   // 다시 올림 → 새로 불러오지 않음
         Assert.Equal(2, c.Stage.Sent.OfType<AddActor>().Count());
         Assert.Same(first, c.Vm.Actors[1]);
         Assert.Equal(new ShowActor(first.Id, true), c.Stage.Last<ShowActor>());
@@ -441,11 +451,11 @@ public class ScriptViewModelTests
     public void ApplySnapshot_EvictsOldestHidden_AndReportsUnknown()
     {
         using var c = new Ctx(setCount: 12);
-        for (int i = 0; i < 12; i++) c.Vm.ApplySnapshot(Snap((c.Asset(i).CgKey, "center", null)));
+        for (int i = 0; i < 12; i++) c.Vm.ApplySnapshot(Snap((c.Asset(i).CgKey, "3-2", null)));
         Assert.Equal(ScriptViewModel.HiddenCacheSize, c.Vm.HiddenCount);   // 11명 숨김 → 가장 오래된 1명은 지움
         Assert.Single(c.Stage.Sent.OfType<RemoveActor>());
 
-        c.Vm.ApplySnapshot(Snap(("no_such_key", "left", null)));
+        c.Vm.ApplySnapshot(Snap(("no_such_key", "3-1", null)));
         Assert.Empty(c.Vm.Actors);
         Assert.Contains("올리지 못함: no_such_key", c.Vm.StatusText);
     }
@@ -462,7 +472,7 @@ public class ScriptViewModelTests
     {
         using var c = new Ctx();
         string k0 = c.Asset(0).CgKey, k1 = c.Asset(1).CgKey;
-        c.Vm.ApplySnapshot(Snap((k0, "left", "wait"), (k1, "right", "wait")), Line(k0, 2.5, Voice(0, 2.5), Voice(1, 1)));
+        c.Vm.ApplySnapshot(Snap((k0, "3-1", "wait"), (k1, "3-3", "wait")), Line(k0, 2.5, Voice(0, 2.5), Voice(1, 1)));
         var (line, other) = (c.Vm.Actors[0], c.Vm.Actors[1]);
         Assert.Same(line, c.Vm.LineActor);
         Assert.Same(line, c.Vm.SelectedActor);
@@ -487,7 +497,7 @@ public class ScriptViewModelTests
 
         // 다시 F5: 바뀌지 않은 다른 캐릭터는 그대로, 이전 줄 소리는 끔
         c.Stage.Sent.Clear();
-        c.Vm.ApplySnapshot(Snap((k0, "left", null), (k1, "right", null)), Line(k0, 0));
+        c.Vm.ApplySnapshot(Snap((k0, "3-1", null), (k1, "3-3", null)), Line(k0, 0));
         Assert.Empty(c.Stage.Sent.OfType<SeekEnd>());
         Assert.Equal(new[] { "line0", "line1" }, c.Stage.Sent.OfType<StopAudio>().Select(s => s.Channel));
         Assert.Contains(c.Stage.Sent.OfType<PlayAnims>(), p => p.Id == line.Id);   // 줄의 Spine은 늘 처음부터
@@ -499,7 +509,7 @@ public class ScriptViewModelTests
     {
         using var c = new Ctx();
         string k0 = c.Asset(0).CgKey;
-        c.Vm.ApplySnapshot(Snap((k0, "center", "wait")), Line(k0, 2, Voice(0, 2), Voice(1, 1)));
+        c.Vm.ApplySnapshot(Snap((k0, "3-2", "wait")), Line(k0, 2, Voice(0, 2), Voice(1, 1)));
         var a = c.Vm.Actors[0];
         c.Load(a);
         c.Stage.Raise(new ActorState(a.Id, [null, null, null, null], false, 0.5, 1, null));
@@ -576,18 +586,18 @@ public class ScriptViewModelTests
         SCTheaterEditor.Script.ScriptLine L(params (string, string)[] a) => SCTheaterEditor.Script.ScriptLine.Create(a);
         var lines = new List<SCTheaterEditor.Script.ScriptLine>
         {
-            L(("Type", "CGGROUP"), ("GroupId", "duo"), ("CG", "a_stand_1"), ("Position", "left")),
-            L(("Type", "CGGROUP"), ("GroupId", "duo"), ("CG", "b_stand_1"), ("Position", "right")),
+            L(("Type", "CGGROUP"), ("GroupId", "duo"), ("CG", "a_stand_1"), ("Position", "3-1")),
+            L(("Type", "CGGROUP"), ("GroupId", "duo"), ("CG", "b_stand_1"), ("Position", "3-3")),
             L(("Type", "TEXT"), ("Name", "둘"), ("CG", "duo")),
             L(("Type", "TEXT"), ("Name", "A"), ("CG", "a_stand_1")),
             L(("Type", "TEXT"), ("Name", "A"), ("Text", "CG 없음")),
             L(("Type", "TRANSITION")),
             L(("Type", "TEXT"), ("Name", "둘"), ("CG", "duo")),
         };
-        Assert.Equal(new[] { "a_stand_1", "b_stand_1" }, SCTheaterEditor.Script.StageStateCalculator.Compute(lines, 2).LineActors);
-        Assert.Equal(new[] { "a_stand_1" }, SCTheaterEditor.Script.StageStateCalculator.Compute(lines, 3).LineActors);
-        Assert.Empty(SCTheaterEditor.Script.StageStateCalculator.Compute(lines, 4).LineActors!);
-        Assert.Equal(new[] { "a_stand_1", "b_stand_1" }, SCTheaterEditor.Script.StageStateCalculator.Compute(lines, 6).LineActors);   // 게임과 같이 그룹은 막 동안 유지 (미결 #7)
+        Assert.Equal(new[] { "a_stand_1", "b_stand_1" }, SCTheaterEditor.Script.StageStateCalculator.Compute(lines, 2, TestData.Stage()).LineActors);
+        Assert.Equal(new[] { "a_stand_1" }, SCTheaterEditor.Script.StageStateCalculator.Compute(lines, 3, TestData.Stage()).LineActors);
+        Assert.Empty(SCTheaterEditor.Script.StageStateCalculator.Compute(lines, 4, TestData.Stage()).LineActors!);
+        Assert.Equal(new[] { "a_stand_1", "b_stand_1" }, SCTheaterEditor.Script.StageStateCalculator.Compute(lines, 6, TestData.Stage()).LineActors);   // 게임과 같이 그룹은 막 동안 유지 (미결 #7)
     }
 
     [Fact]
@@ -596,7 +606,7 @@ public class ScriptViewModelTests
         using var c = new Ctx();
         string k0 = c.Asset(0).CgKey, k1 = c.Asset(1).CgKey, k2 = c.Asset(2).CgKey;
         var snap = new SCTheaterEditor.Script.StageSnapshot(0, null,
-            [new(k2, "center", "wait"), new(k0, "left", "wait"), new(k1, "right", "wait")], [], [k1, k0]);   // 그룹 순서 k1 → k0
+            [new(k2, "3-2", "wait"), new(k0, "3-1", "wait"), new(k1, "3-3", "wait")], [], [k1, k0]);   // 그룹 순서 k1 → k0
         c.Vm.ApplySnapshot(snap, new LinePlan(7, "TEXT", "duo", [Voice(0, 2)], 2, []));
         var (a0, a1, a2) = (c.Vm.Actors.Single(a => a.Asset.CgKey == k0), c.Vm.Actors.Single(a => a.Asset.CgKey == k1), c.Vm.Actors.Single(a => a.Asset.CgKey == k2));
         Assert.Same(a1, c.Vm.LineActor);                          // 그룹 순서의 첫 멤버가 바 기준 · 선택

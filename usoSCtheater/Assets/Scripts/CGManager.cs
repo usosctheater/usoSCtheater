@@ -22,20 +22,22 @@ public class CGManager : MonoBehaviour
     private const int SPINE_SORTING_ORDER = 1;
     private const bool SPINE_PMA_VERTEX_COLORS = true;   //[E-004] 등록 도구에서 이동 — Straight Alpha 셰이더여도 항상 켬
 
-    [Header("Spine Pos 설정")]
-    [SerializeField] private float screenWidth = 1920f;
-    [SerializeField] private float basePosY = -180f;
-    [SerializeField] private float scale3 = 100f;           //3분할 기본 스케일
-    [SerializeField] private float scale5 = 60f;          //5분할 기본 스케일
-    [SerializeField] private float zoomYOffsetScale = 5f;     //줌인 할 때 Y축 보정계수
+    //[스테이지 레이아웃] 삭제: [Header("Spine Pos 설정")] screenWidth · basePosY · scale3 · scale5 · zoomYOffsetScale
+    //  → 숫자 값은 Resources/Data/StageData.xml, 자리 규칙은 공유 라이브러리 StagePlanner, 줌 Y 보정은 head 기준점으로 대체
+    //[스테이지 레이아웃] 추가: 무대 자리 (StageData.xml → StageTable → StagePlanner)
+    private StagePlanner stage;
+    private readonly List<string> stageWarnings = new List<string>();
+    private const string ZOOM_PIVOT_BONE = "head";   //줌 기준점 (기본 자세 위치, 예외 오프셋은 필요할 때 StageData에)
 
     //키 > GameObj 빠른 접근용 딕셔너리
     //[LD 불러오기] 수정: CG 키 관련 사전은 모두 대소문자 무시 (ID 규칙·Spine 인덱스와 통일)
+    //[스테이지 레이아웃] spineDict = 배치 층(부모 — 자리·크기·켜고 끄기), skeletonDict = 효과 층(Spine 자식 — 줌)
     private Dictionary<string, GameObject> spineDict = new Dictionary<string, GameObject>(System.StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, SkeletonAnimation> skeletonDict = new Dictionary<string, SkeletonAnimation>(System.StringComparer.OrdinalIgnoreCase);   //[스테이지 레이아웃]
+    private readonly Dictionary<string, Vector2> zoomPivotDict = new Dictionary<string, Vector2>(System.StringComparer.OrdinalIgnoreCase);   //[스테이지 레이아웃] head 위치 (자식 기준)
     //[LD 불러오기] 추가: 인덱스에 없거나 불러오기 실패한 키 (경고는 1번만)
     private readonly HashSet<string> failedKeys = new HashSet<string>(System.StringComparer.OrdinalIgnoreCase);
-    //포지션 문자열 > X 좌표 (ScreenWidth 기준 비율)
-    private Dictionary<string, float> positionDict = new Dictionary<string, float>();
+    //[스테이지 레이아웃] 삭제: positionDict (포지션 문자열 > X 좌표)
 
     private Dictionary<string, Coroutine> zoomDict = new Dictionary<string, Coroutine>(System.StringComparer.OrdinalIgnoreCase);
 
@@ -83,20 +85,18 @@ public class CGManager : MonoBehaviour
         //[LD 불러오기] 삭제: spineEntries → spineDict 구성 (이제 PrepareAct에서 필요한 Spine만 만듦)
         if (spineParent == null) Debug.LogError("[CGManager] spineParent(Canvas > CG) 미연결 — LD Spine을 만들 수 없습니다.");
 
-        //포지션의 x좌표 등록 (화면 중심 기준, 단위는 px)
-        //3분할
-        positionDict["left"] = screenWidth * -0.25f; //-480
-        positionDict["center"] = screenWidth * 0f; //0
-        positionDict["right"] = screenWidth * 0.25f; //480
-
-        //5분할
-        positionDict["wide_far_left"] = screenWidth * -0.40f; //-768
-        positionDict["wide_left"] = screenWidth * -0.20f; //-384
-        positionDict["wide_center"] = screenWidth * 0f; //0
-        positionDict["wide_right"] = screenWidth * 0.20f; //384
-        positionDict["wide_far_right"] = screenWidth * 0.40f; //768
-
+        //[스테이지 레이아웃] 삭제: positionDict 3분할·5분할 등록 → StageData.xml
+        LoadStageData();        //[스테이지 레이아웃] 추가
         LoadDefaultLipData();   // 추가: 아이돌별 디폴트 립 데이터 로드
+    }
+
+    //[스테이지 레이아웃] 추가: StageData.xml 읽기 (문제는 경고만 — 표가 비면 캐릭터가 나오지 않음)
+    private void LoadStageData()
+    {
+        TextAsset xml = Resources.Load<TextAsset>(UsoSCTheater.ResourcePaths.Data + "/" + StageTable.DataName);
+        var warnings = new List<string>();
+        stage = new StagePlanner(StageTable.Parse(xml != null ? xml.text : null, warnings));
+        foreach (string w in warnings) Debug.LogWarning($"[CGManager] {w}");
     }
 
     //Play 모드에서 Inspector로 트랙별 애니메이션 상태를 실시간 확인하기 위한 갱신 루프
@@ -114,8 +114,8 @@ public class CGManager : MonoBehaviour
         {
             if (!pair.Value.activeSelf) continue;
 
-            SkeletonAnimation skAnim = pair.Value.GetComponent<SkeletonAnimation>();
-            if (skAnim == null) continue;
+            //[스테이지 레이아웃] 수정: GetComponent → skeletonDict (SkeletonAnimation은 자식)
+            if (!skeletonDict.TryGetValue(pair.Key, out SkeletonAnimation skAnim)) continue;
 
             trackDebugInfo.Add(new CGTrackDebugInfo
             {
@@ -171,16 +171,20 @@ public class CGManager : MonoBehaviour
             return false;
         }
 
+        //[스테이지 레이아웃] 변경: {키} = 배치 층(빈 오브젝트), 그 아래 Spine = 효과 층(SkeletonAnimation)
         obj = new GameObject(info.Key);
-        obj.SetActive(false);   //AddComponent 직후 Awake(Initialize)가 데이터 없이 돌지 않도록 먼저 끔
+        obj.SetActive(false);   //AddComponent 직후 Awake(Initialize)가 데이터 없이 돌지 않도록 먼저 끔 (자식도 부모가 꺼져 있어 Awake가 돌지 않음)
         obj.transform.SetParent(GetCharacterFolder(info.CharacterId), false);
 
-        SkeletonAnimation skAnim = obj.AddComponent<SkeletonAnimation>();   //MeshRenderer·MeshFilter는 자동 추가
+        GameObject spine = new GameObject("Spine");   //[스테이지 레이아웃] 추가: 효과 층
+        spine.transform.SetParent(obj.transform, false);
+
+        SkeletonAnimation skAnim = spine.AddComponent<SkeletonAnimation>();   //MeshRenderer·MeshFilter는 자동 추가   //[스테이지 레이아웃] obj → spine
         skAnim.skeletonDataAsset = data;
         skAnim.pmaVertexColors = SPINE_PMA_VERTEX_COLORS;
         skAnim.Initialize(false);
 
-        MeshRenderer meshRenderer = obj.GetComponent<MeshRenderer>();
+        MeshRenderer meshRenderer = spine.GetComponent<MeshRenderer>();   //[스테이지 레이아웃] obj → spine
         if (meshRenderer != null)
         {
             meshRenderer.sortingLayerName = SPINE_SORTING_LAYER;
@@ -188,7 +192,20 @@ public class CGManager : MonoBehaviour
         }
 
         spineDict[info.Key] = obj;
+        skeletonDict[info.Key] = skAnim;                  //[스테이지 레이아웃]
+        zoomPivotDict[info.Key] = GetZoomPivot(skAnim);   //[스테이지 레이아웃]
         return true;
+    }
+
+    //[스테이지 레이아웃] 추가: 줌 기준점 = head 본의 기본 자세 위치 (없으면 원점 + 경고)
+    private Vector2 GetZoomPivot(SkeletonAnimation skAnim)
+    {
+        skAnim.Skeleton.SetToSetupPose();
+        skAnim.Skeleton.UpdateWorldTransform();
+        Bone head = skAnim.Skeleton.FindBone(ZOOM_PIVOT_BONE);
+        if (head != null) return new Vector2(head.WorldX, head.WorldY);
+        Debug.LogWarning($"[CGManager] {skAnim.skeletonDataAsset.name}: '{ZOOM_PIVOT_BONE}' 본 없음 → 줌 기준점 = 원점");
+        return Vector2.zero;
     }
 
     //[LD 불러오기] CG 아래 캐릭터 폴더 (없으면 생성)
@@ -202,18 +219,25 @@ public class CGManager : MonoBehaviour
         return folder;
     }
 
+    //[스테이지 레이아웃] 추가: TEXT·SETCG 1줄마다 SetCG 전에 1번 (앞뒤 순서 — CGGROUP 멤버는 같은 값)
+    public void BeginLine() => stage.StartLine();
+
     public void SetCG (string cgKey, string position, string animation, float voiceDuration = 0f)
     {
         //[LD 불러오기] 수정: 미등록 경고 + spineDict[cgKey] → TryGetSpine (경고는 그 안에서)
         if (!TryGetSpine(cgKey, out GameObject spineObj)) return;
 
-        spineObj.SetActive(true);
+        //[스테이지 레이아웃] 수정: ApplyPosition → 자리 규칙. Pos 오류·분할 불일치는 경고 후 이 줄에서 건너뜀 (애니메이션·립도)
+        stageWarnings.Clear();
+        bool shown = stage.Show(cgKey, position, stageWarnings);
+        foreach (string w in stageWarnings) Debug.LogWarning($"[CGManager] {w}");
+        if (!shown) return;
 
-        //위치 적용
-        ApplyPosition(spineObj, position);
+        spineObj.SetActive(true);
+        ApplyStage();   //[스테이지 레이아웃] 등장과 함께 무대 전원 다시 배치 (자동 배치 이동 + 앞뒤 정렬)
 
         //애니메이션 재생
-        if (!string.IsNullOrEmpty(animation)) PlayAnimation(spineObj, animation);
+        if (!string.IsNullOrEmpty(animation)) PlayAnimation(spineObj.name, animation);   //[스테이지 레이아웃] spineObj → 키 (오브젝트 이름 = 등록 키, 이전 역조회 결과와 같음)
 
         if (voiceDuration > 0f)
         {
@@ -226,11 +250,13 @@ public class CGManager : MonoBehaviour
     {
         if (spineDict.ContainsKey(cgKey))
             spineDict[cgKey].SetActive(false);
+        stage.Remove(cgKey);   //[스테이지 레이아웃] 남은 캐릭터는 옮기지 않음
     }
 
     public void HideAll()
     {
         foreach (var obj in spineDict.Values) obj.SetActive(false);
+        stage.Clear();   //[스테이지 레이아웃]
     }
 
     public void ClearAllCGState()
@@ -251,45 +277,29 @@ public class CGManager : MonoBehaviour
         ClearAllZoom();
     }
 
-    private void ApplyPosition(GameObject spineObj, string position)
+    //[스테이지 레이아웃] 삭제: ApplyPosition (자리 이름 → X·Y·크기, 줌 코루틴 중지 + 크기 되돌림)
+    //  → ApplyStage (부모만 — 줌은 자식이라 다음 CG 줄에서 풀리지 않음)
+    //[스테이지 레이아웃] 추가: 무대 전원의 배치 층 위치·크기 + 앞뒤 정렬 (뒤 → 앞으로 정렬 순서 1, 2, 3…)
+    private void ApplyStage()
     {
-        if (!positionDict.ContainsKey(position))
+        int order = SPINE_SORTING_ORDER;
+        foreach (StagePlacement p in stage.Placements())
         {
-            Debug.LogWarning($"[CGManager] 등록되지 않은 포지션: {position}");
-            return;
+            if (!spineDict.TryGetValue(p.Key, out GameObject obj)) continue;
+            obj.transform.localPosition = new Vector3((float)p.X, (float)p.BaseY, 0f);
+            obj.transform.localScale = new Vector3((float)p.Scale, (float)p.Scale, 1f);
+            if (skeletonDict.TryGetValue(p.Key, out SkeletonAnimation sk)) sk.GetComponent<MeshRenderer>().sortingOrder = order++;
         }
-
-        //[수정] 이 캐릭터의 줌 코루틴이 돌고 있으면 멈춤 (아래에서 정한 크기·Y를 코루틴이 다시 덮어쓰지 않도록)
-        string cgKey = spineDict.FirstOrDefault(kvp => kvp.Value == spineObj).Key;
-        if (cgKey != null && zoomDict.TryGetValue(cgKey, out Coroutine zoom) && zoom != null)
-        {
-            StopCoroutine(zoom);
-            zoomDict[cgKey] = null;
-        }
-
-        //위치 적용
-        Vector3 pos = spineObj.transform.localPosition;
-        pos.x = positionDict[position];
-        pos.y = basePosY;   //[수정] Y도 기준값으로 — 크기를 기본값으로 되돌리므로 줌 보정 Y도 함께 되돌림 (씬에 놓인 Y가 첫 CG에 그대로 나오던 문제)
-        spineObj.transform.localPosition = pos;
-
-        //스케일 적용
-        float scale = position.StartsWith("wide_") ? scale5 : scale3;
-        spineObj.transform.localScale = new Vector3(scale, scale, 1f);
     }
 
-    private void PlayAnimation(GameObject spineObj, string animName)
+    //[스테이지 레이아웃] 수정: (GameObject spineObj, …) → (string cgKey, …) — 역조회(FirstOrDefault) 삭제
+    private void PlayAnimation(string cgKey, string animName)
     {
-        SkeletonAnimation skAnim = spineObj.GetComponent<SkeletonAnimation>();
-        
-        if (skAnim == null)
+        if (!skeletonDict.TryGetValue(cgKey, out SkeletonAnimation skAnim))
         {
-            Debug.LogWarning($"[CGManager] SkeletonAnimation 컴포넌트 없음: {spineObj.name}");
+            Debug.LogWarning($"[CGManager] SkeletonAnimation 없음: {cgKey}");
             return;
         }
-
-        //cgKey 역조회
-        string cgKey = spineDict.FirstOrDefault(kvp => kvp.Value == spineObj).Key;
 
         //공백과 쉼표를 구분자로 분리
         string[] animations = animName.Split(new char[] { ' ', ','}, System.StringSplitOptions.RemoveEmptyEntries);
@@ -375,74 +385,52 @@ public class CGManager : MonoBehaviour
         return 0;
     }
 
-    public void SetZoom(string cgKey, string position, float targetScale, float duration)
+    //[스테이지 레이아웃] 수정: 줌 = 효과 층(자식)만 — 배치와 따로라 다음 CG 줄에서 풀리지 않음, 끝낼 때는 Value = 1 줌
+    //  기준점(head) 고정: 자식 위치 = 기준점 × (1 − 배율). 매번 배율로 다시 계산 → Y 누적·5분할 크기 되돌림·시간 0 보정 문제 없음
+    //  삭제: position 인자 (크기는 부모가 가짐), basePosY·zoomYOffsetScale 보정
+    public void SetZoom(string cgKey, float zoom, float duration)
     {
         //[LD 불러오기] 수정: ContainsKey + 경고 → TryGetSpine
-        if (!TryGetSpine(cgKey, out GameObject spineObj)) return;
+        if (!TryGetSpine(cgKey, out _)) return;
+        StopZoom(cgKey);
 
-        float baseScale = position.StartsWith("wide_") ? scale5 : scale3;
-        float finalScale = baseScale * targetScale;
-
-        //새로운 줌 세팅 시, 기존 줌 코루틴 실행중이면 강제 중단
-        if (zoomDict.ContainsKey(cgKey) && zoomDict[cgKey] != null)
-        {
-            StopCoroutine(zoomDict[cgKey]);
-            zoomDict[cgKey] = null;
-        }
-
-        if (duration <= 0f)
-        {
-            //dur 0이면 즉시 적용
-            spineObj.transform.localScale = new Vector3(finalScale, finalScale, 1f);
-
-            //Y축 보정값도 적용
-            float currentScale = spineObj.transform.localScale.x;
-            float targetY = basePosY -(finalScale - currentScale) * zoomYOffsetScale;
-            spineObj.transform.localPosition = new Vector3(spineObj.transform.localPosition.x, targetY, 0f);
-        }
-        else
-        {
-            //아니면 코루틴
-            zoomDict[cgKey] = StartCoroutine(ZoomCoroutine(spineObj, finalScale, duration));
-        }
+        if (duration <= 0f) ApplyZoom(cgKey, zoom);
+        else zoomDict[cgKey] = StartCoroutine(ZoomCoroutine(cgKey, zoom, duration));
     }
 
-    private IEnumerator ZoomCoroutine(GameObject spineObj, float finalScale, float duration)
+    private IEnumerator ZoomCoroutine(string cgKey, float target, float duration)
     {
-        float elapsed = 0f;
-        float currentScale = spineObj.transform.localScale.x;
-        float currentY = spineObj.transform.localPosition.y;
-        float targetY = basePosY -(finalScale - currentScale) * zoomYOffsetScale;
-
-        while (elapsed < duration)
+        float from = skeletonDict[cgKey].transform.localScale.x;
+        for (float t = 0f; t < duration; t += Time.deltaTime)
         {
-            elapsed += Time.deltaTime;
-            float t = elapsed / duration;
-            float scale = Mathf.Lerp(currentScale, finalScale, t);
-            float posY = Mathf.Lerp(currentY, targetY, t);
-            
-            spineObj.transform.localScale = new Vector3(scale, scale, 1f);
-            spineObj.transform.localPosition = new Vector3(spineObj.transform.localPosition.x, posY, 0f);
+            ApplyZoom(cgKey, Mathf.Lerp(from, target, t / duration));
             yield return null;
         }
+        ApplyZoom(cgKey, target);
+        zoomDict[cgKey] = null;
+    }
 
-        spineObj.transform.localScale = new Vector3(finalScale, finalScale, 1f);
-        spineObj.transform.localPosition = new Vector3(spineObj.transform.localPosition.x, targetY, 0f);
-        
+    //[스테이지 레이아웃] 추가
+    private void ApplyZoom(string cgKey, float zoom)
+    {
+        if (!skeletonDict.TryGetValue(cgKey, out SkeletonAnimation sk)) return;
+        Vector2 pivot = zoomPivotDict[cgKey];
+        sk.transform.localScale = new Vector3(zoom, zoom, 1f);
+        sk.transform.localPosition = new Vector3((float)StageLayout.ZoomOffset(pivot.x, zoom), (float)StageLayout.ZoomOffset(pivot.y, zoom), 0f);
+    }
+
+    //[스테이지 레이아웃] 추가
+    private void StopZoom(string cgKey)
+    {
+        if (zoomDict.TryGetValue(cgKey, out Coroutine zoom) && zoom != null) StopCoroutine(zoom);
+        zoomDict[cgKey] = null;
     }
 
     public void ClearZoom(string cgKey)
     {
-        if (!spineDict.ContainsKey(cgKey)) return;
-
-        if (zoomDict.ContainsKey(cgKey) && zoomDict[cgKey] != null)
-        {
-            StopCoroutine(zoomDict[cgKey]);
-            zoomDict[cgKey] = null;
-        }
-
-        spineDict[cgKey].transform.localScale = new Vector3(scale3, scale3, 1f);
-        spineDict[cgKey].transform.localPosition = new Vector3(spineDict[cgKey].transform.localPosition.x, basePosY, 0f);
+        if (!skeletonDict.ContainsKey(cgKey)) return;   //[스테이지 레이아웃] spineDict → skeletonDict
+        StopZoom(cgKey);
+        ApplyZoom(cgKey, 1f);   //[스테이지 레이아웃] scale3·basePosY 대신 배율 1 (크기는 부모)
     }
 
     public void ClearAllZoom()
@@ -534,9 +522,8 @@ public class CGManager : MonoBehaviour
     //보이스 길이만큼 입 움직임 재생 후 정지 립으로 교체
     private IEnumerator LipSyncCoroutine(string cgKey, string animName, float voiceDuration)
     {
-        if (!spineDict.ContainsKey(cgKey)) yield break;
-        SkeletonAnimation skAnim = spineDict[cgKey].GetComponent<SkeletonAnimation>();
-        if (skAnim == null) yield break;
+        //[스테이지 레이아웃] 수정: spineDict[cgKey].GetComponent → skeletonDict (SkeletonAnimation은 자식)
+        if (!skeletonDict.TryGetValue(cgKey, out SkeletonAnimation skAnim)) yield break;
 
         //립 애니메이션 이름 결정
         string[] animations = animName.Split(new char[] { ' ', ','}, System.StringSplitOptions.RemoveEmptyEntries);

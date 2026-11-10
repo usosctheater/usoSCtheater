@@ -27,9 +27,11 @@ public sealed class MainViewModel
         Log = new LogViewModel(log, ui);
         Download = new DownloadViewModel(settings, library, units, dialogs, catalogFactory, downloaderFactory, saveSettings, log);
         Resource = new ResourceViewModel(settings, library, units, dialogs, saveSettings, messenger, log);
-        Script = new ScriptViewModel(settings, library, backgrounds, stage, gameData.Lips, messenger, saveSettings, log, audioMemos);   // 변경(번역 모드 2회차): LipRules.LoadEmbedded() → gameData.Lips
+        Script = new ScriptViewModel(settings, library, backgrounds, stage, gameData.Lips, messenger, saveSettings, log, audioMemos,
+                                     stageTable: () => gameData.Stage);   //[스테이지 레이아웃] 무대 배치 표   // 변경(번역 모드 2회차): LipRules.LoadEmbedded() → gameData.Lips
         // 추가(4-1): 스크립트 표 (스크립트 탭 아래쪽)
-        Editor = new ActEditorViewModel(settings, library, dialogs, ui, saveSettings, log, characters: gameData.Characters, messenger: messenger);   // 변경(번역 모드 2회차): characters
+        Editor = new ActEditorViewModel(settings, library, dialogs, ui, saveSettings, log, characters: gameData.Characters, messenger: messenger,
+                                         stageTable: () => gameData.Stage);   //[스테이지 레이아웃] F5 무대 동기화의 배치 표   // 변경(번역 모드 2회차): characters
         Script.Editor = Editor;
         Editor.StampProvider = () => Script.CurrentStamp;   // 추가(4-2): 줄 추가 때 무대에서 선택한 캐릭터 정보
         Editor.VoiceMatch = VoiceMatch;   // 추가(번역 모드 5회차): [라이선스 내보내기]
@@ -69,6 +71,7 @@ public sealed class MainViewModel
     {
         Editor.GameDataWarning = GameData.HasProblem ? "⚠ 게임 데이터가 TE 복사본과 다르거나 없음 — 설정 탭 > 게임 데이터" : "";
         Editor.OnGameDataChanged();
+        Script.OnStageDataChanged();   //[스테이지 레이아웃] 표가 바뀌면 분할 목록·배치·안내선 다시
     }
 
     /// <summary>추가: 설정 탭 (설정 관리 규칙 — TE 핸드오프 0절)</summary>

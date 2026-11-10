@@ -76,7 +76,10 @@ namespace UsoSCTheater.Capture
 
             // 고정 해상도로 카메라를 직접 렌더 (Game 뷰 창 크기와 무관)
             targetCamera.targetTexture = rt;
+            Rect prevRect = targetCamera.rect;                 //[스테이지 레이아웃] 추가: 레터박스로 줄어든 영역이면 캡처에 막대가 들어가므로
+            targetCamera.rect = new Rect(0f, 0f, 1f, 1f);      //  캡처할 때만 전체로
             targetCamera.Render();
+            targetCamera.rect = prevRect;                      //[스테이지 레이아웃] 추가
             targetCamera.targetTexture = prevTarget;
 
             AsyncGPUReadback.Request(rt, 0, TextureFormat.RGBA32, request =>

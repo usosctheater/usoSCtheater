@@ -35,9 +35,11 @@ export class Stage {
     this.bg = new PIXI.Sprite(PIXI.Texture.EMPTY);
     this.bg.visible = false;
     this.layer = new PIXI.Container();        // 캐릭터
+    this.guide = new PIXI.Graphics();         // [스테이지 레이아웃] 추가: 대사창 안내선 (캐릭터 위, 선택 표시 아래)
+    this.guideMsg = null;
     this.overlay = new PIXI.Graphics();       // 선택·미리보기 발밑 표시
     this.labels = new PIXI.Container();       // 이름표
-    this.view.addChild(this.frame, this.bg, this.layer, this.overlay, this.labels);
+    this.view.addChild(this.frame, this.bg, this.layer, this.guide, this.overlay, this.labels);   // [스테이지 레이아웃] guide 추가
     this.app.stage.addChild(this.view);
 
     this.drawFrame();
@@ -70,6 +72,7 @@ export class Stage {
     this.height = cfg.screenHeight || 1080;
     this.unitScale = cfg.unitScale || 1;
     this.drawFrame();
+    this.drawGuide();   // [스테이지 레이아웃] 화면 크기가 바뀌면 안내선도
     this.fit();
     for (const id of this.entries.keys()) this.applyPlacement(id);
   }
@@ -163,8 +166,33 @@ export class Stage {
     const e = this.entries.get(msg.id);
     if (!e) return;
     e.x = msg.x; e.y = msg.y; e.scale = msg.scale;
+    e.actor.setZoom(msg.zoom ?? 1);   // [스테이지 레이아웃] 추가: 효과 층 배율 (head 기준)
     this.applyPlacement(msg.id);
     this.refreshMarks();
+  }
+
+  /** [스테이지 레이아웃] 추가: 앞뒤 순서 — ids 순서대로 위에 쌓음 (마지막이 맨 앞, 게임 정렬 순서와 같음) */
+  setOrder(ids) {
+    for (const id of ids || []) {
+      const e = this.entries.get(id);
+      if (e) this.layer.setChildIndex(e.actor.container, this.layer.children.length - 1);
+    }
+  }
+
+  /** [스테이지 레이아웃] 추가: 대사창 안내선 (점선 사각형) */
+  setGuide(msg) {
+    this.guideMsg = msg;
+    this.drawGuide();
+  }
+
+  drawGuide() {
+    const g = this.guide, m = this.guideMsg;
+    g.clear();
+    if (!m || !m.visible) return;
+    const x0 = this.width / 2 + m.x - m.width / 2, y0 = this.height / 2 - m.y - m.height / 2;
+    const pts = [[x0, y0], [x0 + m.width, y0], [x0 + m.width, y0 + m.height], [x0, y0 + m.height], [x0, y0]];
+    g.lineStyle(3, 0xffffff, 0.7);
+    for (let k = 0; k < 4; k++) dashLine(g, pts[k], pts[k + 1], 16, 10);
   }
 
   applyPlacement(id) {
@@ -316,5 +344,16 @@ export class Stage {
       const e = this.entries.get(d.id);
       if (e) post({ type: "dropped", id: d.id, x: e.actor.container.x - this.width / 2 });
     });
+  }
+}
+
+// [스테이지 레이아웃] 추가: 점선 (PIXI 7 Graphics에 점선이 없어 직접)
+function dashLine(g, [x1, y1], [x2, y2], dash, gap) {
+  const len = Math.hypot(x2 - x1, y2 - y1);
+  if (len <= 0) return;
+  const ux = (x2 - x1) / len, uy = (y2 - y1) / len;
+  for (let d = 0; d < len; d += dash + gap) {
+    const e = Math.min(d + dash, len);
+    g.moveTo(x1 + ux * d, y1 + uy * d).lineTo(x1 + ux * e, y1 + uy * e);
   }
 }

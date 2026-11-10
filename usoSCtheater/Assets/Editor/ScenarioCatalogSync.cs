@@ -10,6 +10,7 @@ using UnityEditor.Build.Reporting;
 using UnityEngine;
 using UsoSCTheater.Scenario;
 using UsoSCTheater;   //[리소스 정리] ResourcePaths
+using UsoSCTheater.Shared;   //[스테이지 레이아웃] StageTable · StagePlanner
 
 /// <summary>
 /// 시나리오 루트(Resources/Scenario) 하위 폴더를 스캔해 ScenarioCatalog를 자동 동기화한다. (에디터 전용)
@@ -46,6 +47,12 @@ public class ScenarioCatalogSync : AssetPostprocessor
     private const string ActGroupIdAttr = "GroupId";    //[CharId] CGGROUP 그룹 이름 (기존 Name="그룹명, 화자명" 폐기 — ActNameAttr 삭제)
     private const string ActCharIdAttr = "CharId";      //[CharId] TEXT 화자 캐릭터 ID (쉼표로 여러 명)
     private const string ActLineTag = "Line";
+    private const string ActPositionAttr = "Position";   //[스테이지 레이아웃] 무대 자리 검사
+    private const string ActEffectAttr = "Effect";       //[스테이지 레이아웃] SETCG clean
+
+    //[스테이지 레이아웃] 무대 자리 검사용 표 (동기화 1번마다 StageData.xml을 다시 읽음)
+    private const string StageDataAssetPath = ResourcePaths.AssetsRoot + "/" + ResourcePaths.Data + "/" + StageTable.DataName + ".xml";
+    private static StageTable stageTable;
     //[다국어] 번역 누락 검사(Check Translations)는 Editor/LocalizationCheck.cs로 옮김 (Tools > Localization)
 
     //[다국어] 기본 언어가 아닌 언어 목록 (제목·태그를 언어별로 저장할 대상)
@@ -114,6 +121,7 @@ public class ScenarioCatalogSync : AssetPostprocessor
         }
 
         UsoSCTheater.Character.CharacterDatabase.Reload();   //[CharId] CharacterData·인덱스를 고친 뒤에도 최신 내용으로 검사
+        stageTable = LoadStageTable();   //[스테이지 레이아웃] 추가
 
         var catalog = AssetDatabase.LoadAssetAtPath<ScenarioCatalog>(CatalogAssetPath);
         bool changed = false;
@@ -363,6 +371,74 @@ public class ScenarioCatalogSync : AssetPostprocessor
         }
     }
 
+    //[스테이지 레이아웃] 추가: StageData.xml → 표 (문제는 경고)
+    private static StageTable LoadStageTable()
+    {
+        var asset = AssetDatabase.LoadAssetAtPath<TextAsset>(StageDataAssetPath);
+        var warnings = new List<string>();
+        StageTable table = StageTable.Parse(asset != null ? asset.text : null, warnings);
+        foreach (string w in warnings) Debug.LogWarning($"[ScenarioCatalogSync] {w}");
+        return table;
+    }
+
+    //[스테이지 레이아웃] 추가: 무대 자리 검사 — 게임과 같은 StagePlanner로 막을 처음부터 돌려 경고를 모음 (경고만, 빌드는 막지 않음)
+    //  게임 순회와 같은 규칙: TRANSITION·CG="none" = 비움, SETCG clean = 내림, CGGROUP = 막 전체 정의 (멤버 Position)
+    //  Position이 빈 CG 줄은 확인용 알림 (TE가 항상 N-i를 적으므로 대부분 손으로 쓴 실수). 줄 번호 = TE 스크립트 표 번호
+    private static void ValidateActStage(string assetPath, XmlDocument doc)
+    {
+        XmlNode root = ActXml.GetRoot(doc);
+        if (root == null || stageTable == null) return;
+
+        var lines = new List<XmlNode>();
+        var groups = new Dictionary<string, List<(string cg, string pos)>>(StringComparer.Ordinal);   //게임 cgGroupDict와 같은 비교
+        foreach (XmlNode node in root.ChildNodes)
+        {
+            if (node.NodeType != XmlNodeType.Element || node.Name != ActLineTag) continue;
+            lines.Add(node);
+            if (!string.Equals(ActXml.GetAttrIgnoreCase(node, ActTypeAttr), ActCgGroupType, StringComparison.OrdinalIgnoreCase)) continue;
+            string id = ActXml.GetAttrIgnoreCase(node, ActGroupIdAttr).Trim();
+            if (id.Length == 0) continue;
+            if (!groups.TryGetValue(id, out var members)) groups[id] = members = new List<(string cg, string pos)>();
+            members.Add((ActXml.GetAttrIgnoreCase(node, ActCgAttr), ActXml.GetAttrIgnoreCase(node, ActPositionAttr)));
+        }
+
+        var planner = new StagePlanner(stageTable);
+        var issues = new List<string>();
+        var notes = new List<string>();
+        var warnings = new List<string>();
+        for (int i = 0; i < lines.Count; i++)
+        {
+            XmlNode node = lines[i];
+            string type = ActXml.GetAttrIgnoreCase(node, ActTypeAttr).Trim().ToUpperInvariant();
+            if (type == "TRANSITION") { planner.Clear(); continue; }
+            if (type != "TEXT" && type != "SETCG") continue;
+
+            string cg = ActXml.GetAttrIgnoreCase(node, ActCgAttr).Trim();
+            if (cg.Length == 0) continue;
+            if (string.Equals(cg, ActCgNone, StringComparison.OrdinalIgnoreCase)) { planner.Clear(); continue; }
+
+            var targets = groups.TryGetValue(cg, out var groupMembers) ? groupMembers : new List<(string cg, string pos)> { (cg, ActXml.GetAttrIgnoreCase(node, ActPositionAttr)) };
+            if (type == "SETCG" && string.Equals(ActXml.GetAttrIgnoreCase(node, ActEffectAttr).Trim(), "clean", StringComparison.OrdinalIgnoreCase))
+            {
+                foreach (var t in targets) planner.Remove(t.cg.Trim());
+                continue;
+            }
+
+            planner.StartLine();
+            foreach (var t in targets)
+            {
+                if (t.pos.Trim().Length == 0) notes.Add($"{i + 1}번 줄: {t.cg} Position 없음 (자동 배치)");
+                warnings.Clear();
+                planner.Show(t.cg.Trim(), t.pos, warnings);
+                foreach (string w in warnings) issues.Add($"{i + 1}번 줄: {w}");
+            }
+        }
+
+        string act = Path.GetFileNameWithoutExtension(assetPath);
+        if (issues.Count > 0) Debug.LogWarning($"[ScenarioCatalogSync] {act}: 무대 자리 경고 {issues.Count}개\n  {string.Join("\n  ", issues)}");
+        if (notes.Count > 0) Debug.Log($"[ScenarioCatalogSync] {act}: (확인용) Position이 빈 CG 줄 {notes.Count}개\n  {string.Join("\n  ", notes)}");
+    }
+
     //[목록 UI] 막 XML 루트의 mainTitle / subTitle 읽기 (파싱 실패 시 빈 값 + 경고)
     //[엔딩 SD] spineKeys: 막 안 모든 요소의 CG 값(쉼표 구분)을 등장 순서대로 추가 (중복·none 제외, 대소문자 무시)
     //[다국어] localizedTitles: 기본 언어가 아닌 언어마다 [mainTitle_{언어}, subTitle_{언어}] (없으면 "")
@@ -410,6 +486,7 @@ public class ScenarioCatalogSync : AssetPostprocessor
 
             ValidateActResourceKeys(assetPath, doc);   //[리소스 정리] BG·IMAGE 키 파일 존재 검사
             ValidateActScript(assetPath, doc);         //[CharId] CharId·GroupId·언어 접미어 검사
+            ValidateActStage(assetPath, doc);          //[스테이지 레이아웃] 추가: 무대 자리 검사
         }
         catch (XmlException e)
         {

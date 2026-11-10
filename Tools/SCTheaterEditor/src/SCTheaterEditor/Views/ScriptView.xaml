@@ -37,11 +37,9 @@
                 <Button Content="새로 고침" Margin="4,0,0,0" Padding="8,1" Command="{Binding RefreshBackgroundsCommand}"/>
                 <Button Content="폴더 열기" Margin="4,0,0,0" Padding="8,1" Click="OpenBackgroundFolder_Click"/>
                 <TextBlock Text="분할:" VerticalAlignment="Center" Margin="16,0,6,0"/>
-                <RadioButton Content="3분할" VerticalAlignment="Center" Margin="0,0,8,0" Command="{Binding SetSplitCommand}" CommandParameter="3"
-                             IsChecked="{Binding Split, Mode=OneWay, Converter={StaticResource Equals}, ConverterParameter=3}"/>
-                <RadioButton Content="5분할" VerticalAlignment="Center" Command="{Binding SetSplitCommand}" CommandParameter="5"
-                             IsChecked="{Binding Split, Mode=OneWay, Converter={StaticResource Equals}, ConverterParameter=5}"
-                             ToolTip="5분할에서 3분할로는 캐릭터가 3명 이하일 때만 바꿀 수 있습니다"/>
+                <!-- [스테이지 레이아웃] 변경: 3/5 라디오 → StageData 행 콤보 -->
+                <ComboBox ItemsSource="{Binding SplitOptions}" SelectedItem="{Binding SplitChoice}" MinWidth="50"
+                          ToolTip="무대 전원을 이 분할로 옮김 (왼쪽→오른쪽 순서 유지, 가장 가까운 칸). 캐릭터 수보다 작은 분할로는 바꿀 수 없음"/>
             </StackPanel>
             <TextBlock Text="{Binding StatusText}" Foreground="Gray" VerticalAlignment="Center" Margin="16,0,0,0" TextTrimming="CharacterEllipsis"
                        ToolTip="무대: 클릭 = 선택 · 드래그 = 자리 이동(겹치면 교체) · Space = 재생/일시정지 · R = 초기화 · Delete = 내리기 · Enter/Esc = 미리보기 적용/취소"/>

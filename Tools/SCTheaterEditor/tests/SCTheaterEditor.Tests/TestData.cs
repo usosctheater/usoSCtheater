@@ -9,4 +9,7 @@ internal static class TestData
     public static string Text(string name) => File.ReadAllText(Path(name));
     public static CharacterData Characters() => CharacterData.Parse(Text(GameData.CharacterFile));
     public static LipRules Lips() => LipRules.Parse(Text(GameData.LipFile));
+
+    /// <summary>[스테이지 레이아웃] 추가: 무대 배치 표 (게임 StageData.xml 복사본, 1~6분할)</summary>
+    public static UsoSCTheater.Shared.StageTable Stage() => UsoSCTheater.Shared.StageTable.Parse(Text(GameData.StageFile), new List<string>());
 }

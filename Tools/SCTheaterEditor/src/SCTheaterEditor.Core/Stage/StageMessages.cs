@@ -46,10 +46,22 @@ public sealed record RemoveActor(int Id) : StageCommand
     public override string Type => "removeActor";
 }
 
-/// <summary>위치 (x·y = 화면 중심 기준 px, y는 위가 +), 스케일 배율</summary>
-public sealed record PlaceActor(int Id, double X, double Y, double Scale) : StageCommand
+/// <summary>위치 (x·y = 화면 중심 기준 px, y는 위가 +), 스케일 배율, Zoom = 효과 층 배율 (head 기준)</summary>   //[스테이지 레이아웃] Zoom 추가
+public sealed record PlaceActor(int Id, double X, double Y, double Scale, double Zoom = 1) : StageCommand
 {
     public override string Type => "place";
+}
+
+/// <summary>[스테이지 레이아웃] 추가: 앞뒤 순서 — Ids 순서대로 위에 쌓음 (마지막이 맨 앞, 게임 정렬 순서와 같음)</summary>
+public sealed record OrderActors(IReadOnlyList<int> Ids) : StageCommand
+{
+    public override string Type => "order";
+}
+
+/// <summary>[스테이지 레이아웃] 추가: 대사창 안내선 (화면 중심 기준 가운데 X·Y + 크기, 점선). Visible = 설정 && StageData에 값이 있음</summary>
+public sealed record SetGuide(bool Visible, double X, double Y, double Width, double Height) : StageCommand
+{
+    public override string Type => "guide";
 }
 
 /// <summary>보이기/숨기기 (미리보기가 자리를 대신 쓰는 동안 원래 캐릭터 숨김)</summary>

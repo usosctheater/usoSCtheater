@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;   // 추가: 설정 변경 알림
 using SCTheaterEditor.Script;
 using SCTheaterEditor.Services;
+using UsoSCTheater.Shared;   //[스테이지 레이아웃] StageTable
 
 namespace SCTheaterEditor.ViewModels;
 
@@ -41,12 +42,15 @@ public sealed partial class ActEditorViewModel : ObservableObject
     private bool _originalBackedUp;        // 이 막을 연 뒤 저장 전 원본을 백업했는지
     private System.Threading.Timer? _backupTimer;
     private readonly IMessenger _messenger;   // 추가: 설정 변경 알림
+    private readonly Func<StageTable> _stageTable;   //[스테이지 레이아웃] 추가: F5 무대 동기화의 배치 표
 
     public ActEditorViewModel(AppSettings settings, SpineLibrary library, IDialogService dialogs, IUiDispatcher ui,
                               Action saveSettings, AppLog log, string? backupFolder = null, Func<DateTime>? now = null,
                               LineTypeCatalog? types = null, CharacterData? characters = null,
-                              IMessenger? messenger = null)   // 변경: messenger 추가 (생략하면 이 인스턴스 전용)
+                              IMessenger? messenger = null,   // 변경: messenger 추가 (생략하면 이 인스턴스 전용)
+                              Func<StageTable>? stageTable = null)   //[스테이지 레이아웃] 추가: 무대 배치 표 (앱은 GameData.Stage)
     {
+        _stageTable = stageTable ?? (() => GameData.EmptyStage);   //[스테이지 레이아웃]
         _messenger = messenger ?? new StrongReferenceMessenger();
         // 추가: 시나리오 폴더가 바뀌면 (어디서 바꿨든) 막 목록 다시 읽기
         _messenger.Register<ActEditorViewModel, SettingsChangedMessage>(this, static (r, m) => r.OnSettingsChanged(m));
@@ -475,7 +479,7 @@ public sealed partial class ActEditorViewModel : ObservableObject
     public StageSnapshot? ComputeSnapshot()
     {
         if (Document == null || _selection.Count == 0) return null;
-        return StageStateCalculator.Compute(Document.Lines, _selection.Min(r => r.Number) - 1);
+        return StageStateCalculator.Compute(Document.Lines, _selection.Min(r => r.Number) - 1, _stageTable());   //[스테이지 레이아웃] 표 추가
     }
 
     /// <summary>

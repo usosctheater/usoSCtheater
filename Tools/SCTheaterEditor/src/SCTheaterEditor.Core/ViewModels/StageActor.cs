@@ -25,8 +25,11 @@ public sealed partial class StageActor : ObservableObject
     /// <summary>무대 위 이름표 (아이돌 이름, 없으면 의상명)</summary>
     public string Label => Asset.IdolName.Length > 0 ? Asset.IdolName : Asset.DressName;
 
-    /// <summary>XML Position 값 (center, wide_left …)</summary>
+    /// <summary>XML Position 값 ("N-i")</summary>   //[스테이지 레이아웃] 주석 변경
     [ObservableProperty] public partial string Position { get; set; }
+
+    /// <summary>[스테이지 레이아웃] 추가: 효과 층 배율 (F5 동기화의 게임 줌 끝난 상태, 리소스 탭에서 올리면 1)</summary>
+    public double Zoom { get; set; } = 1;
 
     /// <summary>미리보기 중 (Enter 적용 / Esc 취소 전)</summary>
     [ObservableProperty] public partial bool IsPreview { get; set; }
