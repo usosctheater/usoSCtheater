@@ -145,7 +145,7 @@ public class GameExportTests
         string act = Path.Combine(t.Path, "IL01.xml");
         File.WriteAllText(act, """
             <?xml version="1.0" encoding="UTF-8"?>
-            <Act mainTitle="m" subTitle="s">
+            <Act MainTitle="m" SubTitle="s">
             	<Line Type="TEXT" Name="円香" Text="a" CG="madoka_stand_1040210050" SpeakerType="1"/>
             	<Line Type="CGGROUP" GroupId="G1" CG="mano_stand_1040010010" Position="left"/>
             	<Line Type="TEXT" Name="円香" Text="b" CG="G1" SpeakerType="1"/>

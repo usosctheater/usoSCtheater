@@ -8,16 +8,17 @@ namespace SCTheaterEditor.Tests;
 /// <summary>4-1: 막 XML 읽기·쓰기, 문서 편집·되돌리기, 백업·목록, 스크립트 표 ViewModel</summary>
 public class ActXmlFormatTests
 {
-    // 기존 막 파일과 같은 모양: CRLF, 마지막 줄바꿈 없음, 루트 <Scene … >(> 앞 공백), 탭 + 한 줄
+    // 기존 막 파일과 같은 모양: CRLF, 마지막 줄바꿈 없음, 루트 <Act … >(> 앞 공백), 탭 + 한 줄
+    //[공유 코드 통합] 수정: <Scene> → <Act>, BG Key → ResourceKey (3회차: <Scene>·Key 읽기 삭제)
     internal static readonly string[] SampleLines =
     [
         "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>",
-        "<Scene MainTitle=\"InertiaLucis\" SubTitle=\"힘의 법칙\" >",
+        "<Act MainTitle=\"InertiaLucis\" SubTitle=\"힘의 법칙\" >",
         "\t<Line Type=\"AUDIO\" Value=\"bgm\" Track=\"BGM_2\" Volume=\"0.4\"/>",
-        "\t<Line Type=\"BG\" Key=\"bg_office_day\"/>",
+        "\t<Line Type=\"BG\" ResourceKey=\"bg_office_day\"/>",
         "\t<Line Type=\"TEXT\" Name=\"아사히\" Text=\"무리임다\\n그런 거~\" Voice=\"s001085\" CG=\"asahi_idol_3\" Position=\"right\" Animation=\"anger1 face_anger\" SpeakerType=\"1\"/>",
         "\t<Line Type=\"TRANSITION\" Effect=\"wipe_left\" SE=\"se_trans_out|se_trans_in\"/>",
-        "</Scene>",
+        "</Act>",
     ];
 
     internal static string Sample => string.Join("\r\n", SampleLines);
@@ -27,15 +28,31 @@ public class ActXmlFormatTests
     {
         var doc = ActXmlFormat.Parse(Sample);
         Assert.True(doc.PreservesLayout);
-        Assert.Equal("Scene", doc.SourceRootName);
+        Assert.Equal(0, doc.TitleNameFixes);   //[공유 코드 통합] 수정: SourceRootName 대신
         Assert.Equal("InertiaLucis", doc.MainTitle);
         Assert.Equal("힘의 법칙", doc.SubTitle);
         Assert.Equal(4, doc.Lines.Count);
 
         var expected = SampleLines.ToArray();
-        expected[1] = "<Act mainTitle=\"InertiaLucis\" subTitle=\"힘의 법칙\">";
-        expected[^1] = "</Act>";
+        expected[1] = "<Act MainTitle=\"InertiaLucis\" SubTitle=\"힘의 법칙\">";   //[공유 코드 통합] 수정: 제목 이름 MainTitle·SubTitle
         Assert.Equal(string.Join("\r\n", expected), ActXmlFormat.ToText(doc));
+    }
+
+    //[공유 코드 통합] 추가: <Scene> 루트는 읽지 않음, 대소문자만 다른 제목 이름은 읽고 세어 저장 때 고침
+    [Fact]
+    public void SceneRoot_Rejected()
+    {
+        Assert.Throws<ActFormatException>(() => ActXmlFormat.Parse("<Scene MainTitle=\"t\" SubTitle=\"s\">\r\n</Scene>"));
+    }
+
+    [Fact]
+    public void WrongCaseTitleNames_ReadAndCounted_SavedCorrect()
+    {
+        var doc = ActXmlFormat.Parse("<Act mainTitle=\"t\" subtitle=\"s\" Extra=\"1\">\r\n</Act>");
+        Assert.Equal("t", doc.MainTitle);
+        Assert.Equal("s", doc.SubTitle);
+        Assert.Equal(2, doc.TitleNameFixes);
+        Assert.Equal("<Act MainTitle=\"t\" SubTitle=\"s\" Extra=\"1\">\r\n</Act>", ActXmlFormat.ToText(doc));
     }
 
     [Fact]
@@ -63,7 +80,7 @@ public class ActXmlFormatTests
     {
         string text = string.Join("\r\n",
             "<?xml version=\"1.0\" encoding=\"UTF-8\"?>",
-            "<Act mainTitle=\"t\" subTitle=\"s\" Extra=\"1\">",
+            "<Act MainTitle=\"t\" SubTitle=\"s\" Extra=\"1\">",   //[공유 코드 통합] 수정: 제목 이름
             "\t<!-- 메모 -->",
             "",
             "\t<Line Type=\"FUTURE\" Foo=\"bar\"/>",
@@ -107,13 +124,13 @@ public class ActXmlFormatTests
     [Fact]
     public void MultiLineElement_FallsBackToStandardLayout()
     {
-        string text = "<?xml version=\"1.0\"?>\r\n<Scene MainTitle=\"t\" SubTitle=\"s\">\r\n\t<Line Type=\"TEXT\"\r\n\t      Name=\"a\"/>\r\n\t<!-- c -->\r\n</Scene>";
+        string text = "<?xml version=\"1.0\"?>\r\n<Act MainTitle=\"t\" SubTitle=\"s\">\r\n\t<Line Type=\"TEXT\"\r\n\t      Name=\"a\"/>\r\n\t<!-- c -->\r\n</Act>";   //[공유 코드 통합] 수정: <Scene> → <Act>
         var doc = ActXmlFormat.Parse(text);
         Assert.False(doc.PreservesLayout);
         Assert.Single(doc.Lines);
         Assert.Equal(string.Join("\r\n",
             ActXmlFormat.DefaultDeclaration,
-            "<Act mainTitle=\"t\" subTitle=\"s\">",
+            "<Act MainTitle=\"t\" SubTitle=\"s\">",   //[공유 코드 통합] 수정: 제목 이름
             "\t<Line Type=\"TEXT\" Name=\"a\"/>",
             "\t<!-- c -->",
             "</Act>"), ActXmlFormat.ToText(doc));
@@ -315,13 +332,47 @@ public class ActEditorViewModelTests
         Assert.Equal("BGM_2", Cell(rows[0], "Track").Value);
         Assert.Equal("", rows[0].Others);
         Assert.Equal("ResourceKey", rows[1].Fields[0].Def.Attr);                                      // BG
-        Assert.Equal("Key=bg_office_day", rows[1].Others);                                             // 옛 Key는 팔레트에 없음 → 기타
+        Assert.Equal("bg_office_day", rows[1].Fields[0].Value);                                        //[공유 코드 통합] 수정: 샘플이 ResourceKey로 (옛 Key 읽기 삭제)
+        Assert.Equal("", rows[1].Others);
         Assert.Equal(11, rows[2].Fields.Count);                                                        // TEXT (변경(다국어): CharId 칸 추가)
         Assert.Equal("anger1 face_anger", Cell(rows[2], "Animation").Value);
         Assert.True(Cell(rows[2], "CG").Warning);                                                      // 옛 CG 키 → 경고
         Assert.False(Cell(rows[2], "Name").Warning);
         Assert.Equal(1, env.Vm.UnknownCgCount);
         Assert.True(Cell(rows[2], "Effect").IsEmpty);
+    }
+
+    //[공유 코드 통합] 추가: 막을 열 때 대소문자만 다른 속성 이름을 고침 (되돌리기 1단계, 상태 줄 안내), 줄 검사 경고
+    [Fact]
+    public void Open_FixesWrongCaseAttributeNames_Undoable()
+    {
+        using var env = new Env();
+        string path = Path.Combine(env.Scenario, "IL", "IL03.xml");
+        File.WriteAllText(path, "<Act mainTitle=\"t\" SubTitle=\"s\">\r\n\t<Line Type=\"TEXT\" CharId=\"asahi\" text=\"a\" Text_ja=\"b\"/>\r\n</Act>");
+        env.Vm.Open(path);
+        var line = env.Vm.Document!.Lines[0];
+        Assert.Equal("a", line.Find("Text"));
+        Assert.Equal("b", line.Find("Text_Ja"));
+        Assert.Null(line.Find("text"));
+        Assert.Contains("대소문자가 다른 속성 이름 3곳", env.Vm.StatusText);   // 줄 2 + 제목 1
+        Assert.Equal("t", env.Vm.MainTitle);
+
+        env.Vm.Document.UndoLast();
+        Assert.Equal("a", line.Find("text"));
+        Assert.Null(line.Find("Text"));
+    }
+
+    [Fact]
+    public void LineIssues_WrongCaseAndUnknownCharId_Warn()
+    {
+        using var env = new Env();
+        env.Vm.Open(env.Path1);
+        var line = ScriptLine.Create(("Type", "TEXT"), ("CharId", "nobody"), ("Text", "a"), ("text", "b"));   // 열 때 고치지 않은 이름 (붙여넣기 등)
+        env.Vm.Document!.InsertLines(0, [line]);
+        var row = env.Vm.Rows[0];
+        Assert.True(row.CharIdUnknown);
+        Assert.True(row.OthersWarning);
+        Assert.Contains("'text' → 'Text'", row.OthersToolTip);
     }
 
     [Fact]
@@ -358,6 +409,8 @@ public class ActEditorViewModelTests
         Assert.True(Cell(rows[1], "Effect").ShowHint);
         Assert.False(Cell(rows[2], "Effect").ShowHint);
         Assert.Null(rows[0].OthersToolTip);                    // 기타가 비면 툴팁 없음
+        Assert.Null(rows[1].OthersToolTip);                    //[공유 코드 통합] 수정: 샘플 BG가 ResourceKey로 (기타 없음)
+        env.Vm.Document!.SetAttribute(rows[1].Line, "Foo", "1");   // 모르는 속성 → 기타
         Assert.NotNull(rows[1].OthersToolTip);
     }
 
@@ -463,7 +516,7 @@ public class ActEditorViewModelTests
         Cell(env.Vm.Rows[2], "Text").Value = "바뀐 대사";
         Assert.True(env.Vm.TrySave());
         string saved = File.ReadAllText(env.Path1);
-        Assert.StartsWith(ActXmlFormatTests.SampleLines[0] + "\r\n<Act mainTitle=\"InertiaLucis\"", saved);
+        Assert.StartsWith(ActXmlFormatTests.SampleLines[0] + "\r\n<Act MainTitle=\"InertiaLucis\"", saved);   //[공유 코드 통합] 수정: 제목 이름
         Assert.Contains("Text=\"바뀐 대사\"", saved);
         Assert.False(env.Vm.Document!.IsDirty);
         var backup = Directory.GetFiles(Path.Combine(env.Backups, "IL")).Single();
@@ -642,7 +695,7 @@ public class ActEditorViewModelTests
         using var env = new Env();
         env.Vm.Open(env.Path1);
         env.Vm.SetSelection([]);
-        env.Dialogs.ClipboardText = ActXmlFormatTests.Sample;      // <?xml …?> + <Scene> 문서 전체
+        env.Dialogs.ClipboardText = ActXmlFormatTests.Sample;      // <?xml …?> + <Act> 문서 전체   //[공유 코드 통합] 수정: 주석
         env.Vm.PasteLinesCommand.Execute(null);
         Assert.Equal(8, env.Vm.Rows.Count);                         // 선택이 없으면 막 끝에 4줄
 

@@ -44,7 +44,8 @@ public static class LocalizationCheck
         else Debug.LogWarning($"[LocalizationCheck] 번역 검사: {report.Count}건 (번역 누락·언어별 이미지 문제)\n  {string.Join("\n  ", report)}");   //[언어별 이미지] 수정: 문구
     }
 
-    //막 XML: 루트 mainTitle·subTitle, TEXT 줄 Name·Text (ScenarioCatalogSync에서 옮김)
+    //막 XML: 루트 MainTitle·SubTitle, TEXT 줄 Name·Text (ScenarioCatalogSync에서 옮김)
+    //[공유 코드 통합] 수정(3회차): 읽기는 공유 ActAttrs (속성 이름 대소문자 구분). 기준 자체는 4회차에 공유로
     private static void CheckActs(List<LanguageInfo> targets, List<string> report)
     {
         string root = $"{ResourcePaths.AssetsRoot}/{ResourcePaths.Scenario}";
@@ -55,18 +56,19 @@ public static class LocalizationCheck
                 .OrderBy(p => Path.GetFileNameWithoutExtension(p), StringComparer.Ordinal);
             foreach (string path in paths)
             {
-                XmlNode act = LoadRoot(path, doc => ActXml.GetRoot(doc));
-                if (act == null) continue;
+                XmlNode actNode = LoadRoot(path, doc => ActXml.GetRoot(doc));
+                if (actNode == null) continue;
+                ActAttrs act = ActXml.Attrs(actNode);
+                List<ActAttrs> lines = ActXml.Lines(actNode);
                 foreach (var language in targets)
                 {
-                    int title = new[] { ActXml.MainTitleAttr, ActXml.SubTitleAttr }.Count(a => IsMissing(act, a, language));
+                    int title = ActFormat.RootAttrs.Count(a => IsMissing(act, a, language));
                     int name = 0, text = 0;
-                    foreach (XmlNode line in act.ChildNodes)
+                    foreach (ActAttrs line in lines)
                     {
-                        if (line.NodeType != XmlNodeType.Element || line.Name != "Line") continue;
-                        if (!string.Equals(ActXml.GetAttrIgnoreCase(line, "Type"), "TEXT", StringComparison.OrdinalIgnoreCase)) continue;
-                        if (IsMissing(line, "Name", language)) name++;
-                        if (IsMissing(line, "Text", language)) text++;
+                        if (!line.Is(ActFormat.TypeText)) continue;
+                        if (IsMissing(line, ActFormat.Name, language)) name++;
+                        if (IsMissing(line, ActFormat.Text, language)) text++;
                     }
                     if (title + name + text > 0)
                         report.Add($"{Path.GetFileName(folder)}/{Path.GetFileNameWithoutExtension(path)} [{language.Code}] 제목 {title} · Name {name} · Text {text}");
@@ -83,8 +85,10 @@ public static class LocalizationCheck
         foreach (var language in targets)
         {
             var ids = root.ChildNodes.Cast<XmlNode>()
-                .Where(n => n.NodeType == XmlNodeType.Element && n.Name == element && IsMissing(n, attr, language))
-                .Select(n => ActXml.GetAttrIgnoreCase(n, "Id")).ToList();
+                .Where(n => n.NodeType == XmlNodeType.Element && n.Name == element)
+                .Select(ActXml.Attrs)
+                .Where(n => IsMissing(n, attr, language))
+                .Select(n => n.Key("Id")).ToList();   //[공유 코드 통합] 수정: ActAttrs (이름 대소문자 구분)
             if (ids.Count > 0) report.Add($"{label} [{language.Code}] {ids.Count}개: {string.Join(", ", ids)}");
         }
     }
@@ -180,9 +184,8 @@ public static class LocalizationCheck
         catch (XmlException) { return null; }   // 파싱 오류는 동기화·실행 중 경고가 알려 줌
     }
 
-    private static bool IsMissing(XmlNode node, string attr, LanguageInfo language) =>
-        ActXml.GetAttrIgnoreCase(node, attr).Trim().Length > 0
-        && ActXml.GetAttrIgnoreCase(node, LanguageRules.AttrName(attr, language)).Trim().Length == 0;   //[공유 코드 통합] 수정: Localization.AttrName → LanguageRules.AttrName
+    private static bool IsMissing(ActAttrs node, string attr, LanguageInfo language) =>   //[공유 코드 통합] 수정(3회차): XmlNode → ActAttrs (이름 대소문자 구분)
+        node.Key(attr).Length > 0 && node.Key(LanguageRules.AttrName(attr, language)).Length == 0;
 
     private static string PathOf(Transform t) => t.parent == null ? t.name : $"{PathOf(t.parent)}/{t.name}";
     private static string Short(string s) { s = s.Replace("\n", " "); return s.Length > 20 ? s.Substring(0, 20) + "…" : s; }

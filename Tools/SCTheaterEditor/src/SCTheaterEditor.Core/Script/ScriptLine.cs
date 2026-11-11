@@ -1,6 +1,13 @@
 using System.Text;
+using UsoSCTheater.Shared;   //[공유 코드 통합] ActAttrs
 
 namespace SCTheaterEditor.Script;
+
+/// <summary>[공유 코드 통합] 추가: 줄 → 공유 ActAttrs (속성 목록을 그대로 넘김 — 복사 없음, 읽는 규칙은 공유 라이브러리)</summary>
+public static class ScriptLineExtensions
+{
+    public static ActAttrs Attrs(this ScriptLine line) => new(line.Attributes);
+}
 
 /// <summary>
 /// 막 XML의 &lt;Line&gt; 1개. 속성은 파일에 적힌 순서 그대로 보관하고, 모르는 속성·종류도 지우지 않는다.
@@ -12,7 +19,7 @@ public sealed class ScriptLine
     /// <summary>새로 넣는 속성의 자리 기준 (기존 막 파일의 순서). 목록에 없는 속성은 맨 뒤</summary>
     public static readonly IReadOnlyList<string> AttributeOrder =
     [
-        "Type", "GroupId", "CharId", "Name", "Name_Ja", "Text", "Text_Ja", "Voice", "CG", "Position", "Animation", "Key", "ResourceKey",   // 변경(다국어): GroupId·CharId·Name_Ja·Text_Ja 자리
+        "Type", "GroupId", "CharId", "Name", "Name_Ja", "Text", "Text_Ja", "Voice", "CG", "Position", "Animation", "ResourceKey",   //[공유 코드 통합] "Key" 삭제 (ResourceKey만)   // 변경(다국어): GroupId·CharId·Name_Ja·Text_Ja 자리
         "Value", "Track", "Volume", "Effect", "SE", "Duration", "SpeakerType",
     ];
 

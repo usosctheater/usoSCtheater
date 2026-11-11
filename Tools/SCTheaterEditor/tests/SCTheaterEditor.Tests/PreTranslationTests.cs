@@ -10,7 +10,7 @@ public class PreTranslationTests
 {
     private const string Act =
         "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n" +
-        "<Act mainTitle=\"제목\" subTitle=\"부제\" mainTitle_Ja=\"タイトル\">\r\n" +
+        "<Act MainTitle=\"제목\" SubTitle=\"부제\" MainTitle_Ja=\"タイトル\">\r\n" +
         "\t<Line Type=\"BG\" ResourceKey=\"room\"/>\r\n" +
         "\t<Line Type=\"TEXT\" CharId=\"asahi\" Text=\"안녕\" Text_Ja=\"こんにちは\"/>\r\n" +
         "\t<Line Type=\"TEXT\" Name=\"방송 PD\" Text=\"큐!\"/>\r\n" +
@@ -71,7 +71,7 @@ public class PreTranslationTests
         using var env = new Env();
         var ids = PreTranslation.Targets(env.Doc, env.Ja).Select(t => t.Id).ToList();
         // 제목은 번역 있음, 2번 이름은 CharId만(원문 없음), 2번 대사는 번역 있음
-        Assert.Equal(["T.subTitle", "L3.Name", "L3.Text", "L4.Text"], ids);
+        Assert.Equal(["T.SubTitle", "L3.Name", "L3.Text", "L4.Text"], ids);
     }
 
     [Fact]
@@ -111,12 +111,12 @@ public class PreTranslationTests
         using var env = new Env();
         env.Runner.Result = env.Runner.Result with
         {
-            Text = "[{\"id\":\"T.subTitle\",\"value\":\"サブ\"},{\"id\":\"L3.Name\",\"value\":\"放送PD\"},{\"id\":\"L3.Text\",\"value\":\"キュー！\"}," +
+            Text = "[{\"id\":\"T.SubTitle\",\"value\":\"サブ\"},{\"id\":\"L3.Name\",\"value\":\"放送PD\"},{\"id\":\"L3.Text\",\"value\":\"キュー！\"}," +
                    "{\"id\":\"L4.Text\",\"value\":\"一行目\\\\n二行目\"},{\"id\":\"L2.Text\",\"value\":\"덮어쓰면 안 됨\"}]",
         };
         await env.Vm.PreTranslateCommand.ExecuteAsync(null);
         Assert.Equal(1, env.Runner.Calls);
-        Assert.Equal("サブ", env.Doc.GetRootAttribute("subTitle_Ja"));
+        Assert.Equal("サブ", env.Doc.GetRootAttribute("SubTitle_Ja"));
         Assert.Equal("放送PD", env.Line(2).Find("Name_Ja"));
         Assert.Equal("一行目\\n二行目", env.Line(3).Find("Text_Ja"));
         Assert.Equal("こんにちは", env.Line(1).Find("Text_Ja"));          // 요청하지 않은 칸은 그대로
@@ -125,7 +125,7 @@ public class PreTranslationTests
 
         Assert.Equal("가번역 4칸", env.Doc.Undo.UndoLabel);
         env.Doc.UndoLast();                                                // 한 번에 모두
-        Assert.Null(env.Doc.GetRootAttribute("subTitle_Ja"));
+        Assert.Null(env.Doc.GetRootAttribute("SubTitle_Ja"));
         Assert.Null(env.Line(2).Find("Name_Ja"));
         Assert.Null(env.Line(3).Find("Text_Ja"));
     }
@@ -153,12 +153,12 @@ public class PreTranslationTests
         env.Runner.Result = new(false, null, "취소했습니다", null, TimeSpan.FromSeconds(1));
         await env.Vm.PreTranslateCommand.ExecuteAsync(null);
         Assert.Contains("가번역 실패: 취소했습니다", env.Vm.StatusText);
-        Assert.Null(env.Doc.GetRootAttribute("subTitle_Ja"));
+        Assert.Null(env.Doc.GetRootAttribute("SubTitle_Ja"));
 
         env.Runner.Result = new(true, "번역할 수 없습니다", null, null, TimeSpan.FromSeconds(1));
         await env.Vm.PreTranslateCommand.ExecuteAsync(null);
         Assert.Contains("읽지 못했습니다", env.Vm.StatusText);
-        Assert.Null(env.Doc.GetRootAttribute("subTitle_Ja"));
+        Assert.Null(env.Doc.GetRootAttribute("SubTitle_Ja"));
     }
 
     [Fact]

@@ -36,7 +36,7 @@ public static class PreTranslation
         sb.AppendLine("- 입력 JSON의 todo에 있는 id만, 빠짐없이 번역한다. lines·title은 문맥으로만 쓴다");
         sb.AppendLine("- 출력은 JSON 배열 하나뿐: [{\"id\":\"…\",\"value\":\"…\"}, …]. 설명·코드 블록·다른 글은 쓰지 않는다");
         sb.AppendLine("- 원문의 \\n(역슬래시+n 두 글자)은 줄바꿈 표시다. 같은 수만큼 두 글자 그대로 남긴다 (실제 줄바꿈 문자로 바꾸지 않음)");
-        sb.AppendLine("- id가 L{번호}.Name이면 화면에 나오는 화자 이름, L{번호}.Text면 대사, T.mainTitle·T.subTitle이면 막 제목·부제");
+        sb.AppendLine("- id가 L{번호}.Name이면 화면에 나오는 화자 이름, L{번호}.Text면 대사, T.MainTitle·T.SubTitle이면 막 제목·부제");   //[공유 코드 통합] 수정: 칸 Id
         sb.AppendLine();
         if (!string.IsNullOrWhiteSpace(guide))
         {
@@ -56,8 +56,8 @@ public static class PreTranslation
             if (source.Trim().Length > 0 && string.IsNullOrWhiteSpace(doc.GetRootAttribute(LanguageRules.AttrName(attr, lang))))   //[공유 코드 통합] 수정
                 list.Add(new($"T.{attr}", null, attr, source));
         }
-        Root(ActXmlFormat.MainTitleAttr, doc.MainTitle);
-        Root(ActXmlFormat.SubTitleAttr, doc.SubTitle);
+        Root(ActFormat.MainTitle, doc.MainTitle);   //[공유 코드 통합] 수정: 공유 상수 (칸 Id T.MainTitle)
+        Root(ActFormat.SubTitle, doc.SubTitle);
         for (int i = 0; i < doc.Lines.Count; i++)
         {
             var line = doc.Lines[i];
@@ -97,8 +97,8 @@ public static class PreTranslation
             language = lang.Code,
             act = $"{doc.Group}/{doc.ActName}",
             title = new { mainTitle = doc.MainTitle, subTitle = doc.SubTitle,
-                          mainTitle_translated = doc.GetRootAttribute(LanguageRules.AttrName(ActXmlFormat.MainTitleAttr, lang)) ?? "",   //[공유 코드 통합] 수정
-                          subTitle_translated = doc.GetRootAttribute(LanguageRules.AttrName(ActXmlFormat.SubTitleAttr, lang)) ?? "" },
+                          mainTitle_translated = doc.GetRootAttribute(LanguageRules.AttrName(ActFormat.MainTitle, lang)) ?? "",   //[공유 코드 통합] 수정
+                          subTitle_translated = doc.GetRootAttribute(LanguageRules.AttrName(ActFormat.SubTitle, lang)) ?? "" },
             lines,
             todo = targets.Select(t => new { id = t.Id, source = t.Source }).ToList(),
         };

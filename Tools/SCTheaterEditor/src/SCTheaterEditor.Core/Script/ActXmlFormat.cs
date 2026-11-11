@@ -2,6 +2,7 @@ using System.IO;
 using System.Text;
 using System.Xml;
 using SCTheaterEditor.Services;
+using UsoSCTheater.Shared;   //[공유 코드 통합] ActFormat
 
 namespace SCTheaterEditor.Script;
 
@@ -10,17 +11,14 @@ public sealed class ActFormatException(string message, Exception? inner = null) 
 
 /// <summary>
 /// 막 XML 읽기·쓰기 (게임 DialogManager.LoadAct / ActXml과 같은 형식).
-/// - 루트: &lt;Act mainTitle subTitle&gt; (기존 &lt;Scene MainTitle SubTitle&gt;도 읽음 → 저장하면 Act로, 제목 속성은 대소문자 무시)
+/// - 루트: &lt;Act MainTitle SubTitle&gt; ([공유 코드 통합] 3회차: &lt;Scene&gt; 읽기 삭제 — 모든 막 변환. 제목은 대소문자만 다른 옛 이름(mainTitle)도 읽고 TitleNameFixes에 세어 저장 때 올바른 이름으로)
 /// - 저장 모양은 기존 파일 그대로: 선언 줄, 탭 들여쓰기, 라인 1줄, 줄바꿈(CRLF/LF)·BOM·마지막 줄바꿈 유무, 주석·빈 줄
 /// - 바뀌지 않은 라인은 원래 줄 텍스트 그대로, 바뀐 라인만 새로 씀. 모르는 속성·종류·요소도 보존
 /// - 원래 모양을 지킬 수 없는 파일(한 요소가 여러 줄 등)은 전체를 표준 모양으로 다시 씀 (PreservesLayout = false)
 /// </summary>
 public static class ActXmlFormat
 {
-    public const string RootTag = "Act";
-    public const string LegacyRootTag = "Scene";
-    public const string MainTitleAttr = "mainTitle";
-    public const string SubTitleAttr = "subTitle";
+    //[공유 코드 통합] 삭제: RootTag·LegacyRootTag·MainTitleAttr·SubTitleAttr → 공유 ActFormat.RootTag·MainTitle·SubTitle (<Scene> 읽기 삭제)
     public const string DefaultDeclaration = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>";
 
     private static readonly UTF8Encoding StrictUtf8 = new(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true);
@@ -64,13 +62,12 @@ public static class ActXmlFormat
         }
 
         var root = xml.DocumentElement;
-        if (root == null || (root.Name != RootTag && root.Name != LegacyRootTag))
-            throw new ActFormatException($"루트 태그가 <{RootTag}> 또는 <{LegacyRootTag}>가 아닙니다: <{root?.Name}>");
+        if (root == null || root.Name != ActFormat.RootTag)   //[공유 코드 통합] 수정: <Act>만
+            throw new ActFormatException($"루트 태그가 <{ActFormat.RootTag}>가 아닙니다: <{root?.Name}>");
 
         var doc = new ActDocument(path)
         {
-            SourceRootName = root.Name,
-            HasBom = bom,
+            HasBom = bom,   //[공유 코드 통합] 삭제: SourceRootName
             Newline = text.Contains("\r\n") ? "\r\n" : text.Contains('\n') ? "\n" : "\r\n",
             EndsWithNewline = text.EndsWith('\n'),
         };
@@ -78,8 +75,9 @@ public static class ActXmlFormat
         string main = "", sub = "";
         foreach (XmlAttribute a in root.Attributes)
         {
-            if (a.Name.Equals(MainTitleAttr, StringComparison.OrdinalIgnoreCase)) main = a.Value;
-            else if (a.Name.Equals(SubTitleAttr, StringComparison.OrdinalIgnoreCase)) sub = a.Value;
+            //[공유 코드 통합] 수정: 제목은 MainTitle·SubTitle — 대소문자만 다른 이름도 제목으로 읽고 고친 수를 셈 (저장하면 올바른 이름, 열 때 안내)
+            if (a.Name.Equals(ActFormat.MainTitle, StringComparison.OrdinalIgnoreCase)) { main = a.Value; if (a.Name != ActFormat.MainTitle) doc.TitleNameFixes++; }
+            else if (a.Name.Equals(ActFormat.SubTitle, StringComparison.OrdinalIgnoreCase)) { sub = a.Value; if (a.Name != ActFormat.SubTitle) doc.TitleNameFixes++; }
             else doc.ExtraRootAttributes.Add(new(a.Name, a.Value));
         }
         doc.InitTitles(main, sub);
@@ -209,9 +207,9 @@ public static class ActXmlFormat
         var sb = new StringBuilder(doc.Lines.Count * 120);
         foreach (var p in doc.Prologue) sb.Append(p).Append(nl);
 
-        sb.Append('<').Append(RootTag);
-        AppendAttr(sb, MainTitleAttr, doc.MainTitle);
-        AppendAttr(sb, SubTitleAttr, doc.SubTitle);
+        sb.Append('<').Append(ActFormat.RootTag);   //[공유 코드 통합] 수정: 공유 상수
+        AppendAttr(sb, ActFormat.MainTitle, doc.MainTitle);
+        AppendAttr(sb, ActFormat.SubTitle, doc.SubTitle);
         foreach (var a in doc.ExtraRootAttributes) AppendAttr(sb, a.Key, a.Value);
         sb.Append('>').Append(nl);
 
@@ -223,7 +221,7 @@ public static class ActXmlFormat
         }
         foreach (var r in doc.TrailingRaw) sb.Append(r).Append(nl);
 
-        sb.Append("</").Append(RootTag).Append('>');
+        sb.Append("</").Append(ActFormat.RootTag).Append('>');
         if (doc.EndsWithNewline) sb.Append(nl);
         return sb.ToString();
     }
@@ -242,7 +240,7 @@ public static class ActXmlFormat
         doc.FilePath = Path.GetFullPath(path);
         doc.FileTimeUtc = info.LastWriteTimeUtc;
         doc.FileLength = info.Length;
-        doc.SourceRootName = RootTag;
+        doc.TitleNameFixes = 0;   //[공유 코드 통합] 수정: SourceRootName 대신 — 저장하면 제목 이름이 올바르게 써짐
         doc.Undo.MarkSaved();
     }
 

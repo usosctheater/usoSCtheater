@@ -58,7 +58,7 @@ public class DialogManager : MonoBehaviour
     private string lastLineSpeakerId = null;                                //[CharId] 직전 CG 지정 라인의 CharId (그룹이면 그룹 대사 CharId → 전원 립싱크) — 기존 lastLineSpeakerName
 
     //CGgroup 구현용 Dict
-    private Dictionary<string, List<CGGroupEntry>> cgGroupDict = new Dictionary<string, List<CGGroupEntry>>();
+    private Dictionary<string, List<CGGroupEntry>> cgGroupDict = new Dictionary<string, List<CGGroupEntry>>(System.StringComparer.OrdinalIgnoreCase);   //[공유 코드 통합] 수정: 그룹 이름은 값 → 대소문자 무시
 
     private string currentActName = "";   // [캡처] 캡처 폴더명으로 사용되는 현재 막 이름 //[용어 정리] currentSceneName → currentActName
     
@@ -111,78 +111,78 @@ public class DialogManager : MonoBehaviour
         XmlDocument doc = new XmlDocument();
         doc.LoadXml(xmlAsset.text);
 
-        //막 루트(<Act>, 기존 <Scene> 호환) 바로 아래 모든 Line 노드를 순서대로 처리
-        //[용어 정리] "Scene/Line" → ActXml.GetRoot. 루트가 없으면 빈 목록(기존 동작과 동일)
+        //막 루트(<Act>) 바로 아래 모든 Line을 순서대로 처리
+        //[공유 코드 통합] 수정: 속성 읽기는 공유 ActAttrs (이름 대소문자 구분, 키 앞뒤 공백 지움, 숫자 InvariantCulture). <Scene> 대체 읽기 삭제
         XmlNode actRoot = ActXml.GetRoot(doc);
-        if (actRoot == null) Debug.LogError($"[DialogManager] {xmlAsset.name}: 루트 태그 <{ActXml.RootTag}>/<{ActXml.LegacyRootTag}>를 찾을 수 없습니다.");
-        XmlNodeList lineNodes = actRoot != null ? actRoot.SelectNodes("Line") : doc.SelectNodes($"{ActXml.RootTag}/Line");
+        if (actRoot == null) Debug.LogError($"[DialogManager] {xmlAsset.name}: 루트 태그 <{ActFormat.RootTag}>를 찾을 수 없습니다.");
+        List<ActAttrs> lines = ActXml.Lines(actRoot);
 
-        foreach (XmlNode node in lineNodes)
+        foreach (ActAttrs node in lines)
         {
-            string type = GetAttr(node, "Type").ToUpper();
+            string type = node.Type;
 
             switch (type)
             {
-                case "TEXT":
+                case ActFormat.TypeText:
                     DialogLine line = new DialogLine();
-                    line.charId = GetAttr(node, "CharId").Trim();                                           //[CharId] 화자 = 캐릭터 ID (쉼표로 여러 명)
-                    line.name = Localization.Get(node, "Name");                                              //[다국어] 표시 이름: Name_{현재 언어} → Name
+                    line.charId = node.Key(ActFormat.CharId);                                                 //[CharId] 화자 = 캐릭터 ID (쉼표로 여러 명)
+                    line.name = node.Localized(ActFormat.Name, Localization.Current);                         //[다국어] 표시 이름: Name_{현재 언어} → Name
                     if (line.name.Length == 0) line.name = CharacterDatabase.GetSpeakerNames(line.charId);   //[CharId] 직접 쓴 이름이 없으면 DB 이름
                     //Text 받을 때, \n 문자열을 실제 줄바꿈으로 변환
-                    line.text = Localization.Get(node, "Text").Replace("\\n", "\n");                         //[다국어] Text_{현재 언어} → Text
-                    line.cgKey = GetAttr(node, "CG");
-                    line.cgPos = GetAttr(node, "Position");
-                    line.animation = GetAttr(node, "Animation");
-                    line.voiceKey = GetAttr(node, "Voice");
-                    line.effect = GetAttr(node, "Effect").Trim().ToLower();
-                    line.value = float.TryParse(GetAttr(node, "Value"), out float val) ? val : 1.0f;
-                    line.duration = float.TryParse(GetAttr(node, "Duration"), out float dur) ? dur : 0f;
-                    line.speakerType = int.TryParse(GetAttr(node, "SpeakerType"), out int st) ? st : 1;
+                    line.text = node.Localized(ActFormat.Text, Localization.Current).Replace("\\n", "\n");    //[다국어] Text_{현재 언어} → Text
+                    line.cgKey = node.Key(ActFormat.CG);
+                    line.cgPos = node.Key(ActFormat.Position);
+                    line.animation = node.Key(ActFormat.Animation);
+                    line.voiceKey = node.Key(ActFormat.Voice);
+                    line.effect = node.Key(ActFormat.Effect).ToLowerInvariant();
+                    line.value = (float)node.Number(ActFormat.Value, 1);
+                    line.duration = (float)node.Number(ActFormat.Duration, 0);
+                    line.speakerType = node.Int(ActFormat.SpeakerType, 1);
 
                     scriptNodes.Add(ScriptNode.CreateLine(line));
                     break;
 
-                case "AUDIO":
-                    scriptNodes.Add(ScriptNode.CreateAudio(GetAttr(node, "Value").ToLower(), GetAttr(node, "Track"), float.TryParse(GetAttr(node, "Volume"), out float aVol) ? aVol : 1.0f, GetAttr(node, "Effect").ToLower()));
+                case ActFormat.TypeAudio:
+                    scriptNodes.Add(ScriptNode.CreateAudio(node.Key(ActFormat.Value).ToLowerInvariant(), node.Key(ActFormat.Track), (float)node.Number(ActFormat.Volume, 1), node.Key(ActFormat.Effect).ToLowerInvariant()));
                     break;
 
-                case "SE":
-                    scriptNodes.Add(ScriptNode.CreateSE(GetAttr(node, "Track"), float.TryParse(GetAttr(node, "Volume"), out float seVol) ? seVol : 1.0f, float.TryParse(GetAttr(node, "Duration"), out float seDur) ? seDur : 0f));
+                case ActFormat.TypeSE:
+                    scriptNodes.Add(ScriptNode.CreateSE(node.Key(ActFormat.Track), (float)node.Number(ActFormat.Volume, 1), (float)node.Number(ActFormat.Duration, 0)));
                     break;
 
-                case "TRANSITION":
-                    scriptNodes.Add(ScriptNode.CreateTransition(GetAttr(node, "Effect"), GetAttr(node, "SE")));
+                case ActFormat.TypeTransition:
+                    scriptNodes.Add(ScriptNode.CreateTransition(node.Key(ActFormat.Effect), node.Key(ActFormat.SE)));
                     break;
 
-                case "BG":
-                    scriptNodes.Add(ScriptNode.CreateBG(GetResourceKey(node), GetAttr(node, "Effect"), GetAttr(node, "Position"), float.TryParse(GetAttr(node, "Value"), out float bgVal) ? bgVal : 1.0f));
+                case ActFormat.TypeBG:   //[공유 코드 통합] 수정: ResourceKey만 (Key 대체 읽기 삭제 — 모든 막이 ResourceKey)
+                    scriptNodes.Add(ScriptNode.CreateBG(node.Key(ActFormat.ResourceKey), node.Key(ActFormat.Effect), node.Key(ActFormat.Position), (float)node.Number(ActFormat.Value, 1)));
                     break;
 
-                case "BREAK":
-                    scriptNodes.Add(ScriptNode.CreateBreak(float.TryParse(GetAttr(node, "Duration"), out float breakDur) ? breakDur : 0f, GetAttr(node, "Effect").Trim().ToLower()));
+                case ActFormat.TypeBreak:
+                    scriptNodes.Add(ScriptNode.CreateBreak((float)node.Number(ActFormat.Duration, 0), node.Key(ActFormat.Effect).ToLowerInvariant()));
                     break;
 
-                case "CGGROUP":
+                case ActFormat.TypeCGGroup:
                     //[CharId] GroupId = 그룹 이름 (기존 Name="그룹명, 화자명" 규칙 폐기). 멤버 화자 = CG 키 앞부분(캐릭터 ID)
-                    string groupName = GetAttr(node, "GroupId").Trim();
+                    string groupName = node.Key(ActFormat.GroupId);
                     if (groupName.Length == 0)
                     {
                         Debug.LogWarning($"[DialogManager] {xmlAsset.name}: GroupId가 없는 CGGROUP 줄 → 건너뜀");
                         break;
                     }
-                    string memberCg = GetAttr(node, "CG");
+                    string memberCg = node.Key(ActFormat.CG);
                     string memberId = SpineKeys.TryParse(memberCg, out SpineKeyInfo memberInfo) ? memberInfo.CharacterId : "";
                     if (!cgGroupDict.ContainsKey(groupName)) cgGroupDict[groupName] = new List<CGGroupEntry>();
 
-                    cgGroupDict[groupName].Add(new CGGroupEntry(memberCg, GetAttr(node, "Position"), GetAttr(node, "Animation"), memberId));
+                    cgGroupDict[groupName].Add(new CGGroupEntry(memberCg, node.Key(ActFormat.Position), node.Key(ActFormat.Animation), memberId));
                     break;
 
-                case "SETCG":
-                    scriptNodes.Add(ScriptNode.CreateSetCG(GetAttr(node, "CG"), GetAttr(node, "Position"), GetAttr(node, "Animation"), GetAttr(node, "Effect").Trim().ToLower(), float.TryParse(GetAttr(node, "Value"), out float setCgVal) ? setCgVal : 1.0f, float.TryParse(GetAttr(node, "Duration"), out float setCgDur) ? setCgDur : 0f));
+                case ActFormat.TypeSetCG:
+                    scriptNodes.Add(ScriptNode.CreateSetCG(node.Key(ActFormat.CG), node.Key(ActFormat.Position), node.Key(ActFormat.Animation), node.Key(ActFormat.Effect).ToLowerInvariant(), (float)node.Number(ActFormat.Value, 1), (float)node.Number(ActFormat.Duration, 0)));
                     break;
 
-                case "IMAGE":
-                    scriptNodes.Add(ScriptNode.CreateImage(GetResourceKey(node), float.TryParse(GetAttr(node, "Duration"), out float imgDur) ? imgDur : -1f));
+                case ActFormat.TypeImage:   //[공유 코드 통합] 수정: ResourceKey만
+                    scriptNodes.Add(ScriptNode.CreateImage(node.Key(ActFormat.ResourceKey), (float)node.Number(ActFormat.Duration, -1)));
                     break;
 
                 default:
@@ -194,31 +194,13 @@ public class DialogManager : MonoBehaviour
 
         Debug.Log($"총 {scriptNodes.Count}개 노드 로드 완료");
 
-        cgManager.PrepareAct(CollectSpineKeys());   //[LD 불러오기] 추가: 첫 줄 출력 전에 이 막의 LD Spine 준비
+        cgManager.PrepareAct(ActScript.SpineKeys(lines));   //[LD 불러오기] 첫 줄 출력 전에 이 막의 LD Spine 준비   //[공유 코드 통합] 수정: CollectSpineKeys → 공유 (카탈로그·TE와 같은 규칙)
 
         //로드 완료 후에 자동으로 첫번째 Line을 출력
         ProcessNext();
     }
 
-    //[LD 불러오기] 이 막에서 쓰는 CG 키: TEXT·SETCG의 CG(CGGROUP 이름은 제외 — 멤버로 수집) + CGGROUP 멤버, none 제외, 중복 제거
-    private HashSet<string> CollectSpineKeys()
-    {
-        var keys = new HashSet<string>(System.StringComparer.OrdinalIgnoreCase);
-        void Add(string key)
-        {
-            if (string.IsNullOrEmpty(key) || key.ToLower() == "none" || cgGroupDict.ContainsKey(key)) return;
-            keys.Add(key);
-        }
-
-        foreach (ScriptNode node in scriptNodes)
-        {
-            if (node.type == ScriptNode.NodeType.Line) Add(node.line.cgKey);
-            else if (node.type == ScriptNode.NodeType.SetCG) Add(node.setCgKey);
-        }
-        foreach (var group in cgGroupDict.Values)
-            foreach (var entry in group) Add(entry.cgKey);
-        return keys;
-    }
+    //[공유 코드 통합] 삭제: CollectSpineKeys → 공유 ActScript.SpineKeys
 
     private void ShowLine(DialogLine line)
     {
@@ -475,25 +457,7 @@ public class DialogManager : MonoBehaviour
         //[CGGROUP 생명주기] cgGroupDict는 여기서 비우지 않음 — 막 동안 유지, LoadAct에서만 초기화
     }
 
-    //속성이 없거나 비어있는 경우엔 빈 문자열 반환하는 함수
-    private string GetAttr(XmlNode node, string key)
-    {
-        XmlAttribute attr = node.Attributes[key];
-        return (attr != null) ? attr.Value : "";
-    }
-
-    // =====================================================================
-    // [주의] 리소스 키 속성 하위 호환 처리 (2026-09-29)
-    // BG / IMAGE의 리소스 키 속성명은 "ResourceKey"가 기본(신규 작성 시 사용).
-    // 기존에 작성된 XML은 "Key"를 사용하므로, ResourceKey가 없으면 Key를 읽는다.
-    // → 기존 XML(Key)과 신규 XML(ResourceKey) 양쪽 모두 동작함.
-    // → 모든 XML이 ResourceKey로 전환되기 전까지 Key 폴백을 절대 제거하지 말 것.
-    // =====================================================================
-    private string GetResourceKey(XmlNode node)
-    {
-        string resourceKey = GetAttr(node, "ResourceKey");
-        return !string.IsNullOrEmpty(resourceKey) ? resourceKey : GetAttr(node, "Key");
-    }
+    //[공유 코드 통합] 삭제: GetAttr → 공유 ActAttrs.Key·Raw / GetResourceKey(Key 대체 읽기) → ResourceKey만 (모든 막이 ResourceKey로 전환됨)
 
     private IEnumerator TypeText(DialogLine line)
     {

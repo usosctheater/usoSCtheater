@@ -209,11 +209,10 @@ public class ScenarioPlayer : MonoBehaviour
         //Title 파싱 - mainTitle / subTitle로 분리
         XmlDocument doc = new XmlDocument();
         doc.LoadXml(actFile.text);
-        XmlNode actNode = ActXml.GetRoot(doc);   //[용어 정리] <Act> 우선, 기존 <Scene> 호환
-        //[제목 읽기] 대소문자 구분 없이 조회 (카탈로그 동기화와 동일 규칙)
-        //[다국어] mainTitle_{현재 언어} → mainTitle (Localization.Get도 대소문자 무시라 옛 MainTitle도 읽음)
-        string mainTitle = UsoSCTheater.Localization.Get(actNode, ActXml.MainTitleAttr);
-        string subTitle  = UsoSCTheater.Localization.Get(actNode, ActXml.SubTitleAttr);
+        //[공유 코드 통합] 수정: 루트는 <Act>, 제목 속성 MainTitle/SubTitle (이름 대소문자 구분 — 모든 막 변환됨). 언어별: MainTitle_{접미어} → MainTitle
+        UsoSCTheater.Shared.ActAttrs act = ActXml.Attrs(ActXml.GetRoot(doc));
+        string mainTitle = act.Localized(UsoSCTheater.Shared.ActFormat.MainTitle, UsoSCTheater.Localization.Current);
+        string subTitle  = act.Localized(UsoSCTheater.Shared.ActFormat.SubTitle, UsoSCTheater.Localization.Current);
 
         //Title 표시
         if (!string.IsNullOrEmpty(mainTitle) || !string.IsNullOrEmpty(subTitle))

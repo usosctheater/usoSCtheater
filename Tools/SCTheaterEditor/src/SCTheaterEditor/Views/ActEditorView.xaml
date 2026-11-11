@@ -99,10 +99,10 @@
                 <Button Content="저장" Padding="10,1" Margin="4,0,0,0" Command="{Binding SaveCommand}" ToolTip="열었던 경로에 저장, 직전 파일은 백업 폴더에 (Ctrl+S)"/>
                 <TextBlock Text="제목:" VerticalAlignment="Center" Margin="14,0,4,0"/>
                 <TextBox Width="150" VerticalContentAlignment="Center" IsEnabled="{Binding HasDocument}" KeyDown="Commit_KeyDown"
-                         Text="{Binding MainTitle, UpdateSourceTrigger=LostFocus}" ToolTip="막 XML 루트의 mainTitle (Enter로 확정)"/>
+                         Text="{Binding MainTitle, UpdateSourceTrigger=LostFocus}" ToolTip="막 XML 루트의 MainTitle (Enter로 확정)"/>
                 <TextBlock Text="부제:" VerticalAlignment="Center" Margin="8,0,4,0"/>
                 <TextBox Width="150" VerticalContentAlignment="Center" IsEnabled="{Binding HasDocument}" KeyDown="Commit_KeyDown"
-                         Text="{Binding SubTitle, UpdateSourceTrigger=LostFocus}" ToolTip="막 XML 루트의 subTitle (Enter로 확정)"/>
+                         Text="{Binding SubTitle, UpdateSourceTrigger=LostFocus}" ToolTip="막 XML 루트의 SubTitle (Enter로 확정)"/>
             </StackPanel>
             <TextBlock Text="{Binding DocumentTitle}" FontWeight="Bold" VerticalAlignment="Center" Margin="12,0,0,0"
                        TextTrimming="CharacterEllipsis" ToolTip="{Binding DocumentPath}"/>
@@ -209,8 +209,20 @@
                                   ToolTip="종류 — 바꾸면 칸 구성이 새 종류의 팔레트로 바뀜 (다른 속성은 지우지 않고 기타에)"/>
                         <ItemsControl Grid.Column="2" ItemsSource="{Binding Fields}" ItemTemplate="{StaticResource FieldCellTemplate}"
                                       ItemsPanel="{StaticResource HorizontalPanel}" Focusable="False"/>
-                        <TextBlock Grid.Column="3" Text="{Binding Others}" Foreground="#FF8A8A8A" VerticalAlignment="Center" Margin="6,0,4,0"
-                                   TextTrimming="CharacterEllipsis" ToolTip="{Binding OthersToolTip}"/>
+                        <!-- [공유 코드 통합] 기타 칸 속성에 검사 문제(대소문자가 다른 이름·잘못된 언어 접미어)가 있으면 빨간 글씨 -->
+                        <TextBlock Grid.Column="3" Text="{Binding Others}" VerticalAlignment="Center" Margin="6,0,4,0"
+                                   TextTrimming="CharacterEllipsis" ToolTip="{Binding OthersToolTip}">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="#FF8A8A8A"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding OthersWarning}" Value="True">
+                                            <Setter Property="Foreground" Value="#FFC62828"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
                     </Grid>
                 </DataTemplate>
             </ListBox.ItemTemplate>

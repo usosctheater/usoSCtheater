@@ -40,11 +40,12 @@ public static class StageStateCalculator
         index = Math.Clamp(index, 0, lines.Count - 1);
 
         // 그룹 정의: 막 전체의 CGGROUP 줄 (게임 LoadAct와 같음, 막 동안 유지)
-        var groups = new Dictionary<string, List<(string Cg, string Pos, string Anim)>>(StringComparer.Ordinal);
+        var groups = new Dictionary<string, List<(string Cg, string Pos, string Anim)>>(StringComparer.OrdinalIgnoreCase);   //[공유 코드 통합] 수정: 그룹 이름 대소문자 무시
         foreach (var l in lines)
         {
             if (!l.Type.Equals("CGGROUP", StringComparison.OrdinalIgnoreCase)) continue;
             string name = l.Get("GroupId").Trim();   // 변경(다국어): Name 쉼표 분리 → GroupId
+            if (name.Length == 0) continue;   //[공유 코드 통합] 추가: GroupId 없는 줄 무시 (게임과 같음)
             if (!groups.TryGetValue(name, out var list)) groups[name] = list = new();
             list.Add((l.Get("CG"), l.Get("Position"), l.Get("Animation")));
         }
@@ -69,7 +70,7 @@ public static class StageStateCalculator
                     break;
 
                 case "BG":
-                    string key = (l.Find("ResourceKey") ?? l.Find("Key") ?? "").Trim();
+                    string key = (l.Find("ResourceKey") ?? "").Trim();   //[공유 코드 통합] 수정: Key 대체 삭제
                     if (key.Length > 0) background = key;
                     break;
 

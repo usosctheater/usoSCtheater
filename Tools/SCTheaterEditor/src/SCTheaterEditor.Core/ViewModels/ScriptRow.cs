@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using SCTheaterEditor.Script;
+using UsoSCTheater.Shared;   //[공유 코드 통합] ActIssue · ActFormat
 
 namespace SCTheaterEditor.ViewModels;
 
@@ -19,7 +20,7 @@ public sealed partial class ScriptRow : ObservableObject
     private IReadOnlyList<FieldCell> _fields = [];
     private IReadOnlyList<string> _typeOptions = [];
     private bool _cgMissing;
-    private bool _charIdUnknown;   // 추가(다국어)
+    private IReadOnlyList<ActIssue> _issues = [];   //[공유 코드 통합] 추가: 공유 줄 검사 결과 (CharId·GroupId·속성 이름) — 이전 _charIdUnknown
 
     internal ScriptRow(ScriptLine line, ActEditorViewModel owner)
     {
@@ -65,14 +66,31 @@ public sealed partial class ScriptRow : ObservableObject
     /// <summary>기타: 팔레트에 없는 속성 "이름=값; 이름=값" (읽기 전용)</summary>
     public string Others => string.Join("; ", OtherAttributes().Select(a => $"{a.Key}={a.Value}"));
 
-    /// <summary>추가: 기타 툴팁 — 비어 있으면 null (빈 툴팁 상자가 뜨지 않도록)</summary>
-    public string? OthersToolTip => Others is { Length: > 0 } s ? s : null;
+    /// <summary>추가: 기타 툴팁 — 비어 있으면 null (빈 툴팁 상자가 뜨지 않도록). [공유 코드 통합] 기타 칸 속성의 검사 문구를 덧붙임</summary>
+    public string? OthersToolTip
+    {
+        get
+        {
+            var lines = new List<string>();
+            if (Others is { Length: > 0 } s) lines.Add(s);
+            lines.AddRange(OthersIssues().Select(i => "⚠ " + i.Message));
+            return lines.Count > 0 ? string.Join("\n", lines) : null;
+        }
+    }
+
+    /// <summary>[공유 코드 통합] 추가: 기타 칸(팔레트에 없는 속성)에 검사 문제가 있음 — 대소문자가 다른 이름·잘못된 언어 접미어 → 빨간 글씨</summary>
+    public bool OthersWarning => OthersIssues().Any();
 
     /// <summary>SpineData에 없는 CG 키 (옛 CG 키 등)</summary>
     public bool CgMissing => _cgMissing;
 
-    /// <summary>추가(다국어): 화자(CharId)에 CharacterData에 없는 ID가 있음 (오타 등)</summary>
-    public bool CharIdUnknown => _charIdUnknown;
+    /// <summary>추가(다국어): 화자(CharId)에 CharacterData에 없는 ID가 있음 (오타 등). [공유 코드 통합] 공유 검사 결과에서</summary>
+    public bool CharIdUnknown => IssuesOf(ActFormat.CharId).Any();
+
+    /// <summary>[공유 코드 통합] 추가: 이 속성 칸의 검사 문구들</summary>
+    internal IEnumerable<ActIssue> IssuesOf(string attr) => _issues.Where(i => i.Attr == attr);
+
+    private IEnumerable<ActIssue> OthersIssues() => _issues.Where(i => i.Attr != "Type" && (_def == null || !_def.Has(i.Attr)));
 
     /// <summary>속성 값 (없으면 "")</summary>
     public string Get(string attr) => Line.Get(attr);
@@ -90,19 +108,25 @@ public sealed partial class ScriptRow : ObservableObject
 
     internal void Detach() => Line.Changed -= OnLineChanged;
 
-    /// <summary>CG·화자 경고 다시 계산 (바뀐 경우만 알림) — 변경(다국어): 화자(CharId) 경고 추가</summary>
+    /// <summary>CG·검사 경고 다시 계산 (바뀐 경우만 알림) — 변경(다국어): 화자(CharId) 경고 추가 / [공유 코드 통합] 공유 줄 검사(CharId·GroupId·속성 이름)</summary>
     internal void RefreshWarning()
     {
         bool missing = Owner.IsUnknownCg(Line);
-        bool unknownId = Owner.IsUnknownCharId(Line);
-        bool cgChanged = missing != _cgMissing, idChanged = unknownId != _charIdUnknown;
-        if (!cgChanged && !idChanged) return;
+        var issues = Owner.LineIssues(Line);
+        bool cgChanged = missing != _cgMissing;
+        bool issuesChanged = !issues.Select(i => i.Message).SequenceEqual(_issues.Select(i => i.Message));
+        if (!cgChanged && !issuesChanged) return;
         _cgMissing = missing;
-        _charIdUnknown = unknownId;
+        _issues = issues;
         if (cgChanged) OnPropertyChanged(nameof(CgMissing));
-        if (idChanged) OnPropertyChanged(nameof(CharIdUnknown));
+        if (issuesChanged)
+        {
+            OnPropertyChanged(nameof(CharIdUnknown));
+            OnPropertyChanged(nameof(OthersWarning));
+            OnPropertyChanged(nameof(OthersToolTip));
+        }
         foreach (var f in _fields)
-            if ((cgChanged && f.Def.Attr == "CG") || (idChanged && f.Def.Attr == "CharId")) f.Refresh();
+            if ((cgChanged && f.Def.Attr == ActFormat.CG) || issuesChanged) f.Refresh();
     }
 
     private void OnLineChanged(ScriptLine _)
@@ -161,13 +185,22 @@ public sealed class FieldCell : ObservableObject
 
     internal void RefreshHint() => OnPropertyChanged(nameof(ShowHint));
 
-    /// <summary>CG 칸이고 SpineData에 없는 키 / 추가(다국어): 화자 칸이고 CharacterData에 없는 ID</summary>
-    public bool Warning => (Def.Attr == "CG" && Row.CgMissing) || (Def.Attr == "CharId" && Row.CharIdUnknown);
+    /// <summary>CG 칸이고 SpineData에 없는 키 / 추가(다국어): 화자 칸이고 CharacterData에 없는 ID / [공유 코드 통합] 그 칸에 공유 검사 문제(GroupId 없음 등)</summary>
+    public bool Warning => (Def.Attr == ActFormat.CG && Row.CgMissing) || Row.IssuesOf(Def.Attr).Any();
 
-    public string ToolTip => !Warning ? Def.ToolTip
-        : Def.Attr == "CharId"
-            ? Def.ToolTip + "\n⚠ CharacterData에 없는 화자 ID (오타이거나 등록되지 않은 인물) — 등록되지 않은 인물은 화자를 비우고 이름 칸에 직접 적음"
-            : Def.ToolTip + "\n⚠ SpineData에 없는 CG 키 (옛 CG 키이거나 아직 받지 않은 세트) — 대응표 작업 전까지 무대에 올릴 수 없음";
+    public string ToolTip
+    {
+        get
+        {
+            if (!Warning) return Def.ToolTip;
+            var tip = new List<string> { Def.ToolTip };
+            if (Def.Attr == ActFormat.CG && Row.CgMissing)
+                tip.Add("⚠ SpineData에 없는 CG 키 (옛 CG 키이거나 아직 받지 않은 세트) — 대응표 작업 전까지 무대에 올릴 수 없음");
+            tip.AddRange(Row.IssuesOf(Def.Attr).Select(i => "⚠ " + i.Message));   //[공유 코드 통합] 수정: 공유 검사 문구 (CharId·GroupId)
+            if (Def.Attr == ActFormat.CharId && Row.CharIdUnknown) tip.Add("등록되지 않은 인물은 화자를 비우고 이름 칸에 직접 적음");
+            return string.Join("\n", tip);
+        }
+    }
 
     internal void Refresh() => OnPropertyChanged(string.Empty);
 }

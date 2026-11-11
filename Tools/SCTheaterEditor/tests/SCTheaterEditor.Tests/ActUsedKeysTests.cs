@@ -8,7 +8,7 @@ public class ActUsedKeysTests
 {
     private const string Act =
         "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n" +
-        "<Act mainTitle=\"t\">\r\n" +
+        "<Act MainTitle=\"t\">\r\n" +
         "\t<Line Type=\"TEXT\" CharId=\"asahi\" CG=\"asahi_stand_1\" Text=\"a\"/>\r\n" +
         "\t<Line Type=\"SETCG\" CG=\"fuyuko_stand_2\"/>\r\n" +
         "\t<Line Type=\"CGGROUP\" GroupId=\"grp\" CG=\"mei_stand_3\"/>\r\n" +

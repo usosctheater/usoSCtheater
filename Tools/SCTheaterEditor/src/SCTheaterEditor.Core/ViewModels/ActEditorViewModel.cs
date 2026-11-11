@@ -43,14 +43,17 @@ public sealed partial class ActEditorViewModel : ObservableObject
     private System.Threading.Timer? _backupTimer;
     private readonly IMessenger _messenger;   // 추가: 설정 변경 알림
     private readonly Func<StageTable> _stageTable;   //[스테이지 레이아웃] 추가: F5 무대 동기화의 배치 표
+    private readonly Func<IReadOnlyList<LanguageInfo>> _languages;   //[공유 코드 통합] 추가: 속성 이름 교정·스크립트 검사 (앱은 GameData.Languages)
 
     public ActEditorViewModel(AppSettings settings, SpineLibrary library, IDialogService dialogs, IUiDispatcher ui,
                               Action saveSettings, AppLog log, string? backupFolder = null, Func<DateTime>? now = null,
                               LineTypeCatalog? types = null, CharacterData? characters = null,
                               IMessenger? messenger = null,   // 변경: messenger 추가 (생략하면 이 인스턴스 전용)
-                              Func<StageTable>? stageTable = null)   //[스테이지 레이아웃] 추가: 무대 배치 표 (앱은 GameData.Stage)
+                              Func<StageTable>? stageTable = null,   //[스테이지 레이아웃] 추가: 무대 배치 표 (앱은 GameData.Stage)
+                              Func<IReadOnlyList<LanguageInfo>>? languages = null)   //[공유 코드 통합] 추가: 언어 목록 (앱은 GameData.Languages)
     {
         _stageTable = stageTable ?? (() => GameData.EmptyStage);   //[스테이지 레이아웃]
+        _languages = languages ?? (() => DefaultLanguages);       //[공유 코드 통합]
         _messenger = messenger ?? new StrongReferenceMessenger();
         // 추가: 시나리오 폴더가 바뀌면 (어디서 바꿨든) 막 목록 다시 읽기
         _messenger.Register<ActEditorViewModel, SettingsChangedMessage>(this, static (r, m) => r.OnSettingsChanged(m));
@@ -127,14 +130,14 @@ public sealed partial class ActEditorViewModel : ObservableObject
         RefreshCgWarnings();
     }
 
-    /// <summary>막 제목 (루트 mainTitle) — 고치면 되돌리기 1단계</summary>
+    /// <summary>막 제목 (루트 MainTitle) — 고치면 되돌리기 1단계</summary>
     public string MainTitle
     {
         get => Document?.MainTitle ?? "";
         set => Document?.SetMainTitle(value);
     }
 
-    /// <summary>막 부제 (루트 subTitle)</summary>
+    /// <summary>막 부제 (루트 SubTitle)</summary>
     public string SubTitle
     {
         get => Document?.SubTitle ?? "";
@@ -233,7 +236,9 @@ public sealed partial class ActEditorViewModel : ObservableObject
         SyncEntry();
 
         var notes = new List<string> { $"열기: {doc.Group} / {doc.ActName} ({doc.Lines.Count}줄)" };
-        if (doc.SourceRootName != ActXmlFormat.RootTag) notes.Add($"저장하면 루트가 <{doc.SourceRootName}> → <{ActXmlFormat.RootTag}>");
+        //[공유 코드 통합] 수정: <Scene> 루트 안내 삭제 → 대소문자만 다른 속성 이름 교정 안내
+        int fixedNames = FixAttributeNames(doc);
+        if (fixedNames > 0) notes.Add($"⚠ 대소문자가 다른 속성 이름 {fixedNames}곳을 고침 (Ctrl+Z로 되돌리기)");
         if (!doc.PreservesLayout) notes.Add("원래 줄 모양을 지킬 수 없는 파일 — 저장 시 전체를 표준 모양으로 씀");
         StatusText = string.Join(" · ", notes);
         _log.Info($"막 열기: {doc.FilePath} ({doc.Lines.Count}줄)");
@@ -348,15 +353,9 @@ public sealed partial class ActEditorViewModel : ObservableObject
     {
         var assets = new List<SpineAsset>();
         var unknown = new List<string>();
-        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         if (Document == null) return (assets, unknown);
-        foreach (var line in Document.Lines)
-        {
-            if (!IsCgLine(line)) continue;
-            string cg = line.Get("CG").Trim();
-            if (cg.Length == 0 || cg.Equals("none", StringComparison.OrdinalIgnoreCase) || _groupNames.Contains(cg) || !seen.Add(cg)) continue;
+        foreach (string cg in ActScript.SpineKeys(LineAttrs()))   //[공유 코드 통합] 수정: 키 모으기는 공유 (게임·카탈로그와 같은 규칙)
             if (_library.Find(cg) is { } a) assets.Add(a); else unknown.Add(cg);
-        }
         return (assets, unknown);
     }
 
@@ -912,39 +911,45 @@ public sealed partial class ActEditorViewModel : ObservableObject
     /// SpineData에 없는 CG 키인지 (TEXT·SETCG·CGGROUP의 CG). 비었거나 none, 이 막의 CGGROUP 이름이면 경고 아님.
     /// 오타·아직 받지 않은 세트 검사 (2026-10-16 스파인 데이터 형식 통일로 옛 키는 모두 TE 키로 변환됨)
     /// </summary>
-    internal bool IsUnknownCg(ScriptLine line)
+    internal bool IsUnknownCg(ScriptLine line) =>
+        ActScript.SpineKeyOf(line.Attrs(), _groupNames) is { } cg && _library.Find(cg) == null;   //[공유 코드 통합] 수정: 줄의 Spine 키는 공유 규칙
+
+    //[공유 코드 통합] 삭제: IsUnknownCharId → LineIssues (공유 ActScript.CheckLine — CharId 외 GroupId·속성 이름도)
+
+    /// <summary>[공유 코드 통합] 추가: 줄 검사 = 카탈로그 동기화와 같은 경고 (대소문자가 다른 속성 이름·잘못된 언어 접미어·DB에 없는 CharId·GroupId 없는 CGGROUP)</summary>
+    internal List<ActIssue> LineIssues(ScriptLine line)
     {
-        if (!IsCgLine(line)) return false;   // 변경: IsCgLine 사용
-        string cg = line.Get("CG").Trim();
-        if (cg.Length == 0 || cg.Equals("none", StringComparison.OrdinalIgnoreCase)) return false;
-        if (_groupNames.Contains(cg)) return false;
-        return _library.Find(cg) == null;
+        var issues = new List<ActIssue>();
+        ActScript.CheckLine(line.Attrs(), false, _languages(), id => _characters.Find(id) != null, issues);
+        return issues;
     }
 
-    /// <summary>추가(다국어): TEXT 화자 칸의 ID 중 CharacterData에 없는 것이 있는지 (오타 검사)</summary>
-    internal bool IsUnknownCharId(ScriptLine line) =>
-        line.Type.Equals("TEXT", StringComparison.OrdinalIgnoreCase)
-        && CharIds.Split(line.Get("CharId")).Any(id => _characters.Find(id) == null);   //[공유 코드 통합] 수정: CharacterData.SplitIds → CharIds.Split
+    /// <summary>[공유 코드 통합] 추가: 막을 열 때 대소문자만 다른 속성 이름을 올바른 이름으로 (줄·루트, 되돌리기 1단계). 고친 수 (제목 포함)</summary>
+    private int FixAttributeNames(ActDocument doc)
+    {
+        var langs = _languages();
+        var renames = new List<(ScriptLine? Line, string Old, string New)>();
+        foreach (var line in doc.Lines)
+            foreach (var a in line.Attributes)
+                if (ActFormat.CorrectName(a.Key, false, langs) is { } n) renames.Add((line, a.Key, n));
+        foreach (var a in doc.ExtraRootAttributes)
+            if (ActFormat.CorrectName(a.Key, true, langs) is { } n) renames.Add((null, a.Key, n));
+        return (renames.Count > 0 ? doc.RenameAttributes(renames) : 0) + doc.TitleNameFixes;
+    }
+
+    /// <summary>[공유 코드 통합] 추가: 언어 목록을 받지 않았을 때 (테스트 등)</summary>
+    private static readonly IReadOnlyList<LanguageInfo> DefaultLanguages = [new("ko", "한국어", true), new("ja", "日本語", false, "、")];
+
+    private List<ActAttrs> LineAttrs() => Document == null ? [] : Document.Lines.Select(l => l.Attrs()).ToList();
 
     /// <summary>추가(다국어): TEXT 이름 칸이 비었을 때 흐린 글씨로 보일 이름 = 화자(CharId)의 한국어 이름 (여러 명은 ", "). 없으면 null</summary>
     internal string? SpeakerHint(ScriptLine line) =>
         line.Type.Equals("TEXT", StringComparison.OrdinalIgnoreCase) ? _characters.SpeakerNames(line.Get("CharId")) : null;
 
     /// <summary>추가: CG 속성을 쓰는 라인 종류 (TEXT·SETCG·CGGROUP)</summary>
-    private static bool IsCgLine(ScriptLine line) =>
-        line.Type.Equals("TEXT", StringComparison.OrdinalIgnoreCase) ||
-        line.Type.Equals("SETCG", StringComparison.OrdinalIgnoreCase) ||
-        line.Type.Equals("CGGROUP", StringComparison.OrdinalIgnoreCase);
+    private static bool IsCgLine(ScriptLine line) => ActScript.UsesCg(line.Attrs().Type);   //[공유 코드 통합] 수정: 공유 규칙
 
-    private void RebuildGroupNames()
-    {
-        _groupNames = Document == null
-            ? new(StringComparer.OrdinalIgnoreCase)
-            : Document.Lines.Where(l => l.Type.Equals("CGGROUP", StringComparison.OrdinalIgnoreCase))
-                            .Select(l => l.Get("GroupId").Trim())   // 변경(다국어): Name 쉼표 분리 → GroupId
-                            .Where(n => n.Length > 0)
-                            .ToHashSet(StringComparer.OrdinalIgnoreCase);
-    }
+    private void RebuildGroupNames() => _groupNames = ActScript.GroupIds(LineAttrs());   //[공유 코드 통합] 수정: 공유 규칙 (GroupId가 빈 줄 무시, 대소문자 무시)
 
     private void RefreshCgWarnings()
     {
@@ -968,14 +973,7 @@ public sealed partial class ActEditorViewModel : ObservableObject
 
     private void RefreshUsedCgKeys()
     {
-        var keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        if (Document != null)
-            foreach (var line in Document.Lines)
-            {
-                if (!IsCgLine(line)) continue;
-                string cg = line.Get("CG").Trim();
-                if (cg.Length > 0 && !cg.Equals("none", StringComparison.OrdinalIgnoreCase) && !_groupNames.Contains(cg)) keys.Add(cg);
-            }
+        var keys = new HashSet<string>(ActScript.SpineKeys(LineAttrs()), StringComparer.OrdinalIgnoreCase);   //[공유 코드 통합] 수정: 공유 규칙
         if (keys.SetEquals(UsedCgKeys)) return;
         UsedCgKeys = keys;
         UsedCgKeysChanged?.Invoke();

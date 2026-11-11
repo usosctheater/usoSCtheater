@@ -30,7 +30,7 @@ public class ScenarioCatalogSync : AssetPostprocessor
     private const string CatalogAssetPath = ResourcePaths.AssetsRoot + "/" + ResourcePaths.Data + "/ScenarioCatalog.asset";
 
     //[시나리오 데이터] 시나리오별 태그/등장인물 문서 (동기화 때만 읽음)
-    //양식: <Scenario Id="IL" Tag="a, b" Character="x, y" /> — 요소/속성 이름, Id 모두 대소문자 무시
+    //양식: <Scenario Id="IL" Tag="a, b" Character="x, y" /> — 요소/속성 이름은 대소문자 구분, Id 값은 무시 ([공유 코드 통합] 수정)
     private const string ScenarioDataPath = ResourcePaths.AssetsRoot + "/" + ResourcePaths.Data + "/ScenarioData.xml";
     private const string DataScenarioTag = "Scenario";
     private const string DataIdAttr = "Id";
@@ -39,16 +39,7 @@ public class ScenarioCatalogSync : AssetPostprocessor
     private const string DataIrisAttr = "Iris";                   //[Iris 아이콘] 직접 지정 (유닛 ID 또는 캐릭터 ID, 쉼표 구분)
     private static readonly char[] DataListSeparator = { ',' };   // Tag / Character / Iris 목록 구분자
 
-    //[엔딩 SD] 막 XML에서 사용한 CG 키 수집
-    private const string ActCgAttr = "CG";
-    private const string ActCgNone = "none";
-    private const string ActTypeAttr = "Type";          //[LD 불러오기] CGGROUP 그룹 이름 제외용
-    private const string ActCgGroupType = "CGGROUP";
-    private const string ActGroupIdAttr = "GroupId";    //[CharId] CGGROUP 그룹 이름 (기존 Name="그룹명, 화자명" 폐기 — ActNameAttr 삭제)
-    private const string ActCharIdAttr = "CharId";      //[CharId] TEXT 화자 캐릭터 ID (쉼표로 여러 명)
-    private const string ActLineTag = "Line";
-    private const string ActPositionAttr = "Position";   //[스테이지 레이아웃] 무대 자리 검사
-    private const string ActEffectAttr = "Effect";       //[스테이지 레이아웃] SETCG clean
+    //[공유 코드 통합] 삭제: 막 XML 속성·종류 상수(ActCgAttr·ActCgNone·ActTypeAttr·ActCgGroupType·ActGroupIdAttr·ActCharIdAttr·ActLineTag·ActPositionAttr·ActEffectAttr) → 공유 ActFormat
 
     //[스테이지 레이아웃] 무대 자리 검사용 표 (동기화 1번마다 StageData.xml을 다시 읽음)
     private const string StageDataAssetPath = ResourcePaths.AssetsRoot + "/" + ResourcePaths.Data + "/" + StageTable.DataName + ".xml";
@@ -300,21 +291,20 @@ public class ScenarioCatalogSync : AssetPostprocessor
     }
 
     //[리소스 정리] 막의 BG·IMAGE 키가 실제 파일로 있는지 (없으면 경고, 빌드는 막지 않음 — Spine 검사와 같은 방침)
-    private static void ValidateActResourceKeys(string assetPath, XmlDocument doc)
+    //[공유 코드 통합] 수정: XmlDocument 전체 요소 → 막 줄(ActAttrs), ResourceKey만 (Key 대체 읽기 삭제)
+    private static void ValidateActResourceKeys(string assetPath, List<ActAttrs> lines)
     {
         var missing = new List<string>();
-        foreach (XmlNode node in doc.GetElementsByTagName("*"))
+        foreach (ActAttrs node in lines)
         {
-            string type = ActXml.GetAttrIgnoreCase(node, ActTypeAttr);
-            string folder = string.Equals(type, "BG", StringComparison.OrdinalIgnoreCase) ? ResourcePaths.BG
-                          : string.Equals(type, "IMAGE", StringComparison.OrdinalIgnoreCase) ? ResourcePaths.ScenarioImage : null;
+            string type = node.Type;
+            string folder = type == ActFormat.TypeBG ? ResourcePaths.BG : type == ActFormat.TypeImage ? ResourcePaths.ScenarioImage : null;
             if (folder == null) continue;
 
-            string key = ActXml.GetAttrIgnoreCase(node, "ResourceKey");
-            if (string.IsNullOrEmpty(key)) key = ActXml.GetAttrIgnoreCase(node, "Key");   //DialogManager.GetResourceKey와 같은 폴백
-            if (string.IsNullOrWhiteSpace(key)) continue;
-            string entry = $"{type.ToUpperInvariant()} {key.Trim()}";
-            if (!ResourceFileExists(folder, key.Trim()) && !missing.Contains(entry)) missing.Add(entry);
+            string key = node.Key(ActFormat.ResourceKey);
+            if (key.Length == 0) continue;
+            string entry = $"{type} {key}";
+            if (!ResourceFileExists(folder, key) && !missing.Contains(entry)) missing.Add(entry);
         }
         if (missing.Count > 0)
             Debug.LogWarning($"[ScenarioCatalogSync] {Path.GetFileNameWithoutExtension(assetPath)}: 리소스 파일 없음 {missing.Count}개 (BG → Resources/{ResourcePaths.BG}, IMAGE → Resources/{ResourcePaths.ScenarioImage})\n  {string.Join("\n  ", missing)}");
@@ -329,46 +319,27 @@ public class ScenarioCatalogSync : AssetPostprocessor
             && Directory.GetFiles(dir, Path.GetFileName(full) + ".*").Any(f => !f.EndsWith(".meta", StringComparison.OrdinalIgnoreCase));
     }
 
-    //[CharId] 막 스크립트 데이터 오류 검사 (경고만, 빌드는 막지 않음): DB에 없는 CharId, GroupId 없는 CGGROUP, 잘못된 언어 접미어
-    //줄 번호 = Line 요소 순서 (TE 스크립트 표 번호와 같음). 번역 누락은 여기서 보지 않음 → Tools > Scenario > Check Translations
-    private static void ValidateActScript(string assetPath, XmlDocument doc)
+    //[CharId] 막 스크립트 데이터 오류 검사 (경고만, 빌드는 막지 않음). 줄 번호 = Line 요소 순서 (TE 스크립트 표 번호와 같음). 번역 누락은 Tools > Localization > Check Translations
+    //[공유 코드 통합] 수정: 검사 규칙은 공유 ActScript.CheckLine (TE 스크립트 표와 같은 경고) — 대소문자가 다른 속성 이름·잘못된 언어 접미어·DB에 없는 CharId·GroupId 없는 CGGROUP
+    //  삭제: CheckLanguageSuffix (→ CheckLine)
+    private static void ValidateActScript(string assetPath, ActAttrs root, List<ActAttrs> lines)
     {
-        XmlNode root = ActXml.GetRoot(doc);
-        if (root == null) return;
-
+        var languages = UsoSCTheater.Localization.Languages;
+        Func<string, bool> exists = id => UsoSCTheater.Character.CharacterDatabase.Find(id) != null;
         var issues = new List<string>();
-        CheckLanguageSuffix(root, "루트", issues);
-        int number = 0;
-        foreach (XmlNode node in root.ChildNodes)
+        var found = new List<ActIssue>();
+
+        ActScript.CheckLine(root, true, languages, exists, found);
+        issues.AddRange(found.Select(f => $"루트: {f.Message}"));
+        for (int i = 0; i < lines.Count; i++)
         {
-            if (node.NodeType != XmlNodeType.Element || node.Name != ActLineTag) continue;
-            number++;
-            CheckLanguageSuffix(node, $"{number}번 줄", issues);
-
-            foreach (string id in CharIds.Split(ActXml.GetAttrIgnoreCase(node, ActCharIdAttr)))   //[공유 코드 통합] 수정: CharacterDatabase.SplitIds → CharIds.Split
-            {
-                if (UsoSCTheater.Character.CharacterDatabase.Find(id) == null)
-                    issues.Add($"{number}번 줄: CharacterData에 없는 CharId '{id}'");
-            }
-
-            if (string.Equals(ActXml.GetAttrIgnoreCase(node, ActTypeAttr), ActCgGroupType, StringComparison.OrdinalIgnoreCase)
-                && ActXml.GetAttrIgnoreCase(node, ActGroupIdAttr).Trim().Length == 0)
-                issues.Add($"{number}번 줄: GroupId가 없는 CGGROUP (게임에서 건너뜀)");
+            found.Clear();
+            ActScript.CheckLine(lines[i], false, languages, exists, found);
+            issues.AddRange(found.Select(f => $"{i + 1}번 줄: {f.Message}"));
         }
 
         if (issues.Count > 0)
             Debug.LogWarning($"[ScenarioCatalogSync] {Path.GetFileNameWithoutExtension(assetPath)}: 스크립트 오류 {issues.Count}개\n  {string.Join("\n  ", issues)}");
-    }
-
-    //[CharId] 언어 접미어가 잘못된 속성 (Text_Jp 오타, 기본 언어 접미어 Name_Ko 등 — 게임이 읽지 않음)
-    private static void CheckLanguageSuffix(XmlNode node, string where, List<string> issues)
-    {
-        if (node.Attributes == null) return;
-        foreach (XmlAttribute attr in node.Attributes)
-        {
-            if (LanguageRules.HasInvalidSuffix(attr.Name, UsoSCTheater.Localization.Languages))   //[공유 코드 통합] 수정
-                issues.Add($"{where}: 잘못된 언어 접미어 속성 '{attr.Name}' (LanguageData에 없는 언어이거나 기본 언어 — 기본 언어는 접미어 없이)");
-        }
     }
 
     //[스테이지 레이아웃] 추가: StageData.xml → 표 (문제는 경고)
@@ -384,22 +355,19 @@ public class ScenarioCatalogSync : AssetPostprocessor
     //[스테이지 레이아웃] 추가: 무대 자리 검사 — 게임과 같은 StagePlanner로 막을 처음부터 돌려 경고를 모음 (경고만, 빌드는 막지 않음)
     //  게임 순회와 같은 규칙: TRANSITION·CG="none" = 비움, SETCG clean = 내림, CGGROUP = 막 전체 정의 (멤버 Position)
     //  Position이 빈 CG 줄은 확인용 알림 (TE가 항상 N-i를 적으므로 대부분 손으로 쓴 실수). 줄 번호 = TE 스크립트 표 번호
-    private static void ValidateActStage(string assetPath, XmlDocument doc)
+    //[공유 코드 통합] 수정(3회차): 읽기만 공유 ActAttrs로 (그룹 이름은 값 → 대소문자 무시). 순회 자체는 6회차에 공유 해석기로
+    private static void ValidateActStage(string assetPath, List<ActAttrs> lines)
     {
-        XmlNode root = ActXml.GetRoot(doc);
-        if (root == null || stageTable == null) return;
+        if (stageTable == null) return;
 
-        var lines = new List<XmlNode>();
-        var groups = new Dictionary<string, List<(string cg, string pos)>>(StringComparer.Ordinal);   //게임 cgGroupDict와 같은 비교
-        foreach (XmlNode node in root.ChildNodes)
+        var groups = new Dictionary<string, List<(string cg, string pos)>>(StringComparer.OrdinalIgnoreCase);   //게임 cgGroupDict와 같은 비교
+        foreach (ActAttrs node in lines)
         {
-            if (node.NodeType != XmlNodeType.Element || node.Name != ActLineTag) continue;
-            lines.Add(node);
-            if (!string.Equals(ActXml.GetAttrIgnoreCase(node, ActTypeAttr), ActCgGroupType, StringComparison.OrdinalIgnoreCase)) continue;
-            string id = ActXml.GetAttrIgnoreCase(node, ActGroupIdAttr).Trim();
+            if (!node.Is(ActFormat.TypeCGGroup)) continue;
+            string id = node.Key(ActFormat.GroupId);
             if (id.Length == 0) continue;
             if (!groups.TryGetValue(id, out var members)) groups[id] = members = new List<(string cg, string pos)>();
-            members.Add((ActXml.GetAttrIgnoreCase(node, ActCgAttr), ActXml.GetAttrIgnoreCase(node, ActPositionAttr)));
+            members.Add((node.Key(ActFormat.CG), node.Key(ActFormat.Position)));
         }
 
         var planner = new StagePlanner(stageTable);
@@ -408,17 +376,17 @@ public class ScenarioCatalogSync : AssetPostprocessor
         var warnings = new List<string>();
         for (int i = 0; i < lines.Count; i++)
         {
-            XmlNode node = lines[i];
-            string type = ActXml.GetAttrIgnoreCase(node, ActTypeAttr).Trim().ToUpperInvariant();
-            if (type == "TRANSITION") { planner.Clear(); continue; }
-            if (type != "TEXT" && type != "SETCG") continue;
+            ActAttrs node = lines[i];
+            string type = node.Type;
+            if (type == ActFormat.TypeTransition) { planner.Clear(); continue; }
+            if (type != ActFormat.TypeText && type != ActFormat.TypeSetCG) continue;
 
-            string cg = ActXml.GetAttrIgnoreCase(node, ActCgAttr).Trim();
+            string cg = node.Key(ActFormat.CG);
             if (cg.Length == 0) continue;
-            if (string.Equals(cg, ActCgNone, StringComparison.OrdinalIgnoreCase)) { planner.Clear(); continue; }
+            if (string.Equals(cg, ActFormat.CgNone, StringComparison.OrdinalIgnoreCase)) { planner.Clear(); continue; }
 
-            var targets = groups.TryGetValue(cg, out var groupMembers) ? groupMembers : new List<(string cg, string pos)> { (cg, ActXml.GetAttrIgnoreCase(node, ActPositionAttr)) };
-            if (type == "SETCG" && string.Equals(ActXml.GetAttrIgnoreCase(node, ActEffectAttr).Trim(), "clean", StringComparison.OrdinalIgnoreCase))
+            var targets = groups.TryGetValue(cg, out var groupMembers) ? groupMembers : new List<(string cg, string pos)> { (cg, node.Key(ActFormat.Position)) };
+            if (type == ActFormat.TypeSetCG && node.KeyIs(ActFormat.Effect, "clean"))
             {
                 foreach (var t in targets) planner.Remove(t.cg.Trim());
                 continue;
@@ -439,9 +407,9 @@ public class ScenarioCatalogSync : AssetPostprocessor
         if (notes.Count > 0) Debug.Log($"[ScenarioCatalogSync] {act}: (확인용) Position이 빈 CG 줄 {notes.Count}개\n  {string.Join("\n  ", notes)}");
     }
 
-    //[목록 UI] 막 XML 루트의 mainTitle / subTitle 읽기 (파싱 실패 시 빈 값 + 경고)
-    //[엔딩 SD] spineKeys: 막 안 모든 요소의 CG 값(쉼표 구분)을 등장 순서대로 추가 (중복·none 제외, 대소문자 무시)
-    //[다국어] localizedTitles: 기본 언어가 아닌 언어마다 [mainTitle_{언어}, subTitle_{언어}] (없으면 "")
+    //[목록 UI] 막 XML 루트의 MainTitle / SubTitle 읽기 (파싱 실패 시 빈 값 + 경고)
+    //[엔딩 SD] spineKeys: 막이 쓰는 Spine 키를 등장 순서대로 추가 (중복 없음, 대소문자 무시) — [공유 코드 통합] 공유 ActScript.SpineKeys (쉼표 나누기·모든 요소 훑기 삭제)
+    //[다국어] localizedTitles: 기본 언어가 아닌 언어마다 [MainTitle_{언어}, SubTitle_{언어}] (없으면 "")
     private static void ReadActHeader(string assetPath, out string mainTitle, out string subTitle, List<string> spineKeys, Dictionary<string, string[]> localizedTitles)
     {
         mainTitle = "";
@@ -454,39 +422,28 @@ public class ScenarioCatalogSync : AssetPostprocessor
         {
             var doc = new XmlDocument();
             doc.LoadXml(asset.text);
-            XmlNode root = ActXml.GetRoot(doc);
-            //[제목 읽기] 대소문자 구분 없이 조회
-            mainTitle = ActXml.GetAttrIgnoreCase(root, ActXml.MainTitleAttr);
-            subTitle  = ActXml.GetAttrIgnoreCase(root, ActXml.SubTitleAttr);
+            //[공유 코드 통합] 수정: 루트 <Act>·줄 읽기는 공유 ActAttrs (속성 이름 대소문자 구분)
+            XmlNode rootNode = ActXml.GetRoot(doc);
+            if (rootNode == null) Debug.LogWarning($"[ScenarioCatalogSync] {Path.GetFileNameWithoutExtension(assetPath)}: 루트 태그 <{ActFormat.RootTag}>가 없음");
+            ActAttrs root = ActXml.Attrs(rootNode);
+            List<ActAttrs> lines = ActXml.Lines(rootNode);
+
+            mainTitle = root.Raw(ActFormat.MainTitle);
+            subTitle  = root.Raw(ActFormat.SubTitle);
             foreach (var language in TranslationLanguages())   //[다국어] 번역이 없으면 빈 값 (기본 언어로 대체하는 것은 실행 중)
                 localizedTitles[language.Code] = new[]
                 {
-                    ActXml.GetAttrIgnoreCase(root, LanguageRules.AttrName(ActXml.MainTitleAttr, language)),   //[공유 코드 통합] 수정: Localization.AttrName → LanguageRules.AttrName
-                    ActXml.GetAttrIgnoreCase(root, LanguageRules.AttrName(ActXml.SubTitleAttr, language)),
+                    root.Raw(LanguageRules.AttrName(ActFormat.MainTitle, language)),
+                    root.Raw(LanguageRules.AttrName(ActFormat.SubTitle, language)),
                 };
 
-            //[엔딩 SD] 사용한 CG 키 수집
-            //[LD 불러오기] 수정: CGGROUP 그룹 이름은 Spine 키가 아니므로 제외 (멤버 키는 CGGROUP 줄의 CG로 수집됨)
-            var groupNames = new HashSet<string>(StringComparer.Ordinal);
-            foreach (XmlNode node in doc.GetElementsByTagName("*"))
-            {
-                if (string.Equals(ActXml.GetAttrIgnoreCase(node, ActTypeAttr), ActCgGroupType, StringComparison.OrdinalIgnoreCase))
-                    groupNames.Add(ActXml.GetAttrIgnoreCase(node, ActGroupIdAttr).Trim());   //[CharId] Name 쉼표 분리 → GroupId
-            }
+            //[엔딩 SD] 사용한 CG 키 수집 — [공유 코드 통합] 공유 규칙 (그룹 이름·none·GroupId가 빈 CGGROUP 제외), 시나리오 안에서 겹치지 않게 덧붙임
+            foreach (string key in ActScript.SpineKeys(lines))
+                if (!spineKeys.Contains(key, StringComparer.OrdinalIgnoreCase)) spineKeys.Add(key);
 
-            foreach (XmlNode node in doc.GetElementsByTagName("*"))
-            {
-                foreach (string key in SplitList(ActXml.GetAttrIgnoreCase(node, ActCgAttr)))
-                {
-                    if (string.Equals(key, ActCgNone, StringComparison.OrdinalIgnoreCase)) continue;
-                    if (groupNames.Contains(key)) continue;   //[LD 불러오기] 추가: 그룹 이름 제외
-                    if (!spineKeys.Contains(key, StringComparer.OrdinalIgnoreCase)) spineKeys.Add(key);
-                }
-            }
-
-            ValidateActResourceKeys(assetPath, doc);   //[리소스 정리] BG·IMAGE 키 파일 존재 검사
-            ValidateActScript(assetPath, doc);         //[CharId] CharId·GroupId·언어 접미어 검사
-            ValidateActStage(assetPath, doc);          //[스테이지 레이아웃] 추가: 무대 자리 검사
+            ValidateActResourceKeys(assetPath, lines);       //[리소스 정리] BG·IMAGE 키 파일 존재 검사
+            ValidateActScript(assetPath, root, lines);       //[CharId] 스크립트 검사 (공유 ActScript.CheckLine)
+            ValidateActStage(assetPath, lines);              //[스테이지 레이아웃] 무대 자리 검사
         }
         catch (XmlException e)
         {
@@ -512,11 +469,15 @@ public class ScenarioCatalogSync : AssetPostprocessor
             doc.LoadXml(asset.text);
             if (doc.DocumentElement == null) return result;
 
-            foreach (XmlNode node in doc.DocumentElement.ChildNodes)
+            //[공유 코드 통합] 수정(3회차): 요소·속성 이름은 대소문자 구분 (데이터 문서 규칙, 2026-11-11) — 값 읽기는 ActAttrs (IsName·GetAttrIgnoreCase 삭제)
+            var known = new List<string> { DataIdAttr, DataTagAttr, DataCharacterAttr, DataIrisAttr };
+            known.AddRange(TranslationLanguages().Select(l => LanguageRules.AttrName(DataTagAttr, l)));
+            foreach (XmlNode xml in doc.DocumentElement.ChildNodes)
             {
-                if (node.NodeType != XmlNodeType.Element || !IsName(node, DataScenarioTag)) continue;
+                if (xml.NodeType != XmlNodeType.Element || xml.Name != DataScenarioTag) continue;
+                ActAttrs node = ActXml.Attrs(xml);
 
-                string id = ActXml.GetAttrIgnoreCase(node, DataIdAttr).Trim();
+                string id = node.Key(DataIdAttr);
                 if (string.IsNullOrEmpty(id))
                 {
                     Debug.LogWarning($"[ScenarioCatalogSync] ScenarioData.xml: Id 없는 <{DataScenarioTag}> → 무시");
@@ -529,12 +490,12 @@ public class ScenarioCatalogSync : AssetPostprocessor
                 }
 
                 var item = new ScenarioDataItem();
-                foreach (string tag in SplitList(ActXml.GetAttrIgnoreCase(node, DataTagAttr)))
+                foreach (string tag in SplitList(node.Raw(DataTagAttr)))
                     item.tags.Add(tag);
                 foreach (var language in TranslationLanguages())   //[다국어] Tag_{언어} (목록은 언어마다 독립, 개수가 달라도 됨)
-                    item.localizedTags[language.Code] = SplitList(ActXml.GetAttrIgnoreCase(node, LanguageRules.AttrName(DataTagAttr, language))).ToList();   //[공유 코드 통합] 수정
+                    item.localizedTags[language.Code] = SplitList(node.Raw(LanguageRules.AttrName(DataTagAttr, language))).ToList();   //[공유 코드 통합] 수정
 
-                foreach (string value in SplitList(ActXml.GetAttrIgnoreCase(node, DataCharacterAttr)))
+                foreach (string value in SplitList(node.Raw(DataCharacterAttr)))
                 {
                     string charId = value.ToLowerInvariant();   //캐릭터 ID는 소문자로 저장
                     if (item.characters.Contains(charId)) Debug.LogWarning($"[ScenarioCatalogSync] ScenarioData.xml '{id}': 등장인물 '{charId}' 중복 → 무시");
@@ -542,20 +503,23 @@ public class ScenarioCatalogSync : AssetPostprocessor
                 }
 
                 //[Iris 아이콘] 직접 지정 (유닛 ID 또는 캐릭터 ID, 소문자로 저장)
-                foreach (string value in SplitList(ActXml.GetAttrIgnoreCase(node, DataIrisAttr)))
+                foreach (string value in SplitList(node.Raw(DataIrisAttr)))
                 {
                     string iconId = value.ToLowerInvariant();
                     if (!item.irisIcons.Contains(iconId)) item.irisIcons.Add(iconId);
                 }
 
-                //속성 이름 오타 확인 (예: Charactor → 읽히지 않으므로 경고)
-                foreach (XmlAttribute attr in node.Attributes)
+                //속성 이름 오타 확인 (예: Charactor → 읽히지 않으므로 경고). [공유 코드 통합] 대소문자만 다른 이름은 따로 알림 (예: tag → Tag)
+                foreach (var attr in node.All)
                 {
-                    if (IsName(attr, DataIdAttr) || IsName(attr, DataTagAttr) || IsName(attr, DataCharacterAttr) || IsName(attr, DataIrisAttr)) continue;   //[Iris 아이콘] Iris 허용
-                    if (LanguageRules.HasInvalidSuffix(attr.Name, UsoSCTheater.Localization.Languages))   //[다국어] Tag_Jp·Tag_Ko 등   //[공유 코드 통합] 수정
-                        Debug.LogWarning($"[ScenarioCatalogSync] ScenarioData.xml '{id}': 잘못된 언어 접미어 속성 '{attr.Name}' (LanguageData에 없는 언어이거나 기본 언어 — 기본 언어는 접미어 없이) → 무시");
-                    else if (!TranslationLanguages().Any(l => IsName(attr, LanguageRules.AttrName(DataTagAttr, l))))   //[다국어] Tag_{언어} 허용   //[공유 코드 통합] 수정
-                        Debug.LogWarning($"[ScenarioCatalogSync] ScenarioData.xml '{id}': 알 수 없는 속성 '{attr.Name}' → 무시");
+                    if (known.Contains(attr.Key)) continue;
+                    string correct = known.FirstOrDefault(k => string.Equals(k, attr.Key, StringComparison.OrdinalIgnoreCase));
+                    if (correct != null)
+                        Debug.LogWarning($"[ScenarioCatalogSync] ScenarioData.xml '{id}': 대소문자가 다른 속성 '{attr.Key}' → '{correct}' (읽히지 않음)");
+                    else if (LanguageRules.HasInvalidSuffix(attr.Key, UsoSCTheater.Localization.Languages))   //[다국어] Tag_Jp·Tag_Ko 등
+                        Debug.LogWarning($"[ScenarioCatalogSync] ScenarioData.xml '{id}': 잘못된 언어 접미어 속성 '{attr.Key}' (LanguageData에 없는 언어이거나 기본 언어 — 기본 언어는 접미어 없이) → 무시");
+                    else
+                        Debug.LogWarning($"[ScenarioCatalogSync] ScenarioData.xml '{id}': 알 수 없는 속성 '{attr.Key}' → 무시");
                 }
                 result[id] = item;
             }
@@ -617,8 +581,7 @@ public class ScenarioCatalogSync : AssetPostprocessor
         }
     }
 
-    //[시나리오 데이터] 요소/속성 이름 대소문자 무시 비교 (XmlAttribute도 XmlNode)
-    private static bool IsName(XmlNode node, string name) => string.Equals(node.Name, name, StringComparison.OrdinalIgnoreCase);
+    //[공유 코드 통합] 삭제: IsName (요소·속성 이름 대소문자 무시 비교 — 이름은 구분)
 
     //[시나리오 데이터] "a, b, , c" → ["a", "b", "c"]
     private static IEnumerable<string> SplitList(string value) =>

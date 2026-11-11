@@ -12,9 +12,9 @@ public enum TranslationField { MainTitle, SubTitle, Name, Text }
 /// <summary>
 /// 추가(번역 모드 3회차): 번역 창. 스크립트 표와 같은 막 문서(ActEditorViewModel.Document)를 편집 — 저장·되돌리기·자동 백업 공유.
 /// - 행: 맨 위 제목·부제 1행 + TEXT 줄마다 1행(이름·대사). TEXT가 아닌 줄은 보이지 않음
-/// - 번역 속성 = {기본 속성}_{언어 접미어} (Name_Ja, Text_Ja, mainTitle_Ja, subTitle_Ja)
+/// - 번역 속성 = {기본 속성}_{언어 접미어} (Name_Ja, Text_Ja, MainTitle_Ja, SubTitle_Ja)
 /// - 진행률 = 원문이 있는 칸 중 번역이 채워진 칸 (게임 Tools > Localization > Check Translations와 같은 기준 — 한쪽을 바꾸면 함께)
-/// - 막을 열 때(창을 열 때·막이 바뀔 때) 대소문자만 다른 번역 속성(Text_ja 등)을 TE 표기로 고침 (되돌리기 1단계) + 그 칸 빨간 글씨
+/// - [공유 코드 통합] 대소문자만 다른 번역 속성(Text_ja 등) 교정은 막을 열 때 스크립트 표가 함 (모든 속성, 상태 줄 안내) — 번역 창은 하지 않음
 /// - 다른 줄의 칸으로 옮기면 스크립트 표 선택은 항상 따라가고, 자동 무대 동기화가 켜져 있으면 멈춘 뒤 한 번 동기화(F5와 같음)
 /// 창이 열려 있는 동안만 만들어 두고, 닫으면 Dispose (닫혀 있을 때 비용 없음)
 /// </summary>
@@ -25,12 +25,11 @@ public sealed partial class TranslationViewModel : ObservableObject, IDisposable
 
     private readonly ActEditorViewModel _editor;
     private readonly CharacterData _characters;
-    private readonly IReadOnlyList<LanguageInfo> _allLanguages;
+    //[공유 코드 통합] 삭제: _allLanguages · _fixed (대소문자 교정은 막을 열 때 스크립트 표가 — ActEditorViewModel.FixAttributeNames)
     private readonly TranslationWindowSettings _settings;
     private readonly Action _saveSettings;
     private readonly Action _syncStage;
     private readonly IUiDispatcher _ui;
-    private readonly HashSet<(ScriptLine? Line, string Attr)> _fixed = new();   // 대소문자를 고친 칸 (줄 — 제목은 null, 번역 속성 이름)
     private readonly List<ScriptLine> _watched = new();
     private ActDocument? _doc;
     private LanguageInfo? _language;
@@ -52,7 +51,6 @@ public sealed partial class TranslationViewModel : ObservableObject, IDisposable
         _log = log ?? AppLog.Shared;
         _editor = editor;
         _characters = gameData.Characters;
-        _allLanguages = gameData.Languages;
         _settings = settings;
         _saveSettings = saveSettings;
         _syncStage = syncStage;
@@ -139,54 +137,20 @@ public sealed partial class TranslationViewModel : ObservableObject, IDisposable
             _doc.TitleChanged -= OnTitleChanged;
         }
         _doc = doc;
-        _fixed.Clear();
         _lastLine = null;
         StatusText = "";
         if (doc != null)
         {
             doc.Lines.CollectionChanged += OnLinesChanged;
             doc.TitleChanged += OnTitleChanged;
-            NormalizeNames();
+            //[공유 코드 통합] 삭제: NormalizeNames() — 막을 열 때 스크립트 표가 모든 속성 이름을 고침
         }
         OnPropertyChanged(nameof(DocumentTitle));
         OnPropertyChanged(nameof(CanPreTranslate));   // 추가(번역 모드 4회차)
         Rebuild();
     }
 
-    /// <summary>대소문자만 다른 번역 속성(Text_ja·MainTitle_ja 등)을 TE 표기({속성}_{Ja})로 — 모든 번역 언어, 되돌리기 1단계</summary>
-    private void NormalizeNames()
-    {
-        var doc = _doc!;
-        var renames = new List<(ScriptLine? Line, string Old, string New)>();
-        int conflicts = 0;
-        foreach (var lang in _allLanguages.Where(l => !l.IsDefault))
-        {
-            foreach (var b in new[] { ActXmlFormat.MainTitleAttr, ActXmlFormat.SubTitleAttr })
-            {
-                string target = LanguageRules.AttrName(b, lang);   //[공유 코드 통합] 수정
-                if (doc.FindRootAttributeIgnoreCase(target) is { } found && found != target)
-                {
-                    if (doc.GetRootAttribute(target) != null) conflicts++;
-                    else { renames.Add((null, found, target)); _fixed.Add((null, target)); }
-                }
-            }
-            foreach (var line in doc.Lines.Where(IsText))
-                foreach (var b in new[] { "Name", "Text" })
-                {
-                    string target = LanguageRules.AttrName(b, lang);   //[공유 코드 통합] 수정
-                    var found = line.Attributes.Select(a => a.Key)
-                                    .FirstOrDefault(k => k != target && string.Equals(k, target, StringComparison.OrdinalIgnoreCase));
-                    if (found == null) continue;
-                    if (line.Find(target) != null) conflicts++;
-                    else { renames.Add((line, found, target)); _fixed.Add((line, target)); }
-                }
-        }
-        int n = renames.Count > 0 ? doc.RenameAttributes(renames) : 0;
-        var notes = new List<string>();
-        if (n > 0) notes.Add($"⚠ 대소문자가 다른 번역 속성 {n}곳을 TE 표기(예: Text_Ja)로 고침 (빨간 칸, Ctrl+Z로 되돌리기)");
-        if (conflicts > 0) notes.Add($"⚠ 대소문자만 다른 번역 속성이 따로 있는 곳 {conflicts}곳 — 스크립트 표 '기타' 칸 확인");
-        StatusText = string.Join(" · ", notes);
-    }
+    //[공유 코드 통합] 삭제: NormalizeNames (번역 속성 대소문자 교정) → ActEditorViewModel.FixAttributeNames (막을 열 때, 모든 속성, 공유 ActFormat.CorrectName)
 
     private static bool IsText(ScriptLine l) => l.Type.Equals("TEXT", StringComparison.OrdinalIgnoreCase);
 
@@ -257,8 +221,7 @@ public sealed partial class TranslationViewModel : ObservableObject, IDisposable
         else _doc.SetAttribute(cell.Row.Line, attr, value);
     }
 
-    internal bool IsFixed(TranslationCell cell) =>
-        AttrName(cell.BaseAttr) is { } attr && _fixed.Contains((cell.Row.Line, attr));
+    //[공유 코드 통합] 삭제: IsFixed (대소문자 고친 칸 — 교정은 막을 열 때 스크립트 표가 하고 상태 줄로 안내)
 
     // ------------------------------------------------------------------ 줄 선택 → 스크립트 표 · 무대
 
@@ -485,8 +448,8 @@ public sealed class TranslationCell : ObservableObject
     /// <summary>기본(한국어) 속성 이름</summary>
     public string BaseAttr => Field switch
     {
-        TranslationField.MainTitle => ActXmlFormat.MainTitleAttr,
-        TranslationField.SubTitle => ActXmlFormat.SubTitleAttr,
+        TranslationField.MainTitle => ActFormat.MainTitle,   //[공유 코드 통합] 수정: 공유 상수
+        TranslationField.SubTitle => ActFormat.SubTitle,
         TranslationField.Name => "Name",
         _ => "Text",
     };
@@ -533,14 +496,13 @@ public sealed class TranslationCell : ObservableObject
         }
     }
 
-    /// <summary>대소문자가 다른 표기를 TE 표기로 고친 칸</summary>
-    public bool IsFixed => Row.Owner.IsFixed(this);
+    //[공유 코드 통합] 삭제: IsFixed (대소문자 고친 칸)
 
     /// <summary>추가(번역 모드 4회차): 번역이 있는데 원문과 줄바꿈(\n) 개수가 다름</summary>
     public bool NewlineMismatch => IsDone && PreTranslation.NewlineCount(Value) != PreTranslation.NewlineCount(Source);
 
-    /// <summary>빨간 글씨 = 대소문자 고친 칸 또는 \n 개수가 다른 칸 (변경: 번역 모드 4회차)</summary>
-    public bool Warning => IsFixed || NewlineMismatch;
+    /// <summary>빨간 글씨 = \n 개수가 다른 칸 (변경: 번역 모드 4회차, [공유 코드 통합] 대소문자 고친 칸 표시 삭제)</summary>
+    public bool Warning => NewlineMismatch;
 
     public string ToolTip
     {
@@ -550,9 +512,8 @@ public sealed class TranslationCell : ObservableObject
             string tip = $"{Label} ({attr})";
             if (NewlineMismatch)   // 추가(번역 모드 4회차)
                 tip += $"\n⚠ 줄바꿈(\\n) 개수가 원문과 다릅니다 — 원문 {PreTranslation.NewlineCount(Source)}개, 번역 {PreTranslation.NewlineCount(Value)}개";
-            if (IsFixed) tip += "\n⚠ 대소문자가 다른 표기(예: _ja)를 TE 표기로 고쳤습니다 — 되돌리려면 Ctrl+Z";
-            else if (NewlineMismatch) { }
-            else if (!IsRequired) tip += Field == TranslationField.Name && Hint.Length > 0
+            else if (!IsRequired)   //[공유 코드 통합] 수정: IsFixed 안내 삭제
+                tip += Field == TranslationField.Name && Hint.Length > 0
                 ? "\n비워 두면 화자의 DB 이름이 나옵니다 (흐린 글씨). 다르게 보여야 할 때만 입력"
                 : "\n원문이 비어 있어 번역하지 않아도 됩니다";
             return tip;

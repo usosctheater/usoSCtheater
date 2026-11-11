@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Act mainTitle="InertiaLucis" subTitle="힘의 법칙" mainTitle_Ja="InertiaLucis" subTitle_Ja="力の法則">
+<Act MainTitle="InertiaLucis" SubTitle="힘의 법칙" MainTitle_Ja="InertiaLucis" SubTitle_Ja="力の法則">
 	<Line Type="AUDIO" Value="bgm" Track="BGM_2" Volume="0.4"/>
 	<Line Type="BG" ResourceKey="bg_rouka"/>
 	<Line Type="SE" Track="se_jihannki"/>

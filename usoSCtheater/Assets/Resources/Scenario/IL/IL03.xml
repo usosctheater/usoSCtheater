@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Scene MainTitle="InertiaLucis" SubTitle="빛의 관성">
+<Act MainTitle="InertiaLucis" SubTitle="빛의 관성">
 	<Line Type="BG" ResourceKey="bg_hikaesitu2"/>
 	<Line Type="AUDIO" Value="bgm" Track="bgm_101" Volume="0.4"/>
 	<Line Type="BREAK" Effect="clean"/>
@@ -178,4 +178,4 @@
 	<Line Type="TEXT" CharId="mei" Text="가버렸네." Voice="S003092" CG="mei_stand_3000190060" Position="3-1" Animation="anger2 face_serious lip_smile1" SpeakerType="1"/>
 	<Line Type="TEXT" CharId="asahi" Text="가버렸슴다." Voice="S003093" CG="asahi_stand_3000170060" Position="3-3" Animation="wait3 face_surp lip_surp" SpeakerType="1"/>
 	<Line Type="TRANSITION" Effect="wipe_left" SE="se_trans_out|se_trans_in"/>
-</Scene>
+</Act>

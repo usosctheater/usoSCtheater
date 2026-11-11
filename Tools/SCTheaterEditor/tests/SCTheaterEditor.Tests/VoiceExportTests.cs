@@ -28,7 +28,7 @@ public class VoiceExportTests
 
     private const string Act1 =
         "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n" +
-        "<Act mainTitle=\"제목\" mainTitle_Ja=\"タイトル\">\r\n" +
+        "<Act MainTitle=\"제목\" MainTitle_Ja=\"タイトル\">\r\n" +
         "\t<Line Type=\"TEXT\" CharId=\"asahi\" Text=\"안녕\" Text_Ja=\"こんにちは、プロデューサーさん\\nっす\"/>\r\n" +
         "\t<Line Type=\"TEXT\" CharId=\"asahi\" Text=\"또\" Text_Ja=\"もう一回っす\"/>\r\n" +
         "\t<Line Type=\"BG\" ResourceKey=\"room\"/>\r\n" +
@@ -39,7 +39,7 @@ public class VoiceExportTests
 
     private const string Act2 =
         "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n" +
-        "<Act mainTitle=\"둘째\">\r\n" +
+        "<Act MainTitle=\"둘째\">\r\n" +
         "\t<Line Type=\"TEXT\" CharId=\"mei\" Text=\"메이\"/>\r\n" +
         "\t<Line Type=\"TEXT\" CharId=\"toru\" Text=\"토오루\"/>\r\n" +
         "\t<Line Type=\"TEXT\" CharId=\"asahi\" Text=\"\"/>\r\n" +

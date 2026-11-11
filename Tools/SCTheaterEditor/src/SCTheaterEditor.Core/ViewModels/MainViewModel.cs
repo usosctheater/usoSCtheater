@@ -31,7 +31,7 @@ public sealed class MainViewModel
                                      stageTable: () => gameData.Stage);   //[스테이지 레이아웃] 무대 배치 표   // 변경(번역 모드 2회차): LipRules.LoadEmbedded() → gameData.Lips
         // 추가(4-1): 스크립트 표 (스크립트 탭 아래쪽)
         Editor = new ActEditorViewModel(settings, library, dialogs, ui, saveSettings, log, characters: gameData.Characters, messenger: messenger,
-                                         stageTable: () => gameData.Stage);   //[스테이지 레이아웃] F5 무대 동기화의 배치 표   // 변경(번역 모드 2회차): characters
+                                         stageTable: () => gameData.Stage, languages: () => gameData.Languages);   //[공유 코드 통합] languages 추가   //[스테이지 레이아웃] F5 무대 동기화의 배치 표   // 변경(번역 모드 2회차): characters
         Script.Editor = Editor;
         Editor.StampProvider = () => Script.CurrentStamp;   // 추가(4-2): 줄 추가 때 무대에서 선택한 캐릭터 정보
         Editor.VoiceMatch = VoiceMatch;   // 추가(번역 모드 5회차): [라이선스 내보내기]

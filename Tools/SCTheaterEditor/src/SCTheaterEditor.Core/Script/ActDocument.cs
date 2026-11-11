@@ -29,8 +29,10 @@ public sealed class ActDocument
     /// <summary>저장하지 않은 변경이 있는지</summary>
     public bool IsDirty => Undo.IsDirty;
 
-    /// <summary>읽은 파일의 루트 태그 (기존 막은 Scene — 저장하면 Act)</summary>
-    public string SourceRootName { get; internal set; } = ActXmlFormat.RootTag;
+    //[공유 코드 통합] 삭제: SourceRootName (<Scene> 읽기 삭제)
+
+    /// <summary>[공유 코드 통합] 추가: 읽을 때 대소문자만 다른 제목 속성 이름(mainTitle 등)을 고친 수 — 저장하면 올바른 이름으로 써지고 0</summary>
+    public int TitleNameFixes { get; internal set; }
 
     /// <summary>원래 줄 모양을 지키며 읽었는지 (false면 저장 시 모든 줄을 표준 모양으로 새로 씀)</summary>
     public bool PreservesLayout { get; internal set; }
@@ -118,9 +120,7 @@ public sealed class ActDocument
         return i < 0 ? null : ExtraRootAttributes[i].Value;
     }
 
-    /// <summary>루트 속성 이름 중 대소문자만 다른 것 (예: mainTitle_ja → 찾는 이름 mainTitle_Ja). 없으면 null</summary>
-    public string? FindRootAttributeIgnoreCase(string name) =>
-        ExtraRootAttributes.Select(a => a.Key).FirstOrDefault(k => string.Equals(k, name, StringComparison.OrdinalIgnoreCase));
+    //[공유 코드 통합] 삭제: FindRootAttributeIgnoreCase (번역 창 표기 정리 → 막을 열 때 ActEditorViewModel이 공유 ActFormat.CorrectName으로)
 
     /// <summary>루트 속성 변경 (빈 값 = 삭제), 되돌리기 1단계. 제목 바뀜 알림</summary>
     public void SetRootAttribute(string name, string? value)
@@ -131,7 +131,7 @@ public sealed class ActDocument
     }
 
     /// <summary>
-    /// 속성 이름 바꾸기 여러 개를 한 단계로 (번역 속성 표기 정리: Text_ja → Text_Ja). Line이 null이면 루트 속성.
+    /// 속성 이름 바꾸기 여러 개를 한 단계로 (대소문자 정리: cg → CG, Text_ja → Text_Ja). Line이 null이면 루트 속성.
     /// 새 이름이 이미 있으면 건너뜀 (값을 잃지 않도록). 바꾼 수
     /// </summary>
     public int RenameAttributes(IReadOnlyList<(ScriptLine? Line, string Old, string New)> renames)
@@ -152,7 +152,7 @@ public sealed class ActDocument
             }
         }
         if (parts.Count == 0) return 0;
-        Execute(new MultiEdit(parts, "번역 속성 표기 정리"));
+        Execute(new MultiEdit(parts, "속성 이름 대소문자 정리"));   //[공유 코드 통합] 수정: 문구 (번역 속성 표기 정리 → 모든 속성)
         return parts.Count(p => p is AttributeEdit) + parts.Count(p => p is RootAttrEdit) / 2;
     }
 

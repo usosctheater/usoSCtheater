@@ -1,37 +1,36 @@
-using System;
+using System.Collections.Generic;
 using System.Xml;
+using UsoSCTheater.Shared;   //[공유 코드 통합] ActFormat · ActAttrs
 
 namespace UsoSCTheater.Scenario
 {
     /// <summary>
-    /// 막(Act) XML 공통 파싱 도우미.
-    /// 루트 태그: 신규 &lt;Act&gt;, 기존 &lt;Scene&gt;도 계속 읽는다.
-    /// 모든 막 XML이 &lt;Act&gt;로 전환되기 전까지 Legacy 폴백을 제거하지 말 것 (IL·SC 막은 아직 &lt;Scene&gt;).
+    /// 막(Act) XML ↔ 공유 ActAttrs 연결 (게임 쪽 XmlNode만 다룸). 형식·규칙은 공유 ActFormat·ActScript
+    /// [공유 코드 통합] 삭제: RootTag·LegacyRootTag(&lt;Scene&gt; 대체 읽기 — 모든 막을 &lt;Act&gt;로 변환)·MainTitleAttr·SubTitleAttr·GetAttrIgnoreCase (속성 이름은 대소문자 구분)
     /// (엑셀 XML 변환 템플릿 Resources/XML은 2026-10-30 삭제 — 스크립트 작성은 TE로)
     /// </summary>
     public static class ActXml
     {
-        public const string RootTag = "Act";
-        public const string LegacyRootTag = "Scene";
+        //루트 노드 (<Act>), 없으면 null
+        public static XmlNode GetRoot(XmlDocument doc) => doc.SelectSingleNode(ActFormat.RootTag);
 
-        //[목록 UI] 막 헤더 속성 이름 (ScenarioCatalogSync에서 제목 읽기에 사용)
-        public const string MainTitleAttr = "mainTitle";
-        public const string SubTitleAttr = "subTitle";
-
-        //루트 노드 반환 (<Act> 우선 → <Scene>), 둘 다 없으면 null
-        public static XmlNode GetRoot(XmlDocument doc) =>
-            doc.SelectSingleNode(RootTag) ?? doc.SelectSingleNode(LegacyRootTag);
-
-        //[제목 읽기] 속성 값을 대소문자 구분 없이 조회 (예: subTitle / SubTitle 모두 허용). 없으면 ""
-        //철자가 다른 속성(예: MainTtitle)은 읽지 않음 → 제목이 안 나오면 XML 오타 확인
-        public static string GetAttrIgnoreCase(XmlNode node, string attrName)
+        //노드 속성 → 공유 ActAttrs (파일 순서). node가 null이면 빈 목록
+        public static ActAttrs Attrs(XmlNode node)
         {
-            if (node?.Attributes == null) return "";
-            foreach (XmlAttribute attr in node.Attributes)
-            {
-                if (string.Equals(attr.Name, attrName, StringComparison.OrdinalIgnoreCase)) return attr.Value ?? "";
-            }
-            return "";
+            var list = new List<KeyValuePair<string, string>>();
+            if (node?.Attributes != null)
+                foreach (XmlAttribute a in node.Attributes) list.Add(new KeyValuePair<string, string>(a.Name, a.Value));
+            return new ActAttrs(list);
+        }
+
+        //루트 바로 아래 <Line> 줄들 (순서대로). root가 null이면 빈 목록
+        public static List<ActAttrs> Lines(XmlNode root)
+        {
+            var lines = new List<ActAttrs>();
+            if (root == null) return lines;
+            foreach (XmlNode n in root.ChildNodes)
+                if (n.NodeType == XmlNodeType.Element && n.Name == ActFormat.LineTag) lines.Add(Attrs(n));
+            return lines;
         }
     }
 }

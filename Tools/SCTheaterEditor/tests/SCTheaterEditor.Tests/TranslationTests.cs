@@ -7,6 +7,7 @@ namespace SCTheaterEditor.Tests;
 /// <summary>추가(번역 모드 3회차): 번역 창 ViewModel — 행 구성·진행률·흐린 글씨·편집(되돌리기)·대소문자 정리·선택 동기화</summary>
 public class TranslationTests
 {
+    //[공유 코드 통합] 루트·Text_ja는 일부러 대소문자가 다른 이름 — 막을 열 때 고쳐짐 (OpenFixesCase_OneUndoStep)
     private const string Act =
         "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n" +
         "<Act mainTitle=\"제목\" subTitle=\"부제\" mainTitle_ja=\"タイトル\">\r\n" +
@@ -57,21 +58,21 @@ public class TranslationTests
         Assert.Equal("日本語", env.Vm.SelectedLanguage!.NativeName);
     }
 
+    //[공유 코드 통합] 수정: 번역 창 표기 정리 삭제 → 막을 열 때 스크립트 표가 고침 (제목 mainTitle·subTitle도 세어 안내, 번역 창 칸 경고 없음)
     [Fact]
-    public void Normalize_FixesCase_OneUndoStep()
+    public void OpenFixesCase_OneUndoStep()
     {
         using var env = new Env();
-        Assert.Equal("タイトル", env.Doc.GetRootAttribute("mainTitle_Ja"));
+        Assert.Equal("タイトル", env.Doc.GetRootAttribute("MainTitle_Ja"));
         Assert.Null(env.Doc.GetRootAttribute("mainTitle_ja"));
         Assert.Equal("こんにちは", env.Line(1).Find("Text_Ja"));
         Assert.Null(env.Line(1).Find("Text_ja"));
-        Assert.True(env.Vm.Rows[0].First.Warning);
-        Assert.True(env.Vm.Rows[1].Second.Warning);
-        Assert.False(env.Vm.Rows[1].First.Warning);
-        Assert.Contains("2곳", env.Vm.StatusText);
+        Assert.False(env.Vm.Rows[0].First.Warning);
+        Assert.False(env.Vm.Rows[1].Second.Warning);
+        Assert.Contains("4곳", env.Editor.StatusText);            // 번역 속성 2 + 제목 2
         Assert.True(env.Doc.IsDirty);
 
-        Assert.Equal("번역 속성 표기 정리", env.Doc.Undo.UndoLabel);
+        Assert.Equal("속성 이름 대소문자 정리", env.Doc.Undo.UndoLabel);
         env.Doc.UndoLast();                                         // 한 번에 원래 표기로
         Assert.Equal("こんにちは", env.Line(1).Find("Text_ja"));
         Assert.Equal("タイトル", env.Doc.GetRootAttribute("mainTitle_ja"));
@@ -106,11 +107,11 @@ public class TranslationTests
         env.Vm.Rows[2].First.Value = "放送PD";
         Assert.Equal("放送PD", env.Line(2).Find("Name_Ja"));
         env.Vm.Rows[0].Second.Value = "サブ";
-        Assert.Equal("サブ", env.Doc.GetRootAttribute("subTitle_Ja"));
-        Assert.Contains("subTitle_Ja=\"サブ\"", ActXmlFormat.ToText(env.Doc));
+        Assert.Equal("サブ", env.Doc.GetRootAttribute("SubTitle_Ja"));
+        Assert.Contains("SubTitle_Ja=\"サブ\"", ActXmlFormat.ToText(env.Doc));
 
         env.Editor.UndoCommand.Execute(null);                       // 스크립트 표와 같은 되돌리기
-        Assert.Null(env.Doc.GetRootAttribute("subTitle_Ja"));
+        Assert.Null(env.Doc.GetRootAttribute("SubTitle_Ja"));
         Assert.Equal("", env.Vm.Rows[0].Second.Value);
         env.Vm.Rows[2].First.Value = "";                            // 빈 값 = 속성 삭제
         Assert.Null(env.Line(2).Find("Name_Ja"));
@@ -156,7 +157,7 @@ public class TranslationTests
     {
         using var env = new Env();
         string other = env.Temp.File("IL02.xml");
-        File.WriteAllText(other, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<Act mainTitle=\"둘\" subTitle=\"\">\r\n\t<Line Type=\"TEXT\" Text=\"하나\"/>\r\n</Act>\r\n");
+        File.WriteAllText(other, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<Act MainTitle=\"둘\" SubTitle=\"\">\r\n\t<Line Type=\"TEXT\" Text=\"하나\"/>\r\n</Act>\r\n");
         env.Doc.UndoLast();                                         // 정리 되돌려 저장 안 된 변경 없음 (다른 막 열기 확인 창 방지)
         Assert.True(env.Editor.Open(other));
         Assert.Equal(2, env.Vm.Rows.Count);

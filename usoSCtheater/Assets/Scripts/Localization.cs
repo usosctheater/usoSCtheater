@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Xml;
-using UnityEngine;
+using UnityEngine;   //[공유 코드 통합] 삭제(3회차): using System.Xml
 using UsoSCTheater.Shared;   //[공유 코드 통합] 추가: LanguageInfo · LanguageRules
 
 namespace UsoSCTheater
@@ -10,7 +9,7 @@ namespace UsoSCTheater
 
     /// <summary>
     /// [다국어] 현재 언어 + 언어별 문자열 읽기 (static). 코드는 언어별로 분기하지 않고 여기 함수만 씀
-    /// 데이터 규칙: {속성}_{언어 접미어} (예: Text_Ja), 기본 언어는 접미어 없는 속성. 막 XML 속성 찾기는 아직 대소문자 무시 (구분은 공유 라이브러리 통합 4회차)
+    /// 데이터 규칙: {속성}_{언어 접미어} (예: Text_Ja), 기본 언어는 접미어 없는 속성. 속성 이름은 대소문자 구분 (막 XML 읽기는 공유 ActAttrs.Localized)
     /// 읽는 순서: 현재 언어 속성 → 기본 속성 (빈 값은 없는 것으로 봄)
     /// 언어 목록 Resources/Data/LanguageData.xml, 현재 언어는 PlayerPrefs에 저장
     /// 언어 변경은 목록 씬에서만 (파싱 때 현재 언어 값만 남기는 구조라 재생 중 변경은 반영되지 않음)
@@ -77,35 +76,12 @@ namespace UsoSCTheater
             SetLanguage(languages[(index + 1) % languages.Count].Code);
         }
 
-        //[공유 코드 통합] 삭제: AttrName → LanguageRules.AttrName (표기 Text_Ja — 아래 Get은 찾기가 대소문자 무시라 동작 같음)
-
-        //XML 속성 읽기: 현재 언어 → 기본. 둘 다 없으면 ""
-        public static string Get(XmlNode node, string attr) => Get(node, attr, Current);
-
-        public static string Get(XmlNode node, string attr, LanguageInfo language)
-        {
-            if (language != null && !language.IsDefault && TryGetAttr(node, LanguageRules.AttrName(attr, language), out string value)) return value;   //[공유 코드 통합] 수정
-            return TryGetAttr(node, attr, out value) ? value : "";
-        }
+        //[공유 코드 통합] 삭제: AttrName → LanguageRules.AttrName
+        //[공유 코드 통합] 삭제(3회차): Get(XmlNode…)·TryGetAttr → 공유 ActAttrs.Localized (이름 대소문자 구분)
 
         //[공유 코드 통합] 삭제: TryGet → LanguageRules.TryGet
         //[공유 코드 통합] 삭제: HasInvalidLanguageSuffix → LanguageRules.HasInvalidSuffix(이름, Localization.Languages)
         //[공유 코드 통합] 삭제: Join → CharIds.Join(이름들, Localization.Current)
-
-        //속성 찾기 (이름 대소문자 무시, 빈 값은 없는 것으로 봄)
-        private static bool TryGetAttr(XmlNode node, string name, out string value)
-        {
-            value = null;
-            if (node?.Attributes == null) return false;
-            foreach (XmlAttribute attr in node.Attributes)
-            {
-                if (!string.Equals(attr.Name, name, StringComparison.OrdinalIgnoreCase)) continue;
-                if (string.IsNullOrEmpty(attr.Value)) return false;
-                value = attr.Value;
-                return true;
-            }
-            return false;
-        }
 
         private static void EnsureLoaded()
         {
