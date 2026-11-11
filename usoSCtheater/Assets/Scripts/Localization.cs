@@ -2,37 +2,26 @@ using System;
 using System.Collections.Generic;
 using System.Xml;
 using UnityEngine;
+using UsoSCTheater.Shared;   //[공유 코드 통합] 추가: LanguageInfo · LanguageRules
 
 namespace UsoSCTheater
 {
-    /// <summary>[다국어] 지원 언어 1개 (LanguageData.xml의 Language 한 줄)</summary>
-    public sealed class LanguageInfo
-    {
-        public string Code { get; }            // 언어 코드 (소문자, 예: ko, ja)
-        public string NativeName { get; }      // 그 언어로 쓴 언어 이름 (로그·나중의 설정 UI용)
-        public string ListSeparator { get; }   // 여러 이름을 이어 붙일 때 구분자
-        public bool IsDefault => ReferenceEquals(this, Localization.Default);
-
-        internal LanguageInfo(string code, string nativeName, string listSeparator)
-        {
-            Code = code;
-            NativeName = nativeName;
-            ListSeparator = listSeparator;
-        }
-    }
+    //[공유 코드 통합] 삭제: LanguageInfo 클래스 → 공유 LanguageInfo (IsDefault는 해석 때 정해짐, 이전: ReferenceEquals(this, Default))
 
     /// <summary>
     /// [다국어] 현재 언어 + 언어별 문자열 읽기 (static). 코드는 언어별로 분기하지 않고 여기 함수만 씀
-    /// 데이터 규칙: {속성}_{언어 코드} (예: Text_Ja), 기본 언어는 접미어 없는 속성. 속성 이름은 대소문자 무시
+    /// 데이터 규칙: {속성}_{언어 접미어} (예: Text_Ja), 기본 언어는 접미어 없는 속성. 막 XML 속성 찾기는 아직 대소문자 무시 (구분은 공유 라이브러리 통합 4회차)
     /// 읽는 순서: 현재 언어 속성 → 기본 속성 (빈 값은 없는 것으로 봄)
     /// 언어 목록 Resources/Data/LanguageData.xml, 현재 언어는 PlayerPrefs에 저장
     /// 언어 변경은 목록 씬에서만 (파싱 때 현재 언어 값만 남기는 구조라 재생 중 변경은 반영되지 않음)
+    /// [공유 코드 통합] 언어 목록 해석·속성 이름 규칙·이름 잇기는 공유 LanguageRules·CharIds
     /// </summary>
     public static class Localization
     {
-        public const string DataPath = ResourcePaths.Data + "/LanguageData";   // Resources.Load 경로
-        public const string Separator = "_";                                   // 속성 접미어 구분자 (Text_Ja)
+        public const string DataPath = ResourcePaths.Data + "/" + LanguageRules.DataName;   //[공유 코드 통합] 수정: 파일 이름은 공유 상수
+        //[공유 코드 통합] 삭제: Separator (→ LanguageRules.Separator)
         private const string PrefsKey = "Language";
+        private static readonly LanguageInfo[] Fallback = { new LanguageInfo("ko", "한국어", true) };   //[공유 코드 통합] 추가: 파일이 없거나 깨졌을 때 (게임은 기본 언어 하나)
 
         /// <summary>언어가 바뀐 뒤 호출 (목록 다시 그리기 등)</summary>
         public static event Action Changed;
@@ -58,9 +47,8 @@ namespace UsoSCTheater
         //코드로 찾기 (대소문자 무시), 없으면 null
         public static LanguageInfo Find(string code)
         {
-            if (string.IsNullOrWhiteSpace(code)) return null;
             EnsureLoaded();
-            return languages.Find(l => string.Equals(l.Code, code.Trim(), StringComparison.OrdinalIgnoreCase));
+            return LanguageRules.Find(languages, code);   //[공유 코드 통합] 수정
         }
 
         //언어 변경 + 저장 + Changed 알림 (같은 언어면 아무것도 안 함)
@@ -89,37 +77,20 @@ namespace UsoSCTheater
             SetLanguage(languages[(index + 1) % languages.Count].Code);
         }
 
-        //언어별 속성 이름: 기본 언어 → attr, 그 외 → attr_{code}
-        public static string AttrName(string attr, LanguageInfo language) =>
-            language == null || language.IsDefault ? attr : attr + Separator + language.Code;
+        //[공유 코드 통합] 삭제: AttrName → LanguageRules.AttrName (표기 Text_Ja — 아래 Get은 찾기가 대소문자 무시라 동작 같음)
 
         //XML 속성 읽기: 현재 언어 → 기본. 둘 다 없으면 ""
         public static string Get(XmlNode node, string attr) => Get(node, attr, Current);
 
         public static string Get(XmlNode node, string attr, LanguageInfo language)
         {
-            if (language != null && !language.IsDefault && TryGetAttr(node, AttrName(attr, language), out string value)) return value;
+            if (language != null && !language.IsDefault && TryGetAttr(node, LanguageRules.AttrName(attr, language), out string value)) return value;   //[공유 코드 통합] 수정
             return TryGetAttr(node, attr, out value) ? value : "";
         }
 
-        //속성 사전(이름 → 값, 대소문자 무시 사전)에서 한 언어 값만 (대체 없음). 대체 순서가 다른 곳(캐릭터 이름 등)에서 사용
-        public static bool TryGet(IReadOnlyDictionary<string, string> attrs, string attr, LanguageInfo language, out string value)
-        {
-            value = null;
-            return attrs != null && attrs.TryGetValue(AttrName(attr, language), out value) && !string.IsNullOrEmpty(value);
-        }
-
-        //[검사] 언어 접미어가 잘못된 속성인지: '_' 뒤가 LanguageData에 없는 언어이거나 기본 언어(기본은 접미어 없이 씀). '_'가 없으면 false
-        public static bool HasInvalidLanguageSuffix(string attrName)
-        {
-            int index = attrName?.LastIndexOf(Separator, StringComparison.Ordinal) ?? -1;
-            if (index <= 0 || index == attrName.Length - 1) return false;
-            LanguageInfo language = Find(attrName.Substring(index + 1));
-            return language == null || language.IsDefault;
-        }
-
-        //여러 이름을 현재 언어 구분자로 이어 붙임
-        public static string Join(IEnumerable<string> parts) => string.Join(Current.ListSeparator, parts);
+        //[공유 코드 통합] 삭제: TryGet → LanguageRules.TryGet
+        //[공유 코드 통합] 삭제: HasInvalidLanguageSuffix → LanguageRules.HasInvalidSuffix(이름, Localization.Languages)
+        //[공유 코드 통합] 삭제: Join → CharIds.Join(이름들, Localization.Current)
 
         //속성 찾기 (이름 대소문자 무시, 빈 값은 없는 것으로 봄)
         private static bool TryGetAttr(XmlNode node, string name, out string value)
@@ -139,44 +110,12 @@ namespace UsoSCTheater
         private static void EnsureLoaded()
         {
             if (languages != null) return;
-            languages = new List<LanguageInfo>();
-            LanguageInfo marked = null;
-
+            //[공유 코드 통합] 수정: 해석(Code 정리·중복·Default·기본 목록 대체)은 공유 — 이전 XmlDocument 순회·try/catch 삭제
             TextAsset xml = Resources.Load<TextAsset>(DataPath);
-            if (xml == null) Debug.LogError($"[Localization] Resources/{DataPath}.xml 없음 → 기본 언어(ko)만 사용");
-            else
-            {
-                try
-                {
-                    var doc = new XmlDocument();
-                    doc.LoadXml(xml.text);
-                    foreach (XmlNode node in doc.DocumentElement.ChildNodes)
-                    {
-                        if (node.NodeType != XmlNodeType.Element || node.Name != "Language") continue;
-                        string code = node.Attributes["Code"]?.Value?.Trim().ToLowerInvariant();
-                        if (string.IsNullOrEmpty(code) || languages.Exists(l => l.Code == code))
-                        {
-                            Debug.LogWarning($"[Localization] LanguageData.xml: Code 없음 또는 중복('{code}') → 건너뜀");
-                            continue;
-                        }
-                        var info = new LanguageInfo(code, node.Attributes["NativeName"]?.Value ?? code, node.Attributes["ListSeparator"]?.Value ?? ", ");
-                        languages.Add(info);
-                        if (string.Equals(node.Attributes["Default"]?.Value, "true", StringComparison.OrdinalIgnoreCase))
-                        {
-                            if (marked == null) marked = info;
-                            else Debug.LogWarning($"[Localization] LanguageData.xml: Default가 여러 개 → 첫 항목 '{marked.Code}' 사용");
-                        }
-                    }
-                }
-                catch (XmlException e)
-                {
-                    Debug.LogError($"[Localization] LanguageData.xml 파싱 실패 — {e.Message}");
-                }
-            }
-
-            //데이터가 없거나 깨져도 클라이언트가 멈추지 않게 기본 언어 1개는 보장
-            if (languages.Count == 0) languages.Add(new LanguageInfo("ko", "한국어", ", "));
-            defaultLanguage = marked ?? languages[0];
+            var warnings = new List<string>();
+            languages = new List<LanguageInfo>(LanguageRules.Parse(xml != null ? xml.text : null, Fallback, warnings));
+            foreach (string w in warnings) Debug.LogWarning($"[Localization] {w}");
+            defaultLanguage = languages.Find(l => l.IsDefault);
         }
 
         private static void EnsureCurrent()

@@ -56,7 +56,7 @@ public class ScenarioCatalogSync : AssetPostprocessor
     //[다국어] 번역 누락 검사(Check Translations)는 Editor/LocalizationCheck.cs로 옮김 (Tools > Localization)
 
     //[다국어] 기본 언어가 아닌 언어 목록 (제목·태그를 언어별로 저장할 대상)
-    private static List<UsoSCTheater.LanguageInfo> TranslationLanguages() =>
+    private static List<LanguageInfo> TranslationLanguages() =>   //[공유 코드 통합] 형식: 공유 LanguageInfo
         UsoSCTheater.Localization.Languages.Where(l => !l.IsDefault).ToList();
 
     private static bool syncPending = false;
@@ -345,7 +345,7 @@ public class ScenarioCatalogSync : AssetPostprocessor
             number++;
             CheckLanguageSuffix(node, $"{number}번 줄", issues);
 
-            foreach (string id in UsoSCTheater.Character.CharacterDatabase.SplitIds(ActXml.GetAttrIgnoreCase(node, ActCharIdAttr)))
+            foreach (string id in CharIds.Split(ActXml.GetAttrIgnoreCase(node, ActCharIdAttr)))   //[공유 코드 통합] 수정: CharacterDatabase.SplitIds → CharIds.Split
             {
                 if (UsoSCTheater.Character.CharacterDatabase.Find(id) == null)
                     issues.Add($"{number}번 줄: CharacterData에 없는 CharId '{id}'");
@@ -366,7 +366,7 @@ public class ScenarioCatalogSync : AssetPostprocessor
         if (node.Attributes == null) return;
         foreach (XmlAttribute attr in node.Attributes)
         {
-            if (UsoSCTheater.Localization.HasInvalidLanguageSuffix(attr.Name))
+            if (LanguageRules.HasInvalidSuffix(attr.Name, UsoSCTheater.Localization.Languages))   //[공유 코드 통합] 수정
                 issues.Add($"{where}: 잘못된 언어 접미어 속성 '{attr.Name}' (LanguageData에 없는 언어이거나 기본 언어 — 기본 언어는 접미어 없이)");
         }
     }
@@ -461,8 +461,8 @@ public class ScenarioCatalogSync : AssetPostprocessor
             foreach (var language in TranslationLanguages())   //[다국어] 번역이 없으면 빈 값 (기본 언어로 대체하는 것은 실행 중)
                 localizedTitles[language.Code] = new[]
                 {
-                    ActXml.GetAttrIgnoreCase(root, UsoSCTheater.Localization.AttrName(ActXml.MainTitleAttr, language)),
-                    ActXml.GetAttrIgnoreCase(root, UsoSCTheater.Localization.AttrName(ActXml.SubTitleAttr, language)),
+                    ActXml.GetAttrIgnoreCase(root, LanguageRules.AttrName(ActXml.MainTitleAttr, language)),   //[공유 코드 통합] 수정: Localization.AttrName → LanguageRules.AttrName
+                    ActXml.GetAttrIgnoreCase(root, LanguageRules.AttrName(ActXml.SubTitleAttr, language)),
                 };
 
             //[엔딩 SD] 사용한 CG 키 수집
@@ -532,7 +532,7 @@ public class ScenarioCatalogSync : AssetPostprocessor
                 foreach (string tag in SplitList(ActXml.GetAttrIgnoreCase(node, DataTagAttr)))
                     item.tags.Add(tag);
                 foreach (var language in TranslationLanguages())   //[다국어] Tag_{언어} (목록은 언어마다 독립, 개수가 달라도 됨)
-                    item.localizedTags[language.Code] = SplitList(ActXml.GetAttrIgnoreCase(node, UsoSCTheater.Localization.AttrName(DataTagAttr, language))).ToList();
+                    item.localizedTags[language.Code] = SplitList(ActXml.GetAttrIgnoreCase(node, LanguageRules.AttrName(DataTagAttr, language))).ToList();   //[공유 코드 통합] 수정
 
                 foreach (string value in SplitList(ActXml.GetAttrIgnoreCase(node, DataCharacterAttr)))
                 {
@@ -552,9 +552,9 @@ public class ScenarioCatalogSync : AssetPostprocessor
                 foreach (XmlAttribute attr in node.Attributes)
                 {
                     if (IsName(attr, DataIdAttr) || IsName(attr, DataTagAttr) || IsName(attr, DataCharacterAttr) || IsName(attr, DataIrisAttr)) continue;   //[Iris 아이콘] Iris 허용
-                    if (UsoSCTheater.Localization.HasInvalidLanguageSuffix(attr.Name))   //[다국어] Tag_Jp·Tag_Ko 등
+                    if (LanguageRules.HasInvalidSuffix(attr.Name, UsoSCTheater.Localization.Languages))   //[다국어] Tag_Jp·Tag_Ko 등   //[공유 코드 통합] 수정
                         Debug.LogWarning($"[ScenarioCatalogSync] ScenarioData.xml '{id}': 잘못된 언어 접미어 속성 '{attr.Name}' (LanguageData에 없는 언어이거나 기본 언어 — 기본 언어는 접미어 없이) → 무시");
-                    else if (!TranslationLanguages().Any(l => IsName(attr, UsoSCTheater.Localization.AttrName(DataTagAttr, l))))   //[다국어] Tag_{언어} 허용
+                    else if (!TranslationLanguages().Any(l => IsName(attr, LanguageRules.AttrName(DataTagAttr, l))))   //[다국어] Tag_{언어} 허용   //[공유 코드 통합] 수정
                         Debug.LogWarning($"[ScenarioCatalogSync] ScenarioData.xml '{id}': 알 수 없는 속성 '{attr.Name}' → 무시");
                 }
                 result[id] = item;
@@ -573,15 +573,10 @@ public class ScenarioCatalogSync : AssetPostprocessor
     //[다국어] 번역 속성(Tag_Ja …)은 LanguageData의 언어마다 자동 (언어를 추가해도 코드 수정 없음)
     private static IEnumerable<string> ScenarioDataTemplateAttrs() =>
         new[] { DataTagAttr }
-            .Concat(TranslationLanguages().Select(l => TemplateAttrName(DataTagAttr, l)))
+            .Concat(TranslationLanguages().Select(l => LanguageRules.AttrName(DataTagAttr, l)))   //[공유 코드 통합] 수정: TemplateAttrName → LanguageRules.AttrName (같은 Tag_Ja 표기)
             .Concat(new[] { DataCharacterAttr, DataIrisAttr });
 
-    //양식에 쓸 번역 속성 이름: 언어 코드 첫 글자를 대문자로 (Tag_ja → Tag_Ja, 문서 표기와 맞춤 — 읽기는 대소문자 무시라 동작은 같음)
-    private static string TemplateAttrName(string attr, UsoSCTheater.LanguageInfo language)
-    {
-        string code = language.Code;
-        return $"{attr}_{char.ToUpperInvariant(code[0])}{code.Substring(1)}";
-    }
+    //[공유 코드 통합] 삭제: TemplateAttrName (양식용 번역 속성 이름) → LanguageRules.AttrName
 
     private static bool AppendMissingScenarioData(List<string> ids)
     {

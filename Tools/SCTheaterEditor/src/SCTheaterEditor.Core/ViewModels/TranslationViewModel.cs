@@ -3,6 +3,7 @@ using System.ComponentModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using SCTheaterEditor.Script;
 using SCTheaterEditor.Services;
+using UsoSCTheater.Shared;   //[공유 코드 통합] LanguageInfo · LanguageRules
 
 namespace SCTheaterEditor.ViewModels;
 
@@ -121,7 +122,7 @@ public sealed partial class TranslationViewModel : ObservableObject, IDisposable
     internal CharacterData Characters => _characters;
 
     /// <summary>번역 속성 이름 (Text → Text_Ja). 언어가 없으면 null</summary>
-    internal string? AttrName(string baseAttr) => _language == null ? null : $"{baseAttr}_{_language.Suffix}";
+    internal string? AttrName(string baseAttr) => _language == null ? null : LanguageRules.AttrName(baseAttr, _language);   //[공유 코드 통합] 수정
 
     // ------------------------------------------------------------------ 문서 연결
 
@@ -162,7 +163,7 @@ public sealed partial class TranslationViewModel : ObservableObject, IDisposable
         {
             foreach (var b in new[] { ActXmlFormat.MainTitleAttr, ActXmlFormat.SubTitleAttr })
             {
-                string target = $"{b}_{lang.Suffix}";
+                string target = LanguageRules.AttrName(b, lang);   //[공유 코드 통합] 수정
                 if (doc.FindRootAttributeIgnoreCase(target) is { } found && found != target)
                 {
                     if (doc.GetRootAttribute(target) != null) conflicts++;
@@ -172,7 +173,7 @@ public sealed partial class TranslationViewModel : ObservableObject, IDisposable
             foreach (var line in doc.Lines.Where(IsText))
                 foreach (var b in new[] { "Name", "Text" })
                 {
-                    string target = $"{b}_{lang.Suffix}";
+                    string target = LanguageRules.AttrName(b, lang);   //[공유 코드 통합] 수정
                     var found = line.Attributes.Select(a => a.Key)
                                     .FirstOrDefault(k => k != target && string.Equals(k, target, StringComparison.OrdinalIgnoreCase));
                     if (found == null) continue;
@@ -349,7 +350,7 @@ public sealed partial class TranslationViewModel : ObservableObject, IDisposable
         foreach (var item in items)
         {
             if (!byId.Remove(item.Id, out var t) || item.Value.Trim().Length == 0) continue;   // 요청하지 않은 칸·같은 칸 두 번·빈 답은 무시
-            string attr = $"{t.BaseAttr}_{lang.Suffix}";
+            string attr = LanguageRules.AttrName(t.BaseAttr, lang);   //[공유 코드 통합] 수정
             if (t.Line != null && !doc.Lines.Contains(t.Line)) continue;                         // 그 사이 지운 줄
             string? now = t.Line == null ? doc.GetRootAttribute(attr) : t.Line.Find(attr);
             if (!string.IsNullOrWhiteSpace(now)) { typed++; continue; }                         // 그 사이 직접 입력한 칸은 그대로

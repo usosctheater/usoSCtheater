@@ -12,9 +12,9 @@ namespace UsoSCTheater.Character
     public class CharacterEntry
     {
         public string Id { get; }
-        private readonly Dictionary<string, string> names;   // 속성 이름(Name, Name_Ja, FullName, FullName_Ja ...) → 표기   //[다국어] 주석 수정
+        private readonly IReadOnlyDictionary<string, string> names;   // 속성 이름(Name, Name_Ja, FullName, FullName_Ja ...) → 표기   //[다국어] 주석 수정   //[공유 코드 통합] 형식: 공유 IdEntry.Attrs
 
-        internal CharacterEntry(string id, Dictionary<string, string> names)
+        internal CharacterEntry(string id, IReadOnlyDictionary<string, string> names)
         {
             Id = id;
             this.names = names;
@@ -24,7 +24,8 @@ namespace UsoSCTheater.Character
         /// 언어별 이름 (language = null이면 현재 언어). full = true면 성까지 포함한 이름(FullName).
         /// 없으면 같은 언어의 다른 형식 → 기본 언어 → Id 순으로 대체
         /// </summary>
-        public string GetName(bool full = false, LanguageInfo language = null) => LocalizedNames.Get(names, Id, language, full);   //[유닛] 이름 대체 규칙을 유닛과 공유 //[다국어] 인자 변경 (언어 문자열 → LanguageInfo, 기본 현재 언어)
+        public string GetName(bool full = false, LanguageInfo language = null) =>
+            LocalizedNames.Get(names, Id, language ?? Localization.Current, Localization.Default, full);   //[공유 코드 통합] 수정: 대체 순서는 공유 LocalizedNames (TE와 같은 결과)
     }
 
     //[유닛] 추가: 유닛 1개 (UnitData.xml의 Unit 한 줄). Members = 캐릭터 ID (소문자)
@@ -32,16 +33,17 @@ namespace UsoSCTheater.Character
     {
         public string Id { get; }
         public IReadOnlyList<string> Members { get; }
-        private readonly Dictionary<string, string> names;
+        private readonly IReadOnlyDictionary<string, string> names;   //[공유 코드 통합] 형식: 공유 IdEntry.Attrs (Member도 들어 있음 — 이름 조회에는 쓰지 않음)
 
-        internal UnitEntry(string id, List<string> members, Dictionary<string, string> names)
+        internal UnitEntry(string id, List<string> members, IReadOnlyDictionary<string, string> names)
         {
             Id = id;
             Members = members;
             this.names = names;
         }
 
-        public string GetName(bool full = false, LanguageInfo language = null) => LocalizedNames.Get(names, Id, language, full);   //[다국어] 인자 변경
+        public string GetName(bool full = false, LanguageInfo language = null) =>
+            LocalizedNames.Get(names, Id, language ?? Localization.Current, Localization.Default, full);   //[공유 코드 통합] 수정
 
         //멤버 전원이 목록에 들어 있음 (게스트가 더 있어도 true, 대소문자 무시)
         public bool IsFullyIn(IEnumerable<string> characterIds)
@@ -53,23 +55,7 @@ namespace UsoSCTheater.Character
         }
     }
 
-    //[유닛] 언어별 이름 대체 규칙 (캐릭터·유닛 공용): 요청 형식 → 같은 언어 다른 형식 → 기본 언어 → Id
-    //[다국어] 속성 이름 규칙을 Localization으로 (Name / Name_Ja / FullName / FullName_Ja), 기존 TryGet(언어 + Full 접미어) 삭제
-    internal static class LocalizedNames
-    {
-        public static string Get(Dictionary<string, string> names, string id, LanguageInfo language, bool full)
-        {
-            language ??= Localization.Current;
-            string primary = full ? CharacterDatabase.FullNameAttr : CharacterDatabase.NameAttr;
-            string other   = full ? CharacterDatabase.NameAttr : CharacterDatabase.FullNameAttr;
-
-            if (Localization.TryGet(names, primary, language, out string name)) return name;
-            if (Localization.TryGet(names, other, language, out name)) return name;
-            if (Localization.TryGet(names, primary, Localization.Default, out name)) return name;
-            if (Localization.TryGet(names, other, Localization.Default, out name)) return name;
-            return id;
-        }
-    }
+    //[공유 코드 통합] 삭제: internal static class LocalizedNames (언어별 이름 대체 규칙) → 공유 LocalizedNames
 
     /// <summary>
     /// 캐릭터 통합 데이터베이스 (static). 모든 씬은 캐릭터 정보를 여기서만 가져온다.
@@ -80,8 +66,7 @@ namespace UsoSCTheater.Character
     {
         public const string DataPath = ResourcePaths.Data + "/CharacterData";   // Resources.Load 경로 //[리소스 정리] 폴더는 ResourcePaths
         public const string IconRoot = ResourcePaths.CharacterIcon;            // 목록 아이콘: Resources/CharacterIcon/{Id}
-        public const string NameAttr = "Name";           //[다국어] 이름 속성 (언어별: Name_Ja ...) — 기존 DefaultLanguage("Ko") 삭제
-        public const string FullNameAttr = "FullName";   //[다국어] 성까지 포함한 이름 속성 (FullName_Ja ...) — 기존 FullSuffix("Full") 삭제
+        //[공유 코드 통합] 삭제: NameAttr · FullNameAttr (→ 공유 LocalizedNames.Name · FullName)
 
         private static Dictionary<string, CharacterEntry> byId;   // 대소문자 무시
         private static Dictionary<string, Sprite> iconCache;      // 없는 아이콘(null)도 저장 → 경고·로드 반복 방지
@@ -126,49 +111,23 @@ namespace UsoSCTheater.Character
             units = new List<UnitEntry>();
             unitsById = new Dictionary<string, UnitEntry>(StringComparer.OrdinalIgnoreCase);
 
+            //[공유 코드 통합] 수정: 해석(Id·중복·값 공백)은 공유 IdTable, Member 나누기는 CharIds.Split (같은 규칙) — 이전 XmlDocument 순회 삭제
             TextAsset xml = Resources.Load<TextAsset>(UnitDataPath);
-            if (xml == null)
+            var warnings = new List<string>();
+            foreach (IdEntry e in IdTable.Parse(xml != null ? xml.text : null, "Unit", warnings))
             {
-                Debug.LogWarning($"[CharacterDatabase] Resources/{UnitDataPath}.xml 없음 → 유닛 없음으로 처리");
-                return;
-            }
-
-            XmlDocument doc = new XmlDocument();
-            doc.LoadXml(xml.text);
-            foreach (XmlNode node in doc.DocumentElement.ChildNodes)
-            {
-                if (node.NodeType != XmlNodeType.Element || node.Name != "Unit") continue;
-
-                string id = node.Attributes["Id"]?.Value?.Trim();
-                if (string.IsNullOrEmpty(id) || unitsById.ContainsKey(id))
-                {
-                    Debug.LogWarning($"[CharacterDatabase] UnitData.xml: Id 없음 또는 중복('{id}') → 건너뜀");
-                    continue;
-                }
-
                 var members = new List<string>();
-                var names = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-                foreach (XmlAttribute attr in node.Attributes)
+                foreach (string m in CharIds.Split(e.Attrs.TryGetValue("Member", out string list) ? list : null))
                 {
-                    if (attr.Name == "Id") continue;
-                    if (attr.Name == "Member")
-                    {
-                        foreach (string m in attr.Value.Split(','))
-                        {
-                            string memberId = m.Trim().ToLowerInvariant();
-                            if (memberId.Length == 0) continue;
-                            if (Find(memberId) == null) Debug.LogWarning($"[CharacterDatabase] UnitData.xml '{id}': 멤버 '{memberId}'가 CharacterData.xml에 없음");
-                            members.Add(memberId);
-                        }
-                        continue;
-                    }
-                    names[attr.Name] = attr.Value.Trim();   //Id·Member 외 속성 = 언어별 표기
+                    string memberId = m.ToLowerInvariant();
+                    if (Find(memberId) == null) Debug.LogWarning($"[CharacterDatabase] UnitData.xml '{e.Id}': 멤버 '{memberId}'가 CharacterData.xml에 없음");
+                    members.Add(memberId);
                 }
-
-                var unit = new UnitEntry(id, members, names);
+                var unit = new UnitEntry(e.Id, members, e.Attrs);
                 units.Add(unit);
-                unitsById[id] = unit;
+                unitsById[e.Id] = unit;
             }
+            foreach (string w in warnings) Debug.LogWarning($"[CharacterDatabase] UnitData.xml: {w}");
         }
 
         //Id로 조회 (대소문자 무시), 없으면 null
@@ -185,11 +144,9 @@ namespace UsoSCTheater.Character
 
         //[CharId] 화자 표시 이름: CharId(쉼표로 여러 명) → 현재 언어 이름을 언어별 구분자로 이어 붙임 (DB에 없는 Id는 그대로). 비면 ""
         public static string GetSpeakerNames(string charIds) =>
-            Localization.Join(SplitIds(charIds).Select(id => GetName(id)));
+            CharIds.Join(CharIds.Split(charIds).Select(id => GetName(id)), Localization.Current);   //[공유 코드 통합] 수정
 
-        //[CharId] "a, b" → [a, b] (앞뒤 공백·빈 항목 제외)
-        public static IEnumerable<string> SplitIds(string ids) =>
-            (ids ?? "").Split(',').Select(s => s.Trim()).Where(s => s.Length > 0);
+        //[공유 코드 통합] 삭제: SplitIds → 공유 CharIds.Split
 
         //목록 아이콘: Resources/CharacterIcon/{Id}. 없으면 null (아이콘당 경고 1번)
         public static Sprite LoadIcon(string id)
@@ -276,42 +233,12 @@ namespace UsoSCTheater.Character
             if (byId != null) return;
             byId = new Dictionary<string, CharacterEntry>(StringComparer.OrdinalIgnoreCase);
 
+            //[공유 코드 통합] 수정: 해석(Id·중복·값 공백, Id 외 속성 = 언어별 표기)은 공유 IdTable — 이전 XmlDocument 순회 삭제
             TextAsset xml = Resources.Load<TextAsset>(DataPath);
-            if (xml == null)
-            {
-                Debug.LogError($"[CharacterDatabase] Resources/{DataPath}.xml 없음");
-                return;   //빈 사전 유지 → 에러는 1번만
-            }
-
-            XmlDocument doc = new XmlDocument();
-            doc.LoadXml(xml.text);
-
-            foreach (XmlNode node in doc.DocumentElement.ChildNodes)
-            {
-                if (node.NodeType != XmlNodeType.Element || node.Name != "Character") continue;
-
-                string id = node.Attributes["Id"]?.Value?.Trim();
-                if (string.IsNullOrEmpty(id))
-                {
-                    Debug.LogWarning("[CharacterDatabase] Id 없는 Character 줄 → 건너뜀");
-                    continue;
-                }
-                if (byId.ContainsKey(id))
-                {
-                    Debug.LogWarning($"[CharacterDatabase] Id '{id}' 중복 → 첫 항목만 사용");
-                    continue;
-                }
-
-                //Id 외 속성 = 언어별 표기 (언어 추가 시 코드 수정 불필요)
-                var names = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-                foreach (XmlAttribute attr in node.Attributes)
-                {
-                    if (attr.Name == "Id") continue;
-                    names[attr.Name] = attr.Value.Trim();
-                }
-
-                byId[id] = new CharacterEntry(id, names);
-            }
+            var warnings = new List<string>();
+            foreach (IdEntry e in IdTable.Parse(xml != null ? xml.text : null, "Character", warnings))
+                byId[e.Id] = new CharacterEntry(e.Id, e.Attrs);
+            foreach (string w in warnings) Debug.LogWarning($"[CharacterDatabase] CharacterData.xml: {w}");
         }
     }
 }

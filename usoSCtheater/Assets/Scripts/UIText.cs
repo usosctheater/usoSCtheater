@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
-using System.Xml;
 using UnityEngine;
+using UsoSCTheater.Shared;   //[공유 코드 통합] 추가: IdTable · LanguageRules (삭제: using System.Xml)
 
 namespace UsoSCTheater
 {
@@ -15,7 +15,7 @@ namespace UsoSCTheater
         public const string DataPath = ResourcePaths.Data + "/UITextData";   // Resources.Load 경로
         public const string TextAttr = "Text";
 
-        private static Dictionary<string, Dictionary<string, string>> byId;   // Id(대소문자 무시) → 속성(Text, Text_Ja …)
+        private static Dictionary<string, IReadOnlyDictionary<string, string>> byId;   // Id(대소문자 무시) → 속성(Text, Text_Ja …)   //[공유 코드 통합] 값 형식: 공유 IdEntry.Attrs
         private static HashSet<string> warned;
 
         //Domain Reload 비활성 → Play 시작마다 static 초기화
@@ -42,44 +42,20 @@ namespace UsoSCTheater
                 if (warned.Add(key)) Debug.LogWarning($"[UIText] UITextData.xml에 없는 Id '{key}' → Id 그대로 표시");
                 return key;
             }
-            if (Localization.TryGet(attrs, TextAttr, Localization.Current, out string text)) return text;
-            return Localization.TryGet(attrs, TextAttr, Localization.Default, out text) ? text : "";
+            if (LanguageRules.TryGet(attrs, TextAttr, Localization.Current, out string text)) return text;   //[공유 코드 통합] 수정: Localization.TryGet → LanguageRules.TryGet
+            return LanguageRules.TryGet(attrs, TextAttr, Localization.Default, out text) ? text : "";
         }
 
         private static void EnsureLoaded()
         {
             if (byId != null) return;
-            byId = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
+            byId = new Dictionary<string, IReadOnlyDictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
 
+            //[공유 코드 통합] 수정: 해석(Id·중복·값 공백)은 공유 IdTable — 이전 XmlDocument 순회·try/catch 삭제
             TextAsset xml = Resources.Load<TextAsset>(DataPath);
-            if (xml == null)
-            {
-                Debug.LogError($"[UIText] Resources/{DataPath}.xml 없음");
-                return;
-            }
-            try
-            {
-                var doc = new XmlDocument();
-                doc.LoadXml(xml.text);
-                foreach (XmlNode node in doc.DocumentElement.ChildNodes)
-                {
-                    if (node.NodeType != XmlNodeType.Element || node.Name != "Text") continue;
-                    string id = node.Attributes["Id"]?.Value?.Trim();
-                    if (string.IsNullOrEmpty(id) || byId.ContainsKey(id))
-                    {
-                        Debug.LogWarning($"[UIText] UITextData.xml: Id 없음 또는 중복('{id}') → 건너뜀");
-                        continue;
-                    }
-                    var attrs = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-                    foreach (XmlAttribute a in node.Attributes)
-                        if (a.Name != "Id") attrs[a.Name] = a.Value;
-                    byId[id] = attrs;
-                }
-            }
-            catch (XmlException e)
-            {
-                Debug.LogError($"[UIText] UITextData.xml 파싱 실패 — {e.Message}");
-            }
+            var warnings = new List<string>();
+            foreach (IdEntry e in IdTable.Parse(xml != null ? xml.text : null, "Text", warnings)) byId[e.Id] = e.Attrs;
+            foreach (string w in warnings) Debug.LogWarning($"[UIText] UITextData.xml: {w}");
         }
     }
 }

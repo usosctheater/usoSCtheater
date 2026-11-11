@@ -1,15 +1,9 @@
 using System.IO;
-using System.Xml.Linq;
-using UsoSCTheater.Shared;   //[스테이지 레이아웃] StageTable
+using UsoSCTheater.Shared;   //[스테이지 레이아웃] StageTable   //[공유 코드 통합] LanguageInfo · LanguageRules
 
 namespace SCTheaterEditor.Services;
 
-/// <summary>언어 1개 (게임 LanguageData.xml의 Language 줄). 변경(번역 모드 3회차): ListSeparator(여러 이름 구분자) 추가</summary>
-public sealed record LanguageInfo(string Code, string NativeName, bool IsDefault, string ListSeparator = ", ")
-{
-    /// <summary>번역 속성 접미어 표기 (ja → Ja) — 도구가 쓰는 속성 이름 {속성}_{Ja}</summary>
-    public string Suffix => Code.Length == 0 ? "" : char.ToUpperInvariant(Code[0]) + Code[1..].ToLowerInvariant();
-}
+//[공유 코드 통합] 삭제: record LanguageInfo → 공유 LanguageInfo (Code·NativeName·IsDefault·ListSeparator·Suffix 그대로, 생성자 인자 순서도 같음)
 
 public enum GameDataState { Same, Different, CopyOnly, GameOnly, Missing }
 
@@ -60,7 +54,7 @@ public sealed class GameData
     }
 
     public string Folder { get; }
-    public CharacterData Characters { get; } = new([]);
+    public CharacterData Characters { get; } = new();   //[공유 코드 통합] 수정: 빈 데이터 생성자
     public LipRules Lips { get; } = new();
     public IReadOnlyList<LanguageInfo> Languages { get; private set; } = LanguageFallback;
     public IReadOnlyList<GameDataFileState> States { get; private set; } = [];
@@ -117,16 +111,17 @@ public sealed class GameData
     private void Load()
     {
         _loaded = true;
-        Characters.ReplaceWith(Read(CharacterFile, CharacterData.Parse) ?? new CharacterData([]));
+        //[공유 코드 통합] 수정: 언어 → 캐릭터(기본 언어 필요) 순서, 해석은 공유 (언어 기본 목록은 TE용 ko·ja — 번역 창에 대상 언어가 있어야 함)
+        Languages = Parse(LanguageFile, (xml, w) => LanguageRules.Parse(xml, LanguageFallback, w));
+        Characters.ReplaceWith(Parse(CharacterFile, (xml, w) => CharacterData.Parse(xml, Languages.First(l => l.IsDefault), w)));
         Lips.ReplaceWith(Read(LipFile, LipRules.Parse) ?? new LipRules());
-        Languages = Read(LanguageFile, ParseLanguages) is { Count: > 0 } list ? list : LanguageFallback;
-        Stage = ReadStage();   //[스테이지 레이아웃] 추가
+        Stage = Parse(StageFile, StageTable.Parse);   //[공유 코드 통합] 수정: ReadStage → Parse
     }
 
-    //[스테이지 레이아웃] 추가: 해석 문제는 공유 StageTable이 문구를 만들고 여기서 로그로
-    private StageTable ReadStage()
+    //[공유 코드 통합] 추가 (ReadStage를 일반화): 복사본 글자 → 공유 해석(문제는 warnings) → 로그. 파일이 없으면 xml = null (해석이 경고)
+    private T Parse<T>(string name, Func<string?, ICollection<string>, T> parse)
     {
-        string path = CopyPath(StageFile);
+        string path = CopyPath(name);
         string? xml = null;
         if (File.Exists(path))
         {
@@ -134,9 +129,9 @@ public sealed class GameData
             catch (Exception ex) { _log.Error($"게임 데이터 읽기 실패: {path}", ex); }
         }
         var warnings = new List<string>();
-        var table = StageTable.Parse(xml, warnings);
-        foreach (var w in warnings) _log.Warn($"게임 데이터 {StageFile}: {w}");
-        return table;
+        T result = parse(xml, warnings);
+        foreach (var w in warnings) _log.Warn($"게임 데이터 {name}: {w}");
+        return result;
     }
 
     private T? Read<T>(string name, Func<string, T> parse) where T : class
@@ -183,19 +178,5 @@ public sealed class GameData
         }
     }
 
-    /// <summary>LanguageData.xml → 언어 목록. 기본 언어 = Default="true" 줄, 없으면 첫 줄 (게임 Localization과 같은 규칙)</summary>
-    public static IReadOnlyList<LanguageInfo> ParseLanguages(string xml)
-    {
-        var root = XDocument.Parse(xml).Root ?? throw new InvalidDataException("LanguageData.xml 루트가 없습니다");
-        var items = root.Elements("Language")
-            .Select(e => (Code: ((string?)e.Attribute("Code") ?? "").Trim().ToLowerInvariant(),
-                          Native: (string?)e.Attribute("NativeName") ?? "",
-                          Default: string.Equals((string?)e.Attribute("Default"), "true", StringComparison.OrdinalIgnoreCase),
-                          Separator: (string?)e.Attribute("ListSeparator") ?? ", "))   // 추가(번역 모드 3회차)
-            .Where(x => x.Code.Length > 0)
-            .GroupBy(x => x.Code).Select(g => g.First())
-            .ToList();
-        int def = Math.Max(0, items.FindIndex(x => x.Default));
-        return items.Select((x, i) => new LanguageInfo(x.Code, x.Native, i == def, x.Separator)).ToList();
-    }
+    //[공유 코드 통합] 삭제: ParseLanguages → 공유 LanguageRules.Parse (중복·빈 코드·Default 여럿 경고, NativeName 없으면 코드 — 게임과 같음)
 }

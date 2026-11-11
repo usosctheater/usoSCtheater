@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UsoSCTheater.Shared;   //[공유 코드 통합] 추가: LanguageInfo (공유 형식으로 옮김)
 
 namespace UsoSCTheater
 {

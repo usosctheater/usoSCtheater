@@ -352,8 +352,9 @@ public sealed partial class SettingsViewModel : ObservableObject
         if (_voices == null) return;
         VoiceOptions = [VoiceOption.None, .. _voices.Voices.Select(v => new VoiceOption(v.Id, v.IsRestricted ? $"{v.Name}  ⚠ {v.UseText}" : v.Name, v))];
         var rows = new List<VoiceRow> { new(this, null, "기본 화자 (매칭 없는 줄)", _voices.Default) };
-        foreach (var c in _gameData?.Characters.All ?? [])
-            rows.Add(new(this, c.Id, $"{(c.Name.Length > 0 ? c.Name : c.Id)}  ({c.Id})", _voices.MatchOf(c.Id)));
+        if (_gameData?.Characters is { } chars)   //[공유 코드 통합] 수정: 이름은 기본 언어 표시 이름 (게임과 같은 대체 순서, 없으면 Id)
+            foreach (var c in chars.All)
+                rows.Add(new(this, c.Id, $"{chars.Name(c.Id, chars.DefaultLanguage)}  ({c.Id})", _voices.MatchOf(c.Id)));
         VoiceRows = rows;
         VoiceNote = _voices.Problem;
     }

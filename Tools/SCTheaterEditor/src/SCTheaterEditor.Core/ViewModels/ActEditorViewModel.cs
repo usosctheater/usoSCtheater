@@ -54,7 +54,7 @@ public sealed partial class ActEditorViewModel : ObservableObject
         _messenger = messenger ?? new StrongReferenceMessenger();
         // 추가: 시나리오 폴더가 바뀌면 (어디서 바꿨든) 막 목록 다시 읽기
         _messenger.Register<ActEditorViewModel, SettingsChangedMessage>(this, static (r, m) => r.OnSettingsChanged(m));
-        _characters = characters ?? new CharacterData([]);   // 변경(번역 모드 2회차): 이전 CharacterData.LoadEmbedded() — 앱은 GameData.Characters를 넘김
+        _characters = characters ?? new CharacterData();   //[공유 코드 통합] 수정: 빈 데이터 생성자   // 변경(번역 모드 2회차): 이전 CharacterData.LoadEmbedded() — 앱은 GameData.Characters를 넘김
         // 추가: 종류별 팔레트 (LineTypes.xml) + 저장된 칸 폭
         Types = types ?? LineTypeCatalog.LoadEmbedded();
         Types.ApplyWidths(settings.Editor.FieldWidths);
@@ -924,7 +924,7 @@ public sealed partial class ActEditorViewModel : ObservableObject
     /// <summary>추가(다국어): TEXT 화자 칸의 ID 중 CharacterData에 없는 것이 있는지 (오타 검사)</summary>
     internal bool IsUnknownCharId(ScriptLine line) =>
         line.Type.Equals("TEXT", StringComparison.OrdinalIgnoreCase)
-        && CharacterData.SplitIds(line.Get("CharId")).Any(id => _characters.Find(id) == null);
+        && CharIds.Split(line.Get("CharId")).Any(id => _characters.Find(id) == null);   //[공유 코드 통합] 수정: CharacterData.SplitIds → CharIds.Split
 
     /// <summary>추가(다국어): TEXT 이름 칸이 비었을 때 흐린 글씨로 보일 이름 = 화자(CharId)의 한국어 이름 (여러 명은 ", "). 없으면 null</summary>
     internal string? SpeakerHint(ScriptLine line) =>

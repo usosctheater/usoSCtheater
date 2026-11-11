@@ -2,6 +2,7 @@ using System.IO;
 using System.Text;
 using System.Xml;
 using System.Xml.Linq;
+using UsoSCTheater.Shared;   //[공유 코드 통합] CharIds
 
 namespace SCTheaterEditor.Services;
 
@@ -113,7 +114,7 @@ public sealed class VoiceMatchData
     /// </summary>
     public (VoiceInfo Voice, string Style)? Resolve(string? charIds, ICollection<string>? unknown = null)
     {
-        string? first = CharacterData.SplitIds(charIds).FirstOrDefault();
+        string? first = CharIds.Split(charIds).FirstOrDefault();   //[공유 코드 통합] 수정: CharacterData.SplitIds → CharIds.Split
         VoiceMatchEntry e = first != null && MatchOf(first) is { Voice.Length: > 0 } m ? m : Default;
         if (e.Voice.Length == 0) return null;
         if (FindVoice(e.Voice) is { } v) return (v, e.Style);

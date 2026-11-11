@@ -145,10 +145,13 @@ public class StageStateCalculatorTests
     {
         var data = TestData.Characters();   // 변경(번역 모드 2회차): LoadEmbedded → 시험용 복사본
         Assert.Equal(30, data.Count);                        // 변경(다국어): producer 추가
-        Assert.Equal("아사히", data.Find("ASAHI")?.Name);     // 변경(다국어): .Ko → .Name
-        Assert.Equal("あさひ", data.Find("asahi")?.NameJa);   // 추가(다국어): 게임 원본 복사본 (짧은 이름)
-        Assert.Equal("토오루", data.KoreanName("toru"));
-        Assert.Null(data.KoreanName("nobody"));
+        //[공유 코드 통합] 수정: CharacterInfo(.Name·.NameJa)·KoreanName → 공유 대체 순서 Name(id, 언어), 없는 캐릭터는 null 대신 Id
+        var ja = new UsoSCTheater.Shared.LanguageInfo("ja", "日本語", false, "、");
+        Assert.Equal("아사히", data.Name("ASAHI", data.DefaultLanguage));
+        Assert.Equal("あさひ", data.Name("asahi", ja));   // 게임 원본 복사본 (짧은 이름)
+        Assert.Equal("토오루", data.Name("toru", data.DefaultLanguage));
+        Assert.Equal("nobody", data.Name("nobody", data.DefaultLanguage));
+        Assert.Null(data.Find("nobody"));
     }
 }
 

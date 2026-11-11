@@ -1,6 +1,7 @@
 using SCTheaterEditor.Script;
 using SCTheaterEditor.Services;
 using SCTheaterEditor.ViewModels;
+using UsoSCTheater.Shared;   //[공유 코드 통합] LanguageInfo
 
 namespace SCTheaterEditor.Tests;
 

@@ -1,6 +1,7 @@
 using System.IO;
 using System.Text;
 using SCTheaterEditor.Services;
+using UsoSCTheater.Shared;   //[공유 코드 통합] LanguageInfo · LanguageRules
 
 namespace SCTheaterEditor.Script;
 
@@ -35,7 +36,7 @@ public static class VoiceExport
         var used = new List<VoiceInfo>();
         string? last = null;
         int n = 0;
-        string attr = lang.IsDefault ? "Text" : $"Text_{lang.Suffix}";
+        string attr = LanguageRules.AttrName("Text", lang);   //[공유 코드 통합] 수정
         foreach (var line in doc.Lines)
         {
             if (!IsText(line)) continue;

@@ -36,7 +36,7 @@ public class GameDataTests
         Assert.All(GameData.Files, f => Assert.True(File.Exists(env.Data.CopyPath(f))));
         Assert.All(env.Data.States, s => Assert.Equal(GameDataState.Same, s.State));
         Assert.False(env.Data.HasProblem);
-        Assert.Equal("아사히", env.Data.Characters.KoreanName("asahi"));
+        Assert.Equal("아사히", env.Data.Characters.Name("asahi", env.Data.Characters.DefaultLanguage));   //[공유 코드 통합] 수정: KoreanName → Name(기본 언어)
         Assert.Equal(new[] { "ko", "ja" }, env.Data.Languages.Select(l => l.Code));
         Assert.Equal(1, env.ChangedCount);
     }
@@ -53,12 +53,12 @@ public class GameDataTests
         env.Data.Refresh();   // 복사본이 있으므로 덮어쓰지 않고 비교만
         Assert.Equal(GameDataState.Different, env.Data.States.Single(s => s.Name == GameData.CharacterFile).State);
         Assert.True(env.Data.HasProblem);
-        Assert.Equal("아사히", held.KoreanName("asahi"));
+        Assert.Equal("아사히", held.Name("asahi", held.DefaultLanguage));   //[공유 코드 통합] 수정
 
         Assert.Equal(GameData.Files.Count, env.Data.CopyAllFromGame());   //[스테이지 레이아웃] 3 → 파일 수 (StageData 추가로 4)
         Assert.False(env.Data.HasProblem);
         Assert.Equal(new[] { 1, 2, 3, 4, 5, 6 }, env.Data.Stage.Rows.Select(r => r.Count));   //[스테이지 레이아웃] StageData 복사본을 읽음
-        Assert.Equal("새이름", held.KoreanName("asahi"));   // 같은 객체 안이 바뀜
+        Assert.Equal("새이름", held.Name("asahi", held.DefaultLanguage));   // 같은 객체 안이 바뀜   //[공유 코드 통합] 수정
         Assert.Equal(1, held.Count);
     }
 
@@ -85,17 +85,5 @@ public class GameDataTests
         Assert.Equal(GameDataState.Different, env.Data.States.Single(s => s.Name == GameData.CharacterFile).State);
     }
 
-    [Fact]
-    public void ParseLanguages_DefaultAndSuffix()
-    {
-        var list = GameData.ParseLanguages(
-            "<LanguageData><Language Code=\"ko\" NativeName=\"한국어\"/><Language Code=\"JA\" NativeName=\"日本語\" Default=\"true\"/></LanguageData>");
-        Assert.Equal(new[] { "ko", "ja" }, list.Select(l => l.Code));
-        Assert.False(list[0].IsDefault);
-        Assert.True(list[1].IsDefault);
-        Assert.Equal("Ja", list[1].Suffix);
-
-        var noDefault = GameData.ParseLanguages("<LanguageData><Language Code=\"ko\"/><Language Code=\"ja\"/></LanguageData>");
-        Assert.True(noDefault[0].IsDefault);
-    }
+    //[공유 코드 통합] 삭제: ParseLanguages_DefaultAndSuffix → SharedLanguageTests (공유 LanguageRules.Parse)
 }

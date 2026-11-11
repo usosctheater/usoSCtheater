@@ -3,6 +3,7 @@ using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Unicode;
 using SCTheaterEditor.Services;
+using UsoSCTheater.Shared;   //[공유 코드 통합] LanguageInfo · LanguageRules
 
 namespace SCTheaterEditor.Script;
 
@@ -52,7 +53,7 @@ public static class PreTranslation
         var list = new List<PreTranslationTarget>();
         void Root(string attr, string source)
         {
-            if (source.Trim().Length > 0 && string.IsNullOrWhiteSpace(doc.GetRootAttribute($"{attr}_{lang.Suffix}")))
+            if (source.Trim().Length > 0 && string.IsNullOrWhiteSpace(doc.GetRootAttribute(LanguageRules.AttrName(attr, lang))))   //[공유 코드 통합] 수정
                 list.Add(new($"T.{attr}", null, attr, source));
         }
         Root(ActXmlFormat.MainTitleAttr, doc.MainTitle);
@@ -64,7 +65,7 @@ public static class PreTranslation
             foreach (var attr in new[] { "Name", "Text" })
             {
                 string src = line.Get(attr);
-                if (src.Trim().Length > 0 && string.IsNullOrWhiteSpace(line.Get($"{attr}_{lang.Suffix}")))
+                if (src.Trim().Length > 0 && string.IsNullOrWhiteSpace(line.Get(LanguageRules.AttrName(attr, lang))))   //[공유 코드 통합] 수정
                     list.Add(new($"L{i + 1}.{attr}", line, attr, src));
             }
         }
@@ -74,7 +75,7 @@ public static class PreTranslation
     /// <summary>입력(표준 입력) JSON — 문맥: 제목 + TEXT 줄 전부(번호·화자·한국어·이미 있는 번역), todo: 번역할 칸</summary>
     public static string Input(ActDocument doc, LanguageInfo lang, CharacterData characters, IReadOnlyList<PreTranslationTarget> targets)
     {
-        string s = lang.Suffix;
+        //[공유 코드 통합] 삭제: string s = lang.Suffix — 속성 이름은 LanguageRules.AttrName
         var lines = new List<object>();
         for (int i = 0; i < doc.Lines.Count; i++)
         {
@@ -87,8 +88,8 @@ public static class PreTranslation
                 speakerId = l.Get("CharId"),
                 name = l.Get("Name"),
                 text = l.Get("Text"),
-                name_translated = l.Get($"Name_{s}"),
-                text_translated = l.Get($"Text_{s}"),
+                name_translated = l.Get(LanguageRules.AttrName("Name", lang)),   //[공유 코드 통합] 수정
+                text_translated = l.Get(LanguageRules.AttrName("Text", lang)),
             });
         }
         var payload = new
@@ -96,8 +97,8 @@ public static class PreTranslation
             language = lang.Code,
             act = $"{doc.Group}/{doc.ActName}",
             title = new { mainTitle = doc.MainTitle, subTitle = doc.SubTitle,
-                          mainTitle_translated = doc.GetRootAttribute($"{ActXmlFormat.MainTitleAttr}_{s}") ?? "",
-                          subTitle_translated = doc.GetRootAttribute($"{ActXmlFormat.SubTitleAttr}_{s}") ?? "" },
+                          mainTitle_translated = doc.GetRootAttribute(LanguageRules.AttrName(ActXmlFormat.MainTitleAttr, lang)) ?? "",   //[공유 코드 통합] 수정
+                          subTitle_translated = doc.GetRootAttribute(LanguageRules.AttrName(ActXmlFormat.SubTitleAttr, lang)) ?? "" },
             lines,
             todo = targets.Select(t => new { id = t.Id, source = t.Source }).ToList(),
         };

@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using SCTheaterEditor.Script;
 using SCTheaterEditor.Services;
+using UsoSCTheater.Shared;   //[공유 코드 통합] LanguageInfo
 
 namespace SCTheaterEditor.ViewModels;
 

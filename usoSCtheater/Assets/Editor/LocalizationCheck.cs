@@ -10,6 +10,7 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UsoSCTheater;
 using UsoSCTheater.Scenario;
+using UsoSCTheater.Shared;   //[공유 코드 통합] 추가: LanguageInfo · LanguageRules
 
 /// <summary>
 /// [다국어] 다국어 검사 메뉴 (에디터 전용, 경고만 — 빌드를 막지 않음). 빠뜨림을 사람이 기억하지 않고 도구가 알려 줌 (핸드오프 4장 다국어 원칙)
@@ -181,7 +182,7 @@ public static class LocalizationCheck
 
     private static bool IsMissing(XmlNode node, string attr, LanguageInfo language) =>
         ActXml.GetAttrIgnoreCase(node, attr).Trim().Length > 0
-        && ActXml.GetAttrIgnoreCase(node, UsoSCTheater.Localization.AttrName(attr, language)).Trim().Length == 0;
+        && ActXml.GetAttrIgnoreCase(node, LanguageRules.AttrName(attr, language)).Trim().Length == 0;   //[공유 코드 통합] 수정: Localization.AttrName → LanguageRules.AttrName
 
     private static string PathOf(Transform t) => t.parent == null ? t.name : $"{PathOf(t.parent)}/{t.name}";
     private static string Short(string s) { s = s.Replace("\n", " "); return s.Length > 20 ? s.Substring(0, 20) + "…" : s; }

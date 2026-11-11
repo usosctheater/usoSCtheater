@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Input;
 using SCTheaterEditor.Services;
 using SCTheaterEditor.ViewModels;
+using UsoSCTheater.Shared;   //[공유 코드 통합] LanguageInfo
 
 namespace SCTheaterEditor.Views;
 
