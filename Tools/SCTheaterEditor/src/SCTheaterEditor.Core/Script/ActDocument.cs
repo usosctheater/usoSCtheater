@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.IO;
+using UsoSCTheater.Shared;   //[공유 코드 통합] 추가(4회차): RootAttrs
 
 namespace SCTheaterEditor.Script;
 
@@ -118,6 +119,14 @@ public sealed class ActDocument
     {
         int i = RootIndex(name);
         return i < 0 ? null : ExtraRootAttributes[i].Value;
+    }
+
+    /// <summary>[공유 코드 통합] 추가(4회차): 루트 속성 전부 (제목·부제 + 그 밖) — 공유 규칙(ActTranslation 등)에 넘김</summary>
+    public ActAttrs RootAttrs()
+    {
+        var list = new List<KeyValuePair<string, string>> { new(ActFormat.MainTitle, MainTitle), new(ActFormat.SubTitle, SubTitle) };
+        list.AddRange(ExtraRootAttributes);
+        return new ActAttrs(list);
     }
 
     //[공유 코드 통합] 삭제: FindRootAttributeIgnoreCase (번역 창 표기 정리 → 막을 열 때 ActEditorViewModel이 공유 ActFormat.CorrectName으로)

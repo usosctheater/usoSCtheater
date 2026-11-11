@@ -154,4 +154,51 @@ namespace UsoSCTheater.Shared
                 issues.Add(new ActIssue(ActFormat.GroupId, "GroupId가 없는 CGGROUP (무시됨)"));
         }
     }
+
+    //[공유 코드 통합] 추가(4회차): 번역 칸 1개 (Line = -1이면 막 루트 — 제목·부제, 아니면 막 줄 번호 0부터)
+    public readonly struct ActTranslationField
+    {
+        public int Line { get; }
+        public string Attr { get; }      //기본 속성 (MainTitle·SubTitle·Name·Text)
+        public string Source { get; }    //원문
+        public string Value { get; }     //이 언어 번역
+        public bool IsRequired => ActTranslation.IsRequired(Source);
+        public bool IsDone => ActTranslation.IsDone(Value);
+        public bool IsMissing => IsRequired && !IsDone;
+
+        public ActTranslationField(int line, string attr, string source, string value)
+        {
+            Line = line;
+            Attr = attr;
+            Source = source;
+            Value = value;
+        }
+    }
+
+    //[공유 코드 통합] 추가(4회차): 번역 누락 기준 (게임 Check Translations · TE 가번역 · 번역 창 진행률 공용)
+    public static class ActTranslation
+    {
+        //원문이 있음 (CharId만 있는 이름은 DB에서 나오므로 아님)
+        public static bool IsRequired(string source) => source.Trim().Length > 0;
+        public static bool IsDone(string value) => value.Trim().Length > 0;
+
+        //데이터 문서 요소·막 줄 1개: 원문은 있는데 번역이 빔
+        public static bool IsMissing(ActAttrs node, string attr, LanguageInfo language) =>
+            IsRequired(node.Raw(attr)) && !IsDone(node.Raw(LanguageRules.AttrName(attr, language)));
+
+        //막의 번역 칸 전부 (순서: 루트 MainTitle·SubTitle → TEXT 줄마다 Name·Text)
+        public static List<ActTranslationField> Fields(ActAttrs root, IReadOnlyList<ActAttrs> lines, LanguageInfo language)
+        {
+            var fields = new List<ActTranslationField>();
+            foreach (string a in ActFormat.RootAttrs)
+                fields.Add(new ActTranslationField(-1, a, root.Raw(a), root.Raw(LanguageRules.AttrName(a, language))));
+            for (int i = 0; i < lines.Count; i++)
+            {
+                if (!lines[i].Is(ActFormat.TypeText)) continue;
+                foreach (string a in ActFormat.TranslatableLineAttrs)
+                    fields.Add(new ActTranslationField(i, a, lines[i].Raw(a), lines[i].Raw(LanguageRules.AttrName(a, language))));
+            }
+            return fields;
+        }
+    }
 }

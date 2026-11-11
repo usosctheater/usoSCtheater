@@ -85,6 +85,28 @@ public class SharedActScriptTests
         Assert.Equal("subTitle", Assert.Single(issues).Attr);
     }
 
+    //[공유 코드 통합] 추가(4회차): 번역 칸·누락 기준
+    [Fact]
+    public void TranslationFields_OrderAndMissing()
+    {
+        var root = A(("MainTitle", "제목"), ("SubTitle", " "), ("MainTitle_Ja", "タイトル"));
+        var lines = new List<ActAttrs>
+        {
+            A(("Type", "BG"), ("ResourceKey", "room")),                                   // TEXT 아님 → 칸 없음
+            A(("Type", " text "), ("CharId", "asahi"), ("Text", "안녕"), ("Text_Ja", "  ")),   // 이름은 CharId만 → 번역 대상 아님, 공백 번역 = 누락
+            A(("Type", "TEXT"), ("Name", "PD"), ("Name_Ja", "PD"), ("Text", "큐")),
+        };
+        var fields = ActTranslation.Fields(root, lines, Langs[1]);
+        Assert.Equal(["-1.MainTitle", "-1.SubTitle", "1.Name", "1.Text", "2.Name", "2.Text"], fields.Select(f => $"{f.Line}.{f.Attr}"));
+        Assert.Equal(["1.Text", "2.Text"], fields.Where(f => f.IsMissing).Select(f => $"{f.Line}.{f.Attr}"));
+        Assert.Equal(4, fields.Count(f => f.IsRequired));                               // 제목·1번 대사·2번 이름·대사
+        Assert.Equal("안녕", fields[3].Source);
+
+        Assert.True(ActTranslation.IsMissing(A(("Id", "a"), ("Tag", "태그")), "Tag", Langs[1]));
+        Assert.False(ActTranslation.IsMissing(A(("Id", "a"), ("Tag", "태그"), ("Tag_Ja", "タグ")), "Tag", Langs[1]));
+        Assert.False(ActTranslation.IsMissing(A(("Id", "a"), ("Tag", "")), "Tag", Langs[1]));
+    }
+
     [Fact]
     public void LineTypes_PaletteAttrsAreKnown()
     {

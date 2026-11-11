@@ -48,29 +48,14 @@ public static class PreTranslation
     }
 
     /// <summary>번역할 칸 = 원문이 있고 이 언어 번역이 빈 칸 (게임 Check Translations · 번역 창 진행률과 같은 기준)</summary>
-    public static List<PreTranslationTarget> Targets(ActDocument doc, LanguageInfo lang)
-    {
-        var list = new List<PreTranslationTarget>();
-        void Root(string attr, string source)
-        {
-            if (source.Trim().Length > 0 && string.IsNullOrWhiteSpace(doc.GetRootAttribute(LanguageRules.AttrName(attr, lang))))   //[공유 코드 통합] 수정
-                list.Add(new($"T.{attr}", null, attr, source));
-        }
-        Root(ActFormat.MainTitle, doc.MainTitle);   //[공유 코드 통합] 수정: 공유 상수 (칸 Id T.MainTitle)
-        Root(ActFormat.SubTitle, doc.SubTitle);
-        for (int i = 0; i < doc.Lines.Count; i++)
-        {
-            var line = doc.Lines[i];
-            if (!IsText(line)) continue;
-            foreach (var attr in new[] { "Name", "Text" })
-            {
-                string src = line.Get(attr);
-                if (src.Trim().Length > 0 && string.IsNullOrWhiteSpace(line.Get(LanguageRules.AttrName(attr, lang))))   //[공유 코드 통합] 수정
-                    list.Add(new($"L{i + 1}.{attr}", line, attr, src));
-            }
-        }
-        return list;
-    }
+    public static List<PreTranslationTarget> Targets(ActDocument doc, LanguageInfo lang) =>
+        //[공유 코드 통합] 수정(4회차): 번역 칸·누락 기준은 공유 ActTranslation (칸 Id T.MainTitle·L12.Text 그대로)
+        ActTranslation.Fields(doc.RootAttrs(), doc.Lines.Select(l => l.Attrs()).ToList(), lang)
+            .Where(f => f.IsMissing)
+            .Select(f => f.Line < 0
+                ? new PreTranslationTarget($"T.{f.Attr}", null, f.Attr, f.Source)
+                : new PreTranslationTarget($"L{f.Line + 1}.{f.Attr}", doc.Lines[f.Line], f.Attr, f.Source))
+            .ToList();
 
     /// <summary>입력(표준 입력) JSON — 문맥: 제목 + TEXT 줄 전부(번호·화자·한국어·이미 있는 번역), todo: 번역할 칸</summary>
     public static string Input(ActDocument doc, LanguageInfo lang, CharacterData characters, IReadOnlyList<PreTranslationTarget> targets)
@@ -158,5 +143,5 @@ public static class PreTranslation
         return n;
     }
 
-    private static bool IsText(ScriptLine l) => l.Type.Equals("TEXT", StringComparison.OrdinalIgnoreCase);
+    private static bool IsText(ScriptLine l) => l.Attrs().Is(ActFormat.TypeText);   //[공유 코드 통합] 수정(4회차): 공유 판정 (종류 앞뒤 공백 무시)
 }

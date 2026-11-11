@@ -152,7 +152,7 @@ public sealed partial class TranslationViewModel : ObservableObject, IDisposable
 
     //[공유 코드 통합] 삭제: NormalizeNames (번역 속성 대소문자 교정) → ActEditorViewModel.FixAttributeNames (막을 열 때, 모든 속성, 공유 ActFormat.CorrectName)
 
-    private static bool IsText(ScriptLine l) => l.Type.Equals("TEXT", StringComparison.OrdinalIgnoreCase);
+    private static bool IsText(ScriptLine l) => l.Attrs().Is(ActFormat.TypeText);   //[공유 코드 통합] 수정(4회차): 공유 판정 (번역 칸 기준 ActTranslation.Fields와 같음)
 
     private void Rebuild()
     {
@@ -478,8 +478,8 @@ public sealed class TranslationCell : ObservableObject
     }
 
     /// <summary>번역이 필요한 칸 = 원문이 있음 (CharId만 있는 이름은 DB에서 나오므로 아님)</summary>
-    public bool IsRequired => Source.Trim().Length > 0;
-    public bool IsDone => Value.Trim().Length > 0;
+    public bool IsRequired => ActTranslation.IsRequired(Source);   //[공유 코드 통합] 수정(4회차): 공유 기준
+    public bool IsDone => ActTranslation.IsDone(Value);
 
     /// <summary>
     /// 빈 칸의 흐린 글씨 = 비워 두면 게임에 나오는 것. 이름: 직접 적은 한국어 이름 / 화자(CharId)의 그 언어 DB 이름.
