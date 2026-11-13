@@ -55,7 +55,7 @@ public sealed class GameData
 
     public string Folder { get; }
     public CharacterData Characters { get; } = new();   //[공유 코드 통합] 수정: 빈 데이터 생성자
-    public LipRules Lips { get; } = new();
+    public LipData Lips { get; } = LipData.Empty;   //[공유 코드 통합] 수정(5회차): 립 기본값 해석은 공유 LipData (TE LipRules 삭제)
     public IReadOnlyList<LanguageInfo> Languages { get; private set; } = LanguageFallback;
     public IReadOnlyList<GameDataFileState> States { get; private set; } = [];
 
@@ -67,7 +67,7 @@ public sealed class GameData
     public event Action? Changed;
 
     public string CopyPath(string name) => Path.Combine(Folder, name);
-    public string? GamePath(string name) => _resources() is { Length: > 0 } r ? Path.Combine(r, "Data", name) : null;
+    public string? GamePath(string name) => _resources() is { Length: > 0 } r ? Path.Combine(r, ResourceFolders.Data, name) : null;   //[공유 코드 통합] 수정(5회차): 폴더 이름은 공유 상수
 
     /// <summary>시작·Resources 폴더 변경 때: 없는 복사본만 채우고 비교</summary>
     public void Refresh()
@@ -114,7 +114,7 @@ public sealed class GameData
         //[공유 코드 통합] 수정: 언어 → 캐릭터(기본 언어 필요) 순서, 해석은 공유 (언어 기본 목록은 TE용 ko·ja — 번역 창에 대상 언어가 있어야 함)
         Languages = Parse(LanguageFile, (xml, w) => LanguageRules.Parse(xml, LanguageFallback, w));
         Characters.ReplaceWith(Parse(CharacterFile, (xml, w) => CharacterData.Parse(xml, Languages.First(l => l.IsDefault), w)));
-        Lips.ReplaceWith(Read(LipFile, LipRules.Parse) ?? new LipRules());
+        Lips.ReplaceWith(Read(LipFile, LipData.Parse) ?? LipData.Empty);   //[공유 코드 통합] 수정(5회차)
         Stage = Parse(StageFile, StageTable.Parse);   //[공유 코드 통합] 수정: ReadStage → Parse
     }
 

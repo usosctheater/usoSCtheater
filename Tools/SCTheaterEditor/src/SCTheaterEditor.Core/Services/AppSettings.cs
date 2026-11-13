@@ -1,6 +1,7 @@
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using UsoSCTheater.Shared;   //[공유 코드 통합] 추가(5회차): ResourceFolders
 
 namespace SCTheaterEditor.Services;
 
@@ -239,13 +240,13 @@ public sealed class EditorSettings
     public string? GameResourcesFolder { get; set; }
 
     /// <summary>변경(5회차): Resources\Scenario — 저장하지 않고 Resources 폴더에서 계산 (이전: 따로 지정)</summary>
-    [JsonIgnore] public string? ScenarioFolder => Sub("Scenario");
+    [JsonIgnore] public string? ScenarioFolder => Sub(ResourceFolders.Scenario);   //[공유 코드 통합] 수정(5회차): 폴더 이름은 공유 상수
 
     /// <summary>변경(5회차): Resources\Spine (게임으로 내보내기 대상, 아래 {nickName} 폴더에 씀)</summary>
-    [JsonIgnore] public string? GameSpineFolder => Sub("Spine");
+    [JsonIgnore] public string? GameSpineFolder => Sub(ResourceFolders.Spine);
 
     /// <summary>추가(5회차): Resources\BG (무대 배경 — 이전: exe 옆 Backgrounds\)</summary>
-    [JsonIgnore] public string? BackgroundFolder => Sub("BG");
+    [JsonIgnore] public string? BackgroundFolder => Sub(ResourceFolders.BG);
 
     private string? Sub(string name) =>
         string.IsNullOrWhiteSpace(GameResourcesFolder) ? null : Path.Combine(GameResourcesFolder, name);

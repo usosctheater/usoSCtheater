@@ -16,7 +16,7 @@ namespace UsoSCTheater.Character
         public const string SkeletonDataSuffix = "_SkeletonData";    // spine-unity가 만드는 에셋 이름 접미어
 
         //Resources.Load 경로: Spine/{Id}/{Key}_SkeletonData (기존 SpineKeyInfo.ResourcePath 속성)
-        public static string ResourcePath(this SpineKeyInfo info) => $"{SpineRoot}/{info.CharacterId}/{info.Key}{SkeletonDataSuffix}";
+        public static string ResourcePath(this SpineKeyInfo info) => $"{ResourceFolders.SpineFolder(info.CharacterId)}/{info.Key}{SkeletonDataSuffix}";   //[공유 코드 통합] 수정(5회차): 배치 폴더는 공유 규칙
     }
 
     /// <summary>

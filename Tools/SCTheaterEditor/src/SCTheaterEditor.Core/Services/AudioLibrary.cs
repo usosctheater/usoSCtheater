@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.IO;
+using UsoSCTheater.Shared;   //[공유 코드 통합] 추가(5회차): ResourceFolders · AudioRules
 
 namespace SCTheaterEditor.Services;
 
@@ -25,11 +26,12 @@ public static class AudioLibrary
     private static readonly ConcurrentDictionary<string, (long Length, DateTime Modified, double? Duration)> DurationCache =
         new(StringComparer.OrdinalIgnoreCase);
 
+    //[공유 코드 통합] 수정(5회차): 폴더 이름은 공유 ResourceFolders (/ 구분 — Windows 경로 합치기에 그대로 씀)
     public static string SubFolder(AudioKind kind) => kind switch
     {
-        AudioKind.SE => @"Audio\SE",
-        AudioKind.BGM => @"Audio\BGM",
-        _ => @"Audio\Voice",
+        AudioKind.SE => ResourceFolders.AudioSE,
+        AudioKind.BGM => ResourceFolders.AudioBGM,
+        _ => ResourceFolders.AudioVoice,
     };
 
     /// <summary>Voice 하위 폴더 이름 (자연 정렬, 없으면 빈 목록)</summary>
@@ -70,13 +72,12 @@ public static class AudioLibrary
     {
         key = key.Trim().Replace('\\', '/');
         if (string.IsNullOrWhiteSpace(resources) || key.Length == 0) return null;
-        var dirs = new List<string>();
-        if (kind == AudioKind.Voice && !string.IsNullOrWhiteSpace(voiceGroup)) dirs.Add(Path.Combine(SubFolder(kind), voiceGroup));
-        dirs.Add(SubFolder(kind));
-        foreach (var dir in dirs)
+        //[공유 코드 통합] 수정(5회차): 보이스 찾는 경로·순서는 공유 AudioRules.VoicePaths (게임 AudioManager와 같은 코드)
+        var candidates = kind == AudioKind.Voice ? AudioRules.VoicePaths(voiceGroup, key) : [$"{SubFolder(kind)}/{key}"];
+        foreach (var path in candidates)
             foreach (var ext in Extensions)
             {
-                string full = Path.Combine(resources, dir, key + ext);
+                string full = Path.Combine(resources, path + ext);
                 if (File.Exists(full)) return Path.GetRelativePath(resources, full).Replace('\\', '/');
             }
         return null;

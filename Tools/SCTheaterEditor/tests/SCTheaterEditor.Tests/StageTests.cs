@@ -78,8 +78,13 @@ public class StageMessageTests
         Assert.True(doc.RootElement.GetProperty("preview").GetBoolean());
         Assert.Equal("a.atlas.txt", doc.RootElement.GetProperty("atlas").GetString());
 
-        string play = new PlayAnims(1, ["wait", "face_x"], new LipPlay("lip_wait", null, -1)).ToJson();
+        //[공유 코드 통합] 수정(5회차): 애니메이션마다 트랙·방식·loop_start 시각
+        string play = new PlayAnims(1, [new("wait", 0, "loop", -1), new("face_x", 1, "endLoop", 0.5)], new LipPlay("lip_wait", null, -1)).ToJson();
+        Assert.Contains("\"anims\":[{\"name\":\"wait\",\"track\":0,\"mode\":\"loop\",\"loopStart\":-1},{\"name\":\"face_x\",\"track\":1,\"mode\":\"endLoop\",\"loopStart\":0.5}]", play);
         Assert.Contains("\"lip\":{\"moving\":\"lip_wait\",\"still\":null,\"seconds\":-1}", play);
+
+        string config = new StageConfig(4, 1920, 1080, 1, 2, "loop_start", "head").ToJson();   //[공유 코드 통합] 추가(5회차)
+        Assert.Contains("\"lipTrack\":2,\"loopStartEvent\":\"loop_start\",\"zoomPivotBone\":\"head\"", config);
     }
 
     [Fact]
@@ -314,7 +319,8 @@ public class ScriptViewModelTests
         c.Load(a);
 
         var play = c.Stage.Last<PlayAnims>();
-        Assert.Equal(new[] { "wait" }, play.Anims);
+        Assert.Equal(new[] { "wait" }, play.Anims.Select(p => p.Name));   //[공유 코드 통합] 수정(5회차): AnimPlay
+        Assert.Equal(("loop", 0), (play.Anims[0].Mode, play.Anims[0].Track));   // wait = 계속 반복 (공유 AnimationRules)
         Assert.Equal("lip_wait", play.Lip!.Moving);           // madoka: DefaultLipData에 없음 → lip_wait 안전망 (데이터에 있음)
         Assert.Equal(3.0, play.Lip.Seconds);
 
@@ -324,7 +330,8 @@ public class ScriptViewModelTests
 
         // 게임 방식: face_ 애니메이션은 트랙 1로, 전체 다시 재생
         c.Vm.ApplyAnimCommand.Execute(c.Vm.AnimItems[1]);
-        Assert.Equal(new[] { "wait", "face_anger" }, c.Stage.Last<PlayAnims>().Anims);
+        Assert.Equal(new[] { "wait", "face_anger" }, c.Stage.Last<PlayAnims>().Anims.Select(p => p.Name));   //[공유 코드 통합] 수정(5회차)
+        Assert.Equal(1, c.Stage.Last<PlayAnims>().Anims[1].Track);
         Assert.Equal("wait face_anger", a.AnimationText);
     }
 

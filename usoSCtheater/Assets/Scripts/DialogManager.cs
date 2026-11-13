@@ -290,8 +290,8 @@ public class DialogManager : MonoBehaviour
             switch (node.type)
             {
                 case ScriptNode.NodeType.Audio:
-                    if (node.audioEffect == "stop") audioManager.StopAudio(node.audioSlot);
-                    else audioManager.PlayAudio(node.audioSlot, node.track, node.volume, node.audioEffect == "loop");
+                    if (node.audioEffect == AudioRules.EffectStop) audioManager.StopAudio(node.audioSlot);   //[공유 코드 통합] 수정(5회차): Effect 값은 공유 상수
+                    else audioManager.PlayAudio(node.audioSlot, node.track, node.volume, node.audioEffect == AudioRules.EffectLoop);
                     continue;
 
                 case ScriptNode.NodeType.SE:

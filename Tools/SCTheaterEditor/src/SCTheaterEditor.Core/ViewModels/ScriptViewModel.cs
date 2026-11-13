@@ -27,7 +27,7 @@ public sealed partial class ScriptViewModel : ObservableObject
     private readonly SpineLibrary _library;
     private readonly BackgroundLibrary _backgrounds;
     private readonly IStageHost _host;
-    private readonly LipRules _lipRules;
+    private readonly LipData _lipRules;   //[공유 코드 통합] 수정(5회차): 아이돌별 기본 립 = 공유 LipData (고르는 규칙은 공유 LipRules)
     private readonly IMessenger _messenger;
     private readonly Action _saveSettings;
     private readonly AppLog _log;
@@ -45,7 +45,7 @@ public sealed partial class ScriptViewModel : ObservableObject
     private const double UnitScale = 1.0;             //[스테이지 레이아웃] 옛 StageLayout에서 이동 (Spine 1단위 = 화면 1px, 크기 100 기준)
 
     public ScriptViewModel(AppSettings settings, SpineLibrary library, BackgroundLibrary backgrounds, IStageHost host,
-                           LipRules lipRules, IMessenger messenger, Action saveSettings, AppLog log,
+                           LipData lipRules, IMessenger messenger, Action saveSettings, AppLog log,
                            AudioMemoStore? audioMemos = null,   // 추가(6회차): 오디오 메모 (없으면 저장하지 않는 빈 메모)
                            Func<StageTable>? stageTable = null)   //[스테이지 레이아웃] 추가 (앱은 GameData.Stage)
     {
@@ -515,7 +515,7 @@ public sealed partial class ScriptViewModel : ObservableObject
         {
             // 디버그 방식: 선택한 트랙에만 건다 (접두어와 달라도 허용)
             a.Tracks[selected] = name;
-            Send(new SetTrack(a.Id, selected, name));
+            Send(new SetTrack(a.Id, selected, name == null ? null : PlayOf(a, name, selected)));   //[공유 코드 통합] 수정(5회차): 재생 방식은 C#이 정함
             Resume(a);   // 추가(8회차)
         }
         else
@@ -555,15 +555,23 @@ public sealed partial class ScriptViewModel : ObservableObject
     private void PlayAll(StageActor a)
     {
         var anims = a.Tracks.Where(x => x != null).Select(x => x!).ToList();
-        Send(new PlayAnims(a.Id, anims, BuildLip(a, anims)));
+        //[공유 코드 통합] 수정(5회차): 이름마다 트랙·재생 방식을 공유 AnimationRules로 정해 보냄 (JS는 그대로 재생)
+        Send(new PlayAnims(a.Id, anims.Select(n => PlayOf(a, n, AnimationRules.TrackOf(n))).ToList(), BuildLip(a, anims)));
     }
 
-    /// <summary>립 재생 정보 (꺼져 있거나 디버그 방식이면 null) — CGManager.LipSyncCoroutine 규칙, 아이돌 키 = nickName</summary>
+    /// <summary>[공유 코드 통합] 추가(5회차): 애니메이션 1개의 재생 정보 — loop_start 시각은 불러올 때 받은 애니메이션 목록에서 (없는 이름은 -1, JS가 건너뜀)</summary>
+    private static AnimPlay PlayOf(StageActor a, string name, int track)
+    {
+        double loopStart = a.Animations.FirstOrDefault(x => x.Name == name)?.LoopStart ?? -1;
+        return new AnimPlay(name, track, AnimPlay.ModeText(AnimationRules.ModeOf(name, loopStart >= 0)), loopStart);
+    }
+
+    /// <summary>립 재생 정보 (꺼져 있거나 디버그 방식이면 null) — 공유 LipRules (게임 CGManager.LipSyncCoroutine과 같은 코드), 아이돌 키 = CG 키 앞부분</summary>
     private LipPlay? BuildLip(StageActor a, IReadOnlyList<string> anims)
     {
         if (!LipEnabled || SingleTrackMode) return null;
         var names = a.Animations.Select(x => x.Name).ToHashSet();
-        var (moving, still) = _lipRules.Resolve(anims, a.Asset.NickName, names.Contains);
+        var (moving, still) = LipRules.Resolve(anims, LipRules.IdolKeyOf(a.Asset.CgKey), _lipRules, names.Contains);   //[공유 코드 통합] 수정(5회차): 공유 규칙, 아이돌 키 = CG 키 앞부분 (게임과 같음)
         if (moving == null) return null;
         // 변경(8회차): F5로 맞춘 TEXT 줄의 캐릭터는 보이스 중 가장 긴 길이만큼 말함 (보이스가 없으면 설정대로)
         double seconds = _lineActors.Contains(a) && _line is { VoiceSeconds: > 0 } line ? line.VoiceSeconds   // 변경(9회차): 그룹 멤버 전원
@@ -1096,7 +1104,8 @@ public sealed partial class ScriptViewModel : ObservableObject
         _linePaused = false;
         _lineSoundsPending = false;
         if (Target is PlayTarget.Line or PlayTarget.Audio) SetTarget(SelectedActor != null ? PlayTarget.Actor : PlayTarget.Stage);
-        Send(new StageConfig(AnimationScript.TrackCount, StageLayout.ScreenWidth, StageLayout.ScreenHeight, UnitScale));   //[스테이지 레이아웃] 화면 크기 = 공유 StageLayout, UnitScale은 이 파일
+        Send(new StageConfig(AnimationScript.TrackCount, StageLayout.ScreenWidth, StageLayout.ScreenHeight, UnitScale,
+                             AnimationRules.TrackLip, AnimationRules.LoopStartEvent, StageLayout.ZoomPivotBone));   //[공유 코드 통합] 수정(5회차): 립 트랙·loop_start·줌 기준 본도 공유 값으로   //[스테이지 레이아웃] 화면 크기 = 공유 StageLayout, UnitScale은 이 파일
         SendGuide();   //[스테이지 레이아웃] 추가
         SendBackground();
         Send(new WatchBones(BonesVisible));   // 변경: 무대 전체 일시정지 대신 (캐릭터별 일시정지는 불러온 뒤 OnActorLoaded에서)
@@ -1222,7 +1231,7 @@ public sealed record AnimListItem(AnimListItemKind Kind, string? Name, string Te
     public static AnimListItem From(AnimInfo a)
     {
         string mark = a.LoopStart >= 0 ? $"  ↻ {a.LoopStart:0.00}s부터 반복"
-                    : AnimationScript.ForceLoopAnims.Contains(a.Name) ? "  ∞ 반복" : "";
+                    : AnimationRules.IsForceLoop(a.Name) ? "  ∞ 반복" : "";
         return new AnimListItem(AnimListItemKind.Item, a.Name, $"{a.Name}  ({a.Duration:0.00}s){mark}");
     }
 

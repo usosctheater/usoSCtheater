@@ -63,10 +63,10 @@ public class AnimationScriptTests
     }
 }
 
-/// <summary>립 결정 규칙 (CGManager.LipSyncCoroutine 이식, 내장 DefaultLipData.xml 사용)</summary>
+/// <summary>립 결정 규칙 — [공유 코드 통합] 변경(5회차): 공유 LipRules·LipData (게임 CGManager와 같은 코드), 시험용 DefaultLipData.xml 복사본</summary>
 public class LipRulesTests
 {
-    private static readonly LipRules Rules = TestData.Lips();   // 변경(번역 모드 2회차): LoadEmbedded → 시험용 복사본
+    private static readonly UsoSCTheater.Shared.LipData Data = TestData.Lips();
 
     private static Func<string, bool> Has(params string[] names)
     {
@@ -74,23 +74,33 @@ public class LipRulesTests
         return set.Contains;
     }
 
+    private static (string?, string?) Resolve(string[] anims, string idol, Func<string, bool> exists) =>
+        UsoSCTheater.Shared.LipRules.Resolve(anims, idol, Data, exists);
+
     [Fact]
     public void NoLipAnims_UsesIdolCategory() =>
-        Assert.Equal(("lip_anger", "lip_anger_s"), Rules.Resolve(new[] { "anger1" }, "asahi", Has()));
+        Assert.Equal(("lip_anger", "lip_anger_s"), Resolve(new[] { "anger1" }, "asahi", Has()));
 
     [Fact]
     public void CandidateExists_StillFromCategory() =>
         // lip_surp는 데이터에 있고 lip_surp_s는 없음 → 멈춤 립만 아사히 Surp 기본값
-        Assert.Equal(("lip_surp", "lip_serious_s"), Rules.Resolve(new[] { "surp2" }, "asahi", Has("lip_surp")));
+        Assert.Equal(("lip_surp", "lip_serious_s"), Resolve(new[] { "surp2" }, "asahi", Has("lip_surp")));
 
     [Fact]
     public void ExplicitLip_StillFromIdolDefault() =>
         // 2026-10-12 실제 데이터로 확인한 사례: mei anger1 + lip_a → lip_a / lip_smile_s
-        Assert.Equal(("lip_a", "lip_smile_s"), Rules.Resolve(new[] { "anger1", "lip_a" }, "mei", Has()));
+        Assert.Equal(("lip_a", "lip_smile_s"), Resolve(new[] { "anger1", "lip_a" }, "mei", Has()));
 
     [Fact]
     public void UnknownIdol_FallsBackToLipWait() =>
-        Assert.Equal(("lip_wait", "lip_wait_s"), Rules.Resolve(new[] { "smile1" }, "madoka", Has("lip_wait", "lip_wait_s")));
+        Assert.Equal(("lip_wait", "lip_wait_s"), Resolve(new[] { "smile1" }, "madoka", Has("lip_wait", "lip_wait_s")));
+
+    [Fact]
+    public void IdolCaseInsensitive_AndIdolKeyFromCg()   //[공유 코드 통합] 추가(5회차)
+    {
+        Assert.Equal(("lip_anger", "lip_anger_s"), Resolve(new[] { "anger1" }, "ASAHI", Has()));
+        Assert.Equal("asahi", UsoSCTheater.Shared.LipRules.IdolKeyOf("asahi_stand_1040010010"));
+    }
 
     [Theory]
     [InlineData("smile3", "smile")]
@@ -98,7 +108,7 @@ public class LipRulesTests
     [InlineData(null, "wait")]
     [InlineData("", "wait")]
     public void ExtractLipKey(string? anim, string expected) =>
-        Assert.Equal(expected, LipRules.ExtractLipKey(anim));
+        Assert.Equal(expected, UsoSCTheater.Shared.LipRules.KeywordOf(anim));
 }
 
 /// <summary>atlas 페이지 줄 찾기, 텍스처 형식 판별</summary>

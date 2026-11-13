@@ -11,6 +11,7 @@ namespace UsoSCTheater.Shared
     {
         public const double ScreenWidth = 1920;
         public const double ScreenHeight = 1080;
+        public const string ZoomPivotBone = "head";   //[공유 코드 통합] 추가(5회차): 줌 기준 본 (기본 자세 위치) — TE JS는 config로 받음
 
         //"N-i" → 숫자 두 개 (형식만). 칸 범위·표에 있는지는 StagePlanner
         public static bool TryParsePos(string? text, out int count, out int index)

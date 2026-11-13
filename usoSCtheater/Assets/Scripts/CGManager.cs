@@ -27,7 +27,7 @@ public class CGManager : MonoBehaviour
     //[스테이지 레이아웃] 추가: 무대 자리 (StageData.xml → StageTable → StagePlanner)
     private StagePlanner stage;
     private readonly List<string> stageWarnings = new List<string>();
-    private const string ZOOM_PIVOT_BONE = "head";   //줌 기준점 (기본 자세 위치, 예외 오프셋은 필요할 때 StageData에)
+    private const string ZOOM_PIVOT_BONE = StageLayout.ZoomPivotBone;   //줌 기준점 (기본 자세 위치, 예외 오프셋은 필요할 때 StageData에) //[공유 코드 통합] 수정(5회차): 이름은 공유 상수
 
     //키 > GameObj 빠른 접근용 딕셔너리
     //[LD 불러오기] 수정: CG 키 관련 사전은 모두 대소문자 무시 (ID 규칙·Spine 인덱스와 통일)
@@ -48,19 +48,9 @@ public class CGManager : MonoBehaviour
     //립 연동용 코루틴 관리
     private Dictionary<string, Coroutine> lipCoroutineDict = new Dictionary<string, Coroutine>(System.StringComparer.OrdinalIgnoreCase);
 
-    private static readonly string[] DEFAULT_LIP_ANIM = { "lip_wait" };
-    private static readonly string[] DEFAULT_LIP_S_ANIM = { "lip_wait_s" };
-
-    //아이돌별 디폴트 립(Moving/Still) 한 쌍
-    private struct LipDefaultEntry
-    {
-        public string Moving;
-        public string Still;
-    }
-
-    //아이돌 이름 > (카테고리 이름 > 디폴트 립 데이터)
-    private Dictionary<string, Dictionary<string, LipDefaultEntry>> defaultLipDataDict
-        = new Dictionary<string, Dictionary<string, LipDefaultEntry>>(System.StringComparer.OrdinalIgnoreCase);
+    //[공유 코드 통합] 삭제(5회차): DEFAULT_LIP_ANIM·DEFAULT_LIP_S_ANIM·LipDefaultEntry → 공유 LipRules (안전망 lip_wait·lip_wait_s 포함)
+    //[공유 코드 통합] 수정(5회차): 아이돌별 디폴트 립 = 공유 LipData (DefaultLipData.xml 해석)
+    private LipData lipData = LipData.Empty;
 
     //트랙별 애니메이션 상태를 Inspector에서 실시간으로 보기 위한 디버그 구조체
     [System.Serializable]
@@ -77,8 +67,7 @@ public class CGManager : MonoBehaviour
     [Header("디버그 - 트랙별 애니메이션 상태 (읽기 전용)")]
     [SerializeField] private List<CGTrackDebugInfo> trackDebugInfo = new List<CGTrackDebugInfo>();
 
-    //강제 무한 Loop용 애니메이션 목록
-    private static readonly HashSet<string> FORCE_LOOP_ANIMS = new HashSet<string> {"wait", "blank"};
+    //[공유 코드 통합] 삭제(5회차): FORCE_LOOP_ANIMS → 공유 AnimationRules.IsForceLoop
 
     void Awake()
     {
@@ -301,8 +290,8 @@ public class CGManager : MonoBehaviour
             return;
         }
 
-        //공백과 쉼표를 구분자로 분리
-        string[] animations = animName.Split(new char[] { ' ', ','}, System.StringSplitOptions.RemoveEmptyEntries);
+        //공백과 쉼표를 구분자로 분리 //[공유 코드 통합] 수정(5회차): 공유 AnimationRules.Split
+        List<string> animations = AnimationRules.Split(animName);
 
         //모든 트랙 초기화
         skAnim.AnimationState.ClearTracks();
@@ -318,33 +307,16 @@ public class CGManager : MonoBehaviour
         foreach (string anim in animations)
         {
             string trimmed = anim.Trim();
-            int track = GetTrackIndex(trimmed);
+            int track = AnimationRules.TrackOf(trimmed);   //[공유 코드 통합] 수정(5회차): 트랙은 공유 규칙
 
             //SkeletonData에서 Loop_Start 이벤트 존재 여부 및 시간 조회
             float loopStartTime = GetLoopStartTime(skAnim, trimmed);
             bool hasEndLoop = loopStartTime >= 0f;
 
-            bool shouldLoop;
-            bool shouldHold;
-
-            if (hasEndLoop)
-            {
-                //LoopStart 이벤트가 있으면 1회 재생 후 EndLoop
-                shouldLoop = false;
-                shouldHold = false;
-            }
-            else if (FORCE_LOOP_ANIMS.Contains(trimmed))
-            {
-                //강제 무한 Loop 애니메이션이라면 무한 루프
-                shouldLoop = true;
-                shouldHold = false;
-            }
-            else
-            {
-                //둘 다 아닐 경우 1회 재생 후 마지막 동작 유지
-                shouldLoop = false;
-                shouldHold = true;
-            }
+            //[공유 코드 통합] 수정(5회차): 재생 방식은 공유 AnimationRules.ModeOf (loop_start → EndLoop, wait·blank → Loop, 나머지 → Hold)
+            SpineAnimMode mode = AnimationRules.ModeOf(trimmed, hasEndLoop);
+            bool shouldLoop = mode == SpineAnimMode.Loop;
+            bool shouldHold = mode == SpineAnimMode.Hold;
 
             //Loop_Start 이벤트가 있으면 loop=false로 1회 재생, 없다면 기존처럼 loop=true로 재생
             Spine.TrackEntry entry = skAnim.AnimationState.SetAnimation(track, trimmed, shouldLoop);
@@ -375,15 +347,7 @@ public class CGManager : MonoBehaviour
         }
     }
 
-    private int GetTrackIndex(string animName)
-    {
-        string lower = animName.ToLower();
-
-        if (lower.StartsWith("face_")) return 1;
-        if (lower.StartsWith("lip_")) return 2;
-        if (lower.StartsWith("arm_")) return 3;
-        return 0;
-    }
+    //[공유 코드 통합] 삭제(5회차): GetTrackIndex → 공유 AnimationRules.TrackOf
 
     //[스테이지 레이아웃] 수정: 줌 = 효과 층(자식)만 — 배치와 따로라 다음 CG 줄에서 풀리지 않음, 끝낼 때는 Value = 1 줌
     //  기준점(head) 고정: 자식 위치 = 기준점 × (1 − 배율). 매번 배율로 다시 계산 → Y 누적·5분할 크기 되돌림·시간 0 보정 문제 없음
@@ -449,7 +413,7 @@ public class CGManager : MonoBehaviour
             {
                 for (int i = 0; i < eventTimeline.Events.Length; i++)
                 {
-                    if (eventTimeline.Events[i].Data.Name == "loop_start")
+                    if (eventTimeline.Events[i].Data.Name == AnimationRules.LoopStartEvent)   //[공유 코드 통합] 수정(5회차): 이벤트 이름은 공유 상수
                     {
                         return eventTimeline.Frames[i];
                     }
@@ -526,50 +490,12 @@ public class CGManager : MonoBehaviour
         if (!skeletonDict.TryGetValue(cgKey, out SkeletonAnimation skAnim)) yield break;
 
         //립 애니메이션 이름 결정
-        string[] animations = animName.Split(new char[] { ' ', ','}, System.StringSplitOptions.RemoveEmptyEntries);
-        string explicitLip = System.Array.Find(animations, a => a.Trim().StartsWith("lip_"));
-
-        string lipMoving;
-        string lipStill;
-
-        if (!string.IsNullOrEmpty(explicitLip))
-        {
-            //명시적인 Lip 애니메이션 지정이 있는 경우
-            lipMoving = explicitLip.Trim();
-            string candidate = lipMoving + "_s";
-
-            if (skAnim.Skeleton.Data.FindAnimation(candidate) != null)
-            {
-                lipStill = candidate;
-            }
-            else
-            {
-                // 변경: "lip_smile1" -> "smile1" -> 끝자리 숫자 제거 -> "smile" (카테고리 키워드), 아이돌별 디폴트 립 조회
-                string keyword = ExtractLipKey(lipMoving.Substring(4));
-                lipStill = GetDefaultLipEntry(ExtractIdolKey(cgKey), keyword, skAnim).Still;
-            }
-        }
-        else
-        {
-            //Lip 애니메이션 지정이 없는 경우, 0번 트랙 애니메이션에서 추출 시도
-            string track0Anim = System.Array.Find(animations, a => GetTrackIndex(a.Trim()) == 0)?. Trim();
-            string lipKey = ExtractLipKey(track0Anim);
-
-            string candidate = "lip_" + lipKey;
-            string candidateS = "lip_" + lipKey + "_s";
-
-            // 변경: 하드코딩된 디폴트 대신, 아이돌별 디폴트 립 데이터로 폴백
-            bool needDefault = skAnim.Skeleton.Data.FindAnimation(candidate) == null
-                             || skAnim.Skeleton.Data.FindAnimation(candidateS) == null;
-
-            LipDefaultEntry defaultEntry = needDefault ? GetDefaultLipEntry(ExtractIdolKey(cgKey), lipKey, skAnim) : default;
-
-            lipMoving = skAnim.Skeleton.Data.FindAnimation(candidate) != null ? candidate : defaultEntry.Moving;
-            lipStill = skAnim.Skeleton.Data.FindAnimation(candidateS) != null ? candidateS : defaultEntry.Still;
-        }
+        //[공유 코드 통합] 수정(5회차): 고르는 규칙(명시 lip_ → _s / 기본 트랙 키워드 → 아이돌별 기본값 → lip_wait 안전망)은 공유 LipRules
+        var (lipMoving, lipStill) = LipRules.Resolve(AnimationRules.Split(animName), LipRules.IdolKeyOf(cgKey), lipData,
+                                                     name => skAnim.Skeleton.Data.FindAnimation(name) != null);
 
         //보이스 재생 중에는 움직이는 Lip 애니메이션 재생
-        skAnim.AnimationState.SetAnimation(2, lipMoving, true);
+        skAnim.AnimationState.SetAnimation(AnimationRules.TrackLip, lipMoving, true);
         
         yield return new WaitForSeconds(voiceDuration);
 
@@ -578,12 +504,12 @@ public class CGManager : MonoBehaviour
         {
             if (lipStill != null)
             {
-                skAnim.AnimationState.SetAnimation(2, lipStill, true);
+                skAnim.AnimationState.SetAnimation(AnimationRules.TrackLip, lipStill, true);   //[공유 코드 통합] 수정(5회차): 립 트랙 번호는 공유 상수
             }
             else
             {
                 //Lip 애니메이션을 최종적으로 못찾았을 경우, 그냥 애니메이션을 정지시킴
-            Spine.TrackEntry track2 = skAnim.AnimationState.GetCurrent(2);
+            Spine.TrackEntry track2 = skAnim.AnimationState.GetCurrent(AnimationRules.TrackLip);
             if (track2 != null) track2.TimeScale = 0f;
             }
         }
@@ -591,15 +517,7 @@ public class CGManager : MonoBehaviour
         lipCoroutineDict[cgKey] = null;
     }
 
-    private string ResolveLipAnim(SkeletonAnimation skAnim, string[] candidates)
-    {
-        foreach (string candidate in candidates)
-        {
-            if (skAnim.Skeleton.Data.FindAnimation(candidate) != null) return candidate;
-        }
-
-        return null;
-    }
+    //[공유 코드 통합] 삭제(5회차): ResolveLipAnim·GetDefaultLipEntry → 공유 LipRules
 
     //DefaultLipData.xml을 읽어 아이돌별/카테고리별 디폴트 립 데이터를 구성
     private void LoadDefaultLipData()
@@ -611,48 +529,8 @@ public class CGManager : MonoBehaviour
             return;
         }
 
-        XmlDocument doc = new XmlDocument();
-        doc.LoadXml(xmlAsset.text);
-
-        foreach (XmlNode idolNode in doc.DocumentElement.ChildNodes)
-        {
-            if (idolNode.NodeType != XmlNodeType.Element) continue;
-
-            Dictionary<string, LipDefaultEntry> categoryDict
-                = new Dictionary<string, LipDefaultEntry>(System.StringComparer.OrdinalIgnoreCase);
-
-            foreach (XmlNode categoryNode in idolNode.ChildNodes)
-            {
-                if (categoryNode.NodeType != XmlNodeType.Element) continue;
-
-                categoryDict[categoryNode.Name] = new LipDefaultEntry
-                {
-                    Moving = categoryNode.Attributes["Moving"]?.Value,
-                    Still = categoryNode.Attributes["Still"]?.Value
-                };
-            }
-
-            defaultLipDataDict[idolNode.Name] = categoryDict;
-        }
-    }
-
-    //아이돌(cgKey) + 키워드 기준으로 디폴트 립(Moving/Still) 조회
-    private LipDefaultEntry GetDefaultLipEntry(string idolKey, string keyword, SkeletonAnimation skAnim)
-    {
-        string categoryKey = string.IsNullOrEmpty(keyword) ? "Default" : keyword;
-
-        if (defaultLipDataDict.TryGetValue(idolKey, out var categoryDict))
-        {
-            if (categoryDict.TryGetValue(categoryKey, out var entry)) return entry;
-            if (categoryDict.TryGetValue("Default", out var defaultEntry)) return defaultEntry;
-        }
-
-        //데이터에 아이돌 자체가 없거나 Default 카테고리도 없는 극단적 예외 상황 - 하드코딩된 안전망 사용
-        return new LipDefaultEntry
-        {
-            Moving = ResolveLipAnim(skAnim, DEFAULT_LIP_ANIM),
-            Still = ResolveLipAnim(skAnim, DEFAULT_LIP_S_ANIM)
-        };
+        //[공유 코드 통합] 수정(5회차): 해석은 공유 LipData.Parse (요소 이름 대소문자 무시는 그대로)
+        lipData = LipData.Parse(xmlAsset.text);
     }
 
     public void UpdateLipOnly(string cgKey, string animation, float voiceDuration)
@@ -677,23 +555,6 @@ public class CGManager : MonoBehaviour
         lipCoroutineDict[cgKey] = StartCoroutine(LipSyncCoroutine(cgKey, animation, voiceDuration));
     }
 
-    //0번 트랙에서 키워드 추출하는 함수
-    private string ExtractLipKey(string animName)
-    {
-        if (string.IsNullOrEmpty(animName)) return "wait";
-
-        //anger1 > anger / smile3 > smile
-        string trimmed = animName.TrimEnd('0', '1', '2', '3', '4', '5', '6', '7', '8', '9');
-        return trimmed;
-    }
-
-    //cgKey에서 아이돌 명 추출하는 함수
-    private string ExtractIdolKey(string cgKey)
-    {
-        if (string.IsNullOrEmpty(cgKey)) return cgKey;
-
-        int underscoreIndex = cgKey.IndexOf('_');
-        return underscoreIndex > 0 ? cgKey.Substring(0, underscoreIndex) : cgKey;
-    }
+    //[공유 코드 통합] 삭제(5회차): ExtractLipKey·ExtractIdolKey → 공유 LipRules.KeywordOf·IdolKeyOf
 
 }

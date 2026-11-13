@@ -8,7 +8,7 @@ namespace SCTheaterEditor.Services;
 /// </summary>
 public sealed class BackgroundLibrary
 {
-    public static readonly IReadOnlyList<string> Extensions = [".png", ".jpg", ".jpeg", ".webp"];
+    public static readonly IReadOnlyList<string> Extensions = [".png", ".jpg", ".jpeg"];   //[공유 코드 통합] 수정(5회차): .webp 제외 (Unity가 가져오지 못해 게임에 나오지 않음)
 
     private Dictionary<string, string> _files = new(StringComparer.OrdinalIgnoreCase);
 

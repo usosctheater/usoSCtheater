@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using UsoSCTheater.Shared;   //[공유 코드 통합] 추가(5회차): SpineAnimMode
 
 namespace SCTheaterEditor.Stage;
 
@@ -24,7 +25,9 @@ public abstract record StageCommand
 }
 
 /// <summary>무대 설정 (페이지가 준비되면 처음 보냄) — 트랙 수·화면 크기·발 위치 등은 C#(Core)이 기준</summary>
-public sealed record StageConfig(int TrackCount, double ScreenWidth, double ScreenHeight, double UnitScale) : StageCommand
+/// [공유 코드 통합] 추가(5회차): LipTrack·LoopStartEvent·ZoomPivotBone — 공유 AnimationRules·StageLayout 값 (JS에 같은 글자를 따로 적지 않음)
+public sealed record StageConfig(int TrackCount, double ScreenWidth, double ScreenHeight, double UnitScale,
+                                 int LipTrack, string LoopStartEvent, string ZoomPivotBone) : StageCommand
 {
     public override string Type => "config";
 }
@@ -85,14 +88,28 @@ public sealed record SelectActor(int? Id) : StageCommand
 /// <summary>립 재생 정보 (Seconds &lt; 0 = 계속 말함)</summary>
 public sealed record LipPlay(string Moving, string? Still, double Seconds);
 
-/// <summary>게임 방식 재생: 전체 초기화 후 문자열 전체 (CGManager.PlayAnimation) + 립</summary>
-public sealed record PlayAnims(int Id, IReadOnlyList<string> Anims, LipPlay? Lip) : StageCommand
+/// <summary>
+/// [공유 코드 통합] 추가(5회차): 애니메이션 1개를 어떻게 재생할지 — C#이 공유 AnimationRules로 정하고 JS는 그대로 재생만.
+/// Mode = hold(1회 후 유지) · loop(반복) · endLoop(1회 후 LoopStart초부터 반복), LoopStart = loop_start 이벤트 시각 (없으면 -1)
+/// </summary>
+public sealed record AnimPlay(string Name, int Track, string Mode, double LoopStart)
+{
+    public static string ModeText(SpineAnimMode mode) => mode switch
+    {
+        SpineAnimMode.Loop => "loop",
+        SpineAnimMode.EndLoop => "endLoop",
+        _ => "hold",
+    };
+}
+
+/// <summary>게임 방식 재생: 전체 초기화 후 문자열 전체 (CGManager.PlayAnimation) + 립. [공유 코드 통합] 변경(5회차): 이름 → AnimPlay (트랙·방식 포함)</summary>
+public sealed record PlayAnims(int Id, IReadOnlyList<AnimPlay> Anims, LipPlay? Lip) : StageCommand
 {
     public override string Type => "play";
 }
 
-/// <summary>디버그 방식: 그 트랙만 교체 (Anim이 null이면 트랙 비움)</summary>
-public sealed record SetTrack(int Id, int Track, string? Anim) : StageCommand
+/// <summary>디버그 방식: 그 트랙만 교체 (Anim이 null이면 트랙 비움). [공유 코드 통합] 변경(5회차): Anim = AnimPlay (Track은 Anim.Track과 같음 — 디버그 방식은 접두어와 달라도 됨)</summary>
+public sealed record SetTrack(int Id, int Track, AnimPlay? Anim) : StageCommand
 {
     public override string Type => "setTrack";
 }

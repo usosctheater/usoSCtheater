@@ -45,6 +45,8 @@ public sealed class GameSpineExporter(SpineLibrary library)
             ? a.CgKey + imageFile[a.BaseName.Length..]
             : $"{a.CgKey}_{imageFile}";
 
+    //[공유 코드 통합] 확인(5회차): 배치 규칙 Spine/{캐릭터 ID}의 원본은 공유 ResourceFolders.SpineFolder (게임 SpineResources가 씀).
+    //  gameSpineFolder = Resources/{ResourceFolders.Spine} (AppSettings), 그 아래 캐릭터 ID(= nickName = CG 키 앞부분) 폴더
     public static string TargetFolder(string gameSpineFolder, SpineAsset a) => Path.Combine(gameSpineFolder, a.NickName);
 
     /// <summary>게임에 이 세트의 json이 있는지 (정보 표시용 빠른 확인)</summary>

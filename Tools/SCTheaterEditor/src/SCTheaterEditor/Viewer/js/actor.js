@@ -1,25 +1,24 @@
 // 캐릭터 1명: Spine 불러오기(세트별 참조 횟수 관리) + 게임 재생 규칙(CGManager와 동일) + 립 재생
-// 재생 규칙
-// - 트랙: face_ → 1, lip_ → 2, arm_ → 3, 그 외(eye_ 포함) → 0      (CGManager.GetTrackIndex)
-// - loop_start 이벤트가 있으면 1회 재생 → 끝나면 loop_start 시점부터 다시 1회 재생을 반복 (EndLoop)
-// - wait, blank는 무한 반복 (FORCE_LOOP_ANIMS)
-// - 그 외에는 1회 재생 후 마지막 동작 유지 (Complete 시 timeScale = 0)
+// [공유 코드 통합] 변경(5회차): 트랙·재생 방식은 C#이 공유 AnimationRules로 정해 보냄 ({ name, track, mode, loopStart }) — 여기는 그대로 재생만
+// 재생 방식 (mode)
+// - endLoop: 1회 재생 → 끝나면 loopStart 시점부터 다시 1회 재생을 반복
+// - loop: 무한 반복
+// - hold: 1회 재생 후 마지막 동작 유지 (Complete 시 timeScale = 0)
 // - 문자열 재생 시 전체 트랙 초기화 + 기본 자세 (ClearTracks + SetToSetupPose)
+// [공유 코드 통합] 삭제(5회차): FORCE_LOOP_ANIMS·trackIndex (규칙 사본)
 
-const FORCE_LOOP_ANIMS = new Set(["wait", "blank"]);
 let trackCount = 4;
+let lipTrack = 2;                    // [공유 코드 통합] 추가(5회차): 아래 셋은 C# config로 받음 (공유 상수)
+let loopStartEvent = "loop_start";
+let zoomPivotBone = "head";
 
-/** C#이 내려준 설정 (트랙 수 등) */
+/** C#이 내려준 설정 (트랙 수·립 트랙·loop_start 이벤트 이름·줌 기준 본) */
 export function configure(cfg) {
-  if (cfg && cfg.trackCount) trackCount = cfg.trackCount;
-}
-
-export function trackIndex(name) {
-  const lower = name.toLowerCase();
-  if (lower.startsWith("face_")) return 1;
-  if (lower.startsWith("lip_")) return 2;
-  if (lower.startsWith("arm_")) return 3;
-  return 0;
+  if (!cfg) return;
+  if (cfg.trackCount) trackCount = cfg.trackCount;
+  if (cfg.lipTrack !== undefined) lipTrack = cfg.lipTrack;
+  if (cfg.loopStartEvent) loopStartEvent = cfg.loopStartEvent;
+  if (cfg.zoomPivotBone) zoomPivotBone = cfg.zoomPivotBone;
 }
 
 /** 애니메이션 안 이벤트 시간 (없으면 -1). CGManager.GetLoopStartTime과 같은 기준 */
@@ -114,7 +113,7 @@ export class SpineActor {
     this.applySkin(skin);
     spine.skeleton.setToSetupPose();
     spine.skeleton.updateWorldTransform();
-    const head = spine.skeleton.findBone("head");   // [스테이지 레이아웃] 추가: 게임 CGManager와 같은 줌 기준점 (기본 자세)
+    const head = spine.skeleton.findBone(zoomPivotBone);   // [스테이지 레이아웃] 추가: 게임 CGManager와 같은 줌 기준점 (기본 자세) // [공유 코드 통합] 수정(5회차): 본 이름은 config
     this.pivot = head ? { x: head.worldX, y: head.worldY } : { x: 0, y: 0 };
     this.applyZoom();
 
@@ -128,7 +127,7 @@ export class SpineActor {
       animations: data.spineData.animations.map(a => ({
         name: a.name,
         duration: a.duration,
-        loopStart: findEventTime(a, "loop_start"),
+        loopStart: findEventTime(a, loopStartEvent),   // [공유 코드 통합] 수정(5회차): C#이 재생 방식을 정할 때 씀
       })),
     };
   }
@@ -166,45 +165,51 @@ export class SpineActor {
     spine.skeleton.setSlotsToSetupPose();
   }
 
-  /** 애니메이션 1개를 지정 트랙에 게임 규칙대로 건다. 없는 이름이면 false */
-  applyAnim(track, name) {
+  /**
+   * 애니메이션 1개를 C#이 정한 트랙·방식대로 건다. 없는 이름이면 false
+   * [공유 코드 통합] 변경(5회차): (track, name) → p = { name, track, mode, loopStart } (방식 판정은 C# 공유 AnimationRules)
+   */
+  applyAnim(p) {
     const spine = this.spine;
-    const anim = spine.spineData.findAnimation(name);
-    if (!anim) return false;
-    const loopStart = findEventTime(anim, "loop_start");
-    if (loopStart >= 0) {
+    const { name, track } = p;
+    if (!spine.spineData.findAnimation(name)) return false;
+    if (p.mode === "endLoop") {
       const restart = () => {
         const again = spine.state.setAnimation(track, name, false);
-        again.trackTime = loopStart;
+        again.trackTime = p.loopStart;
+        again.endLoopStart = p.loopStart;
         again.listener = { complete: restart };
       };
-      spine.state.setAnimation(track, name, false).listener = { complete: restart };
-    } else if (FORCE_LOOP_ANIMS.has(name)) {
-      spine.state.setAnimation(track, name, true);
+      const first = spine.state.setAnimation(track, name, false);
+      first.endLoopStart = p.loopStart;   // seekTo가 씀
+      first.listener = { complete: restart };
+    } else if (p.mode === "loop") {
+      spine.state.setAnimation(track, name, true).endLoopStart = -1;   // 트랙 항목은 엔진이 재사용하므로 매번 씀
     } else {
       const entry = spine.state.setAnimation(track, name, false);
+      entry.endLoopStart = -1;
       entry.listener = { complete: (e) => { e.timeScale = 0; } };
     }
     return true;
   }
 
-  /** 게임 방식: 전체 초기화 후 목록 전체를 접두어 기준 트랙에 재생 + 립 */
-  play(names, lipInfo) {
+  /** 게임 방식: 전체 초기화 후 목록 전체를 C#이 정한 트랙에 재생 + 립 */
+  play(anims, lipInfo) {
     const spine = this.spine;
     if (!spine) return;
     spine.state.clearTracks();
     spine.skeleton.setToSetupPose();
     this.clock = 0;   // 추가
-    for (const name of names) this.applyAnim(trackIndex(name), name);
+    for (const p of anims) this.applyAnim(p);   // [공유 코드 통합] 수정(5회차): 트랙은 C#이 정함
     this.startLip(lipInfo);   // 게임도 PlayAnimation 다음에 립 코루틴을 시작함 (lip 트랙을 덮어씀)
   }
 
-  /** 디버그 방식: 지정 트랙만 교체 (나머지 트랙은 계속 재생) */
-  setTrack(track, name) {
+  /** 디버그 방식: 지정 트랙만 교체 (나머지 트랙은 계속 재생). [공유 코드 통합] 변경(5회차): anim = { name, track, mode, loopStart } 또는 null */
+  setTrack(track, anim) {
     const spine = this.spine;
     if (!spine) return;
-    if (track === 2) this.lip = null;   // 립 트랙을 직접 바꾸면 립 재생 중지
-    if (name) { this.applyAnim(track, name); return; }
+    if (track === lipTrack) this.lip = null;   // 립 트랙을 직접 바꾸면 립 재생 중지
+    if (anim) { this.applyAnim(anim); return; }
     spine.state.clearTrack(track);
     if (track === 0) spine.skeleton.setToSetupPose();   // 기본 트랙을 비우면 기본 자세로 (디버그 씬과 같음)
   }
@@ -224,7 +229,7 @@ export class SpineActor {
     this.lip = null;
     const spine = this.spine;
     if (!spine || !info || !info.moving || !spine.spineData.findAnimation(info.moving)) return;
-    spine.state.setAnimation(2, info.moving, true);
+    spine.state.setAnimation(lipTrack, info.moving, true);   // [공유 코드 통합] 수정(5회차): 립 트랙 번호는 config
     this.lip = { moving: info.moving, still: info.still, seconds: info.seconds, elapsed: 0, phase: "moving" };
   }
 
@@ -232,8 +237,8 @@ export class SpineActor {
   switchLipToStill() {
     const spine = this.spine, lip = this.lip;
     if (!spine || !lip) return;
-    if (lip.still && spine.spineData.findAnimation(lip.still)) spine.state.setAnimation(2, lip.still, true);
-    else { const e = spine.state.tracks[2]; if (e) e.timeScale = 0; }
+    if (lip.still && spine.spineData.findAnimation(lip.still)) spine.state.setAnimation(lipTrack, lip.still, true);
+    else { const e = spine.state.tracks[lipTrack]; if (e) e.timeScale = 0; }
     lip.phase = "still";
   }
 
@@ -269,10 +274,10 @@ export class SpineActor {
     for (let i = 0; i < trackCount; i++) {
       const e = spine.state.tracks[i];
       if (!e || !e.animation) continue;
-      if (i === 2 && lip) continue;   // 립 트랙은 아래에서 처리
+      if (i === lipTrack && lip) continue;   // 립 트랙은 아래에서 처리
       const d = e.animation.duration;
       if (e.loop) { e.trackTime = t; continue; }
-      const ls = findEventTime(e.animation, "loop_start");
+      const ls = e.endLoopStart ?? -1;   // [공유 코드 통합] 수정(5회차): 재생할 때 C#이 정한 endLoop 시점 (이벤트를 다시 찾지 않음)
       if (ls >= 0) {
         e.trackTime = t <= d || d - ls <= 0 ? Math.min(t, d) : ls + (t - d) % (d - ls);
         continue;
@@ -285,11 +290,11 @@ export class SpineActor {
         lip.elapsed = t;
         if (t >= lip.seconds && lip.phase === "moving") this.switchLipToStill();
         else if (t < lip.seconds && lip.phase === "still") {
-          spine.state.setAnimation(2, lip.moving, true);
+          spine.state.setAnimation(lipTrack, lip.moving, true);
           lip.phase = "moving";
         }
       }
-      const e2 = spine.state.tracks[2];
+      const e2 = spine.state.tracks[lipTrack];
       if (e2 && e2.animation && lip.phase === "moving") e2.trackTime = t;
     }
     this.clock = t;

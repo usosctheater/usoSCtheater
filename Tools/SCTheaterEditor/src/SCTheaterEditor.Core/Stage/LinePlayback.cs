@@ -1,6 +1,7 @@
 using System.Globalization;
 using SCTheaterEditor.Script;
 using SCTheaterEditor.Services;
+using UsoSCTheater.Shared;   //[공유 코드 통합] 추가(5회차): ActFormat.SplitList · AudioRules
 
 namespace SCTheaterEditor.Stage;
 
@@ -22,7 +23,7 @@ public sealed record LinePlan(int LineNumber, string Type, string? CgKey, IReadO
 /// - TEXT: CG(그 줄의 Spine) + Voice(공백·쉼표로 여러 개 = 동시 재생, 채널 line0, line1 …)
 /// - SETCG: CG
 /// - SE: Track (Volume · Duration = 재생 시간)
-/// - AUDIO: Track (Value가 bgm이면 BGM 폴더, 그 밖은 SE 폴더, Volume). Effect=stop이면 없음. 반복(loop)은 하지 않고 한 번
+/// - AUDIO: Track (Value = 슬롯: bgm이면 BGM 폴더, 1~3은 SE 폴더, 없는 슬롯은 재생하지 않고 '없음'에 — 공유 AudioRules, Volume). Effect=stop이면 없음. 반복(loop)은 하지 않고 한 번
 /// - 그 밖: 없음
 /// </summary>
 public static class LinePlayback
@@ -54,7 +55,7 @@ public static class LinePlayback
         {
             case "TEXT":
                 cg = CgOf(line);
-                foreach (var key in line.Get("Voice").Split([' ', ','], StringSplitOptions.RemoveEmptyEntries))
+                foreach (var key in ActFormat.SplitList(line.Get("Voice")))   //[공유 코드 통합] 수정(5회차): 여러 키 나누기는 공유
                     Add(AudioKind.Voice, key, 1, 0, "보이스");
                 break;
             case "SETCG":
@@ -64,10 +65,13 @@ public static class LinePlayback
                 if (line.Get("Track").Trim() is { Length: > 0 } se) Add(AudioKind.SE, se, Volume(line), Number(line.Get("Duration")), "SE");
                 break;
             case "AUDIO":
-                if (line.Get("Effect").Trim().Equals("stop", StringComparison.OrdinalIgnoreCase)) break;
+                if (line.Get("Effect").Trim().Equals(AudioRules.EffectStop, StringComparison.OrdinalIgnoreCase)) break;
                 if (line.Get("Track").Trim() is { Length: > 0 } track)
                 {
-                    bool bgm = line.Get("Value").Trim().Equals("bgm", StringComparison.OrdinalIgnoreCase);
+                    //[공유 코드 통합] 수정(5회차): 슬롯 규칙은 공유 — 없는 슬롯은 게임처럼 재생하지 않음, bgm → BGM 폴더 / 1~3 → SE 폴더
+                    string slot = line.Get("Value").Trim();
+                    if (!AudioRules.IsSlot(slot)) { missing.Add($"없는 AUDIO 슬롯 '{slot}'"); break; }
+                    bool bgm = AudioRules.IsBgm(slot);
                     Add(bgm ? AudioKind.BGM : AudioKind.SE, track, Volume(line), 0, bgm ? "BGM" : "SE");
                 }
                 break;

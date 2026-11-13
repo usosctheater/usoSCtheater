@@ -3,12 +3,12 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using UnityEngine;
 using UsoSCTheater;   //[리소스 정리] ResourcePaths
+using UsoSCTheater.Shared;   //[공유 코드 통합] 추가(5회차): AudioRules (슬롯·보이스 경로)·ActFormat.SplitList
 
 public class AudioManager : MonoBehaviour
 {
     //[리소스 정리] 삭제: [SerializeField] voicePath·bgmPath·sePath → ResourcePaths.AudioVoice / AudioBGM / AudioSE (값은 그대로)
-    private const string voicePath = ResourcePaths.AudioVoice;
-    private const string bgmPath = ResourcePaths.AudioBGM;
+    //[공유 코드 통합] 삭제(5회차): voicePath·bgmPath → 공유 AudioRules.VoicePaths·SlotFolder
     private const string sePath = ResourcePaths.AudioSE;
 
     //Voice 여러 개 저장 가능하도록 List로 변경
@@ -16,7 +16,7 @@ public class AudioManager : MonoBehaviour
     private AudioSource bgmSource;
     private AudioSource seSource;
 
-    private Dictionary<string, AudioSource> audioSlots = new Dictionary<string, AudioSource>();
+    private Dictionary<string, AudioSource> audioSlots = new Dictionary<string, AudioSource>(System.StringComparer.OrdinalIgnoreCase);   //[공유 코드 통합] 수정(5회차): 슬롯은 값이라 대소문자 무시
 
     //[시나리오] 현재 시나리오의 보이스 하위 폴더명 (예: "IL"). 비어 있으면 voicePath 루트만 검색
     private string scenarioVoiceFolder = "";
@@ -24,11 +24,10 @@ public class AudioManager : MonoBehaviour
 
     void Awake()
     {
-        string[] slotKeys = {"bgm", "1", "2", "3"};
-        foreach (string key in slotKeys)
+        foreach (string key in AudioRules.Slots)   //[공유 코드 통합] 수정(5회차): 슬롯 목록은 공유
         {
             AudioSource source = gameObject.AddComponent<AudioSource>();
-            source.loop = (key == "bgm");
+            source.loop = AudioRules.IsBgm(key);
             audioSlots[key] = source;
         }
 
@@ -42,12 +41,12 @@ public class AudioManager : MonoBehaviour
         //새로운 보이스 키 없으면 기존 재생 유지
         if (string.IsNullOrEmpty(voiceKey)) return;
 
-        string[] keys = voiceKey.Split(new char[] { ' ', ','}, System.StringSplitOptions.RemoveEmptyEntries);
+        List<string> keys = ActFormat.SplitList(voiceKey);   //[공유 코드 통합] 수정(5회차): 여러 키 나누기는 공유
 
         //List 부족 시 추가 생성
-        while (voiceSources.Count < keys.Length) voiceSources.Add(gameObject.AddComponent<AudioSource>());
+        while (voiceSources.Count < keys.Count) voiceSources.Add(gameObject.AddComponent<AudioSource>());
 
-        for (int i = 0; i < keys.Length; i++)
+        for (int i = 0; i < keys.Count; i++)
         {
             string trimmed = keys[i].Trim();
             AudioClip clip = LoadVoiceClip(trimmed);   //[시나리오] 시나리오 폴더 우선 → 루트 폴백
@@ -74,12 +73,13 @@ public class AudioManager : MonoBehaviour
     //폴더 간 파일명 중복 허용. 루트 폴백으로 Voice="OT/OT001" 같은 다른 폴더 참조도 동작
     private AudioClip LoadVoiceClip(string key)
     {
-        if (!string.IsNullOrEmpty(scenarioVoiceFolder))
+        //[공유 코드 통합] 수정(5회차): 찾는 경로·순서는 공유 AudioRules.VoicePaths
+        foreach (string path in AudioRules.VoicePaths(scenarioVoiceFolder, key))
         {
-            AudioClip clip = Resources.Load<AudioClip>($"{voicePath}/{scenarioVoiceFolder}/{key}");
+            AudioClip clip = Resources.Load<AudioClip>(path);
             if (clip != null) return clip;
         }
-        return Resources.Load<AudioClip>($"{voicePath}/{key}");
+        return null;
     }
 
     //보이스 길이 조회 (PlayVoice와 동일한 경로 규칙 사용). 다중 키는 가장 긴 길이 반환
@@ -88,9 +88,9 @@ public class AudioManager : MonoBehaviour
         if (string.IsNullOrEmpty(voiceKey)) return 0f;
 
         float maxDuration = 0f;
-        foreach (string key in voiceKey.Split(new char[] { ' ', ','}, System.StringSplitOptions.RemoveEmptyEntries))
+        foreach (string key in ActFormat.SplitList(voiceKey))   //[공유 코드 통합] 수정(5회차): 여러 키 나누기는 공유
         {
-            AudioClip clip = LoadVoiceClip(key.Trim());
+            AudioClip clip = LoadVoiceClip(key);
             if (clip != null) maxDuration = Mathf.Max(maxDuration, clip.length);
         }
         return maxDuration;
@@ -113,7 +113,7 @@ public class AudioManager : MonoBehaviour
         if (string.IsNullOrEmpty(track)) return;
 
         AudioSource source = audioSlots[slot];
-        string path = slot == "bgm" ? bgmPath : sePath;
+        string path = AudioRules.SlotFolder(slot);   //[공유 코드 통합] 수정(5회차): 슬롯 → 폴더는 공유
         AudioClip clip = Resources.Load<AudioClip>($"{path}/{track}");
 
         if (clip == null)
@@ -124,7 +124,7 @@ public class AudioManager : MonoBehaviour
 
         if (source.isPlaying) UnityEngine.Debug.LogWarning($"[AudioManager] 슬롯 {slot} 강제 덮어쓰기: {source.clip?.name} → {track}");
 
-        source.loop = (slot == "bgm") ? true : loop;
+        source.loop = AudioRules.IsBgm(slot) || loop;   //[공유 코드 통합] 수정(5회차): bgm 판정은 공유
         source.volume = volume;
         source.Stop();
         source.clip = clip;

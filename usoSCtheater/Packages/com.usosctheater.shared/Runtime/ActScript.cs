@@ -27,6 +27,16 @@ namespace UsoSCTheater.Shared
             { Type, GroupId, CharId, Name, Text, Voice, CG, Position, Animation, ResourceKey, Value, Track, Volume, Effect, SE, Duration, SpeakerType };
         public static readonly IReadOnlyList<string> TranslatableLineAttrs = new[] { Name, Text };   //TEXT 줄 (루트는 RootAttrs 전부)
 
+        //[공유 코드 통합] 추가(5회차): 여러 값을 적는 칸(Animation·Voice) 나누기 — 공백·쉼표 구분, 빈 항목 제외
+        private static readonly char[] ListSeparators = { ' ', ',' };
+        public static List<string> SplitList(string? value)
+        {
+            var items = new List<string>();
+            foreach (string s in (value ?? "").Split(ListSeparators, StringSplitOptions.RemoveEmptyEntries))
+                if (s.Trim() is { Length: > 0 } t) items.Add(t);
+            return items;
+        }
+
         //속성 이름 교정: 아는 이름(번역 속성 포함)과 대소문자만 다르면 올바른 이름, 아니면 null (정확히 맞거나 모르는 이름)
         public static string? CorrectName(string name, bool root, IEnumerable<LanguageInfo> languages)
         {
@@ -134,7 +144,7 @@ namespace UsoSCTheater.Shared
             return keys;
         }
 
-        //스크립트 검사 (경고만): 대소문자가 다른 속성 이름, 잘못된 언어 접미어, DB에 없는 CharId(TEXT), GroupId가 빈 CGGROUP
+        //스크립트 검사 (경고만): 대소문자가 다른 속성 이름, 잘못된 언어 접미어, DB에 없는 CharId(TEXT), GroupId가 빈 CGGROUP, 없는 AUDIO 슬롯(5회차)
         public static void CheckLine(ActAttrs line, bool root, IReadOnlyList<LanguageInfo> languages, Func<string, bool> characterExists, ICollection<ActIssue> issues)
         {
             foreach (var a in line.All)
@@ -152,6 +162,10 @@ namespace UsoSCTheater.Shared
 
             if (line.Is(ActFormat.TypeCGGroup) && line.Key(ActFormat.GroupId).Length == 0)
                 issues.Add(new ActIssue(ActFormat.GroupId, "GroupId가 없는 CGGROUP (무시됨)"));
+
+            //[공유 코드 통합] 추가(5회차): AUDIO 슬롯
+            if (line.Is(ActFormat.TypeAudio) && !AudioRules.IsSlot(line.Key(ActFormat.Value)))
+                issues.Add(new ActIssue(ActFormat.Value, $"없는 AUDIO 슬롯 '{line.Key(ActFormat.Value)}' ({string.Join("·", AudioRules.Slots)}) — 재생되지 않음"));
         }
     }
 
